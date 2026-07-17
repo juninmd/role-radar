@@ -31,6 +31,14 @@ Regras do digest:
       ),
     },
     {
+      name: "O que fazer em Franca",
+      url: gnews("o que fazer em Franca SP fim de semana"),
+    },
+    {
+      name: "Passeios/turismo Franca",
+      url: gnews('passeios OR turismo OR lazer OR feira "Franca" SP'),
+    },
+    {
       name: "Shows/Eventos Ribeirão",
       url: gnews('shows OR eventos OR festival "Ribeirão Preto"'),
     },
