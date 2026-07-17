@@ -3,7 +3,6 @@ import { upsertEvent } from "../db.ts";
 
 const CITY_SLUGS = [
   "franca-sp",
-  "ribeirao-preto-sp",
   "itirapua-sp",
   "ribeirao-corrente-sp",
   "restinga-sp",
@@ -19,9 +18,7 @@ const norm = (s: string) =>
 
 // Só cidades pedidas — páginas pequenas do Sympla vazam eventos de fora.
 const ALLOWED = new Set(
-  ["Franca", "Ribeirão Preto", "Itirapuã", "Ribeirão Corrente", "Restinga"].map(
-    norm,
-  ),
+  ["Franca", "Itirapuã", "Ribeirão Corrente", "Restinga"].map(norm),
 );
 
 interface SymplaEvent {

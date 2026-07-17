@@ -12,6 +12,7 @@ import { nowPlaying } from "./sources/cinema.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
+import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
 import {
   sendTelegram,
@@ -39,7 +40,11 @@ const humanDay = (iso: string) =>
 
 function eventLines(ev: Event): string {
   const lines = [`🎟️ *${ev.title}*`];
-  const where = [ev.venue, ev.city].filter(Boolean).join(", ");
+  let where = [ev.venue, ev.city].filter(Boolean).join(", ");
+  if (ev.venue) {
+    const query = encodeURIComponent(`${ev.venue}, Franca, SP`);
+    where = `[${ev.venue}](https://www.google.com/maps/search/?api=1&query=${query})${ev.city ? `, ${ev.city}` : ""}`;
+  }
   if (where) lines.push(`📍 ${where}`);
   lines.push(`📆 ${humanDay(ev.date)}${ev.time ? ` às ${ev.time}` : ""}`);
   if (ev.price) lines.push(`💰 ${ev.price}`);
@@ -47,7 +52,7 @@ function eventLines(ev: Event): string {
   return lines.join("\n");
 }
 
-/** Extract events from pending items, post today's events + 7-day agenda. */
+/** Extract events from pending items, post today's events + 7-day agenda + sightseeing spots. */
 export async function digest(): Promise<void> {
   const today = isoDay(new Date());
   await Promise.allSettled([
@@ -57,13 +62,16 @@ export async function digest(): Promise<void> {
     syncSesc(today),
   ]);
   pruneEventsBefore(today);
-  // Cidades pedidas (normalizadas sem acento).
+  // Cidades pedidas (normalizadas sem acento), focando exclusivamente em Franca e microregião imediata.
   pruneDisallowedCities([
     "franca",
-    "ribeirao preto",
     "itirapua",
     "ribeirao corrente",
     "restinga",
+    "claraval",
+    "patrocinio paulista",
+    "cristais paulista",
+    "pedregulho",
   ]);
 
   // Eventos de HOJE — um post por evento, com foto quando houver.
@@ -91,6 +99,15 @@ export async function digest(): Promise<void> {
     await sendTelegramAlbum(caption, posters);
   }
 
+  // Dica de Passeio Permanente em Franca - SP (Surpresa diária com imagem e localização)
+  const spot = getDailySpot(today);
+  const spotBody = `✨ *Dica de Passeio em Franca!* ✨\n\n*${spot.name}*\n${spot.description}\n\n📍 [${spot.venue}](${spot.mapsUrl})`;
+  if (spot.image) {
+    await sendTelegramPhoto(spotBody, spot.image);
+  } else {
+    await sendTelegram(spotBody);
+  }
+
   // Agenda dos próximos 7 dias — um post agrupado por dia.
   const week = eventsBetween(addDays(today, 1), addDays(today, 7));
   if (week.length) {
@@ -100,20 +117,14 @@ export async function digest(): Promise<void> {
     }
     const blocks = [...byDay.entries()].map(([date, evs]) => {
       const rows = evs.map((ev) => {
-        const bits = [
-          ev.time,
-          [ev.venue, ev.city].filter(Boolean).join(", "),
-          ev.price,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+        const bits = [ev.time, ev.venue, ev.price].filter(Boolean).join(" · ");
         const title = ev.link ? `[${ev.title}](${ev.link})` : `*${ev.title}*`;
         return `• ${title}${bits ? `\n  ${bits}` : ""}`;
       });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
     });
     await sendTelegram(
-      `${topic.emoji} *Agenda — próximos 7 dias*\n\n${blocks.join("\n\n")}`,
+      `${topic.emoji} *Agenda — próximos 7 dias em Franca-SP*\n\n${blocks.join("\n\n")}`,
     );
     console.log(`[digest] agenda com ${week.length} evento(s)`);
   }

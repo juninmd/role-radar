@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
-const CITIES = [
-  { id: 27, label: "Cinemas de Ribeirão Preto" },
-  { id: 192, label: "Cinema Moviecom Franca" },
-];
+const CITIES = [{ id: 192, label: "Cinema Moviecom Franca" }];
 
 interface Movie {
   title?: string;

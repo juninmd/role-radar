@@ -1,7 +1,4 @@
-const CITIES = [
-  { id: 27, label: "Ribeirão Preto", cinema: "Cinemas de Ribeirão Preto" },
-  { id: 192, label: "Franca", cinema: "Moviecom Franca" },
-];
+const CITIES = [{ id: 192, label: "Franca", cinema: "Moviecom Franca" }];
 
 interface Movie {
   title?: string;

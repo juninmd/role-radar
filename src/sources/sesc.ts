@@ -2,10 +2,7 @@ import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 // group_id de cada unidade SESC (via /wp/v1/unidades-atividades).
-const UNITS = [
-  { id: 1005, city: "Franca" },
-  { id: 35, city: "Ribeirão Preto" },
-];
+const UNITS = [{ id: 1005, city: "Franca" }];
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
@@ -22,7 +19,7 @@ interface Atividade {
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
-/** SESC Franca + Ribeirão via API pública de atividades (JSON, com imagem/data). */
+/** SESC Franca via API pública de atividades (JSON, com imagem/data). */
 export async function syncSesc(today: string): Promise<number> {
   let stored = 0;
   for (const unit of UNITS) {

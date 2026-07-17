@@ -3,7 +3,7 @@ import { chat } from "./ai.ts";
 import { env } from "./config/env.ts";
 import { markDigested, pendingItems, upsertEvent } from "./db.ts";
 
-const EXTRACT_PROMPT = `Você extrai eventos de entretenimento de notícias de Franca-SP, Ribeirão Preto-SP e região.
+const EXTRACT_PROMPT = `Você extrai eventos de entretenimento de notícias de Franca-SP e região.
 
 Responda APENAS com um array JSON válido (sem markdown, sem comentários). Cada evento:
 {"title": "nome curto e limpo do evento (sem frase de manchete)", "date": "YYYY-MM-DD", "time": "HH:MM" ou null, "venue": "local" ou null, "city": "cidade", "price": "R$ 60" | "grátis" | null, "item": <número do item de origem>}
@@ -11,7 +11,8 @@ Responda APENAS com um array JSON válido (sem markdown, sem comentários). Cada
 Regras:
 - SÓ inclua eventos cuja data do EVENTO esteja escrita no título ou resumo (ex.: "dia 24", "nesta sexta (18)", "24 de julho").
 - A data de publicação da notícia NÃO é a data do evento — nunca a use. Texto sem data do evento → NÃO inclua.
-- SÓ eventos em Franca, Ribeirão Preto ou cidades da região. Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
+- SÓ eventos em Franca-SP ou cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, etc.). Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
+- Vale qualquer tipo de rolê com data: shows, teatro, stand-up, festivais, feiras/exposições, jogos de basquete (Sesi Franca) e futebol da região, passeios e eventos gratuitos.
 - price só se o texto mencionar valor ou gratuidade.
 - Eventos passados em relação à data de hoje → NÃO inclua.
 - NUNCA invente eventos: cada evento precisa vir de um item da lista e "item" deve ser o número dele.
