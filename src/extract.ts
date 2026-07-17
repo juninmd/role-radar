@@ -37,7 +37,11 @@ function parseJson(raw: string): Extracted[] {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");
   if (start < 0 || end < 0) throw new Error("sem array JSON na resposta");
-  return JSON.parse(text.slice(start, end + 1)) as Extracted[];
+  // A IA às vezes emite \u inválido (ex.: "\uls") — neutraliza p/ não quebrar o parse.
+  const json = text
+    .slice(start, end + 1)
+    .replace(/\\u(?![0-9a-fA-F]{4})/g, "u");
+  return JSON.parse(json) as Extracted[];
 }
 
 /** Extract dated events from pending items via AI. Returns count stored. */
