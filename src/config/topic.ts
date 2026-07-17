@@ -66,6 +66,16 @@ Regras do digest:
       ),
     },
     {
+      name: "Sesc Ribeirão",
+      url: gnews('"Sesc Ribeirão Preto" programação OR show OR espetáculo'),
+    },
+    {
+      name: "Sesi Franca/região",
+      url: gnews(
+        '"Sesi Franca" OR "Sesi Ribeirão" programação OR show OR teatro',
+      ),
+    },
+    {
       name: "Casas de show Ribeirão",
       url: gnews(
         '"Theatro Pedro II" OR "Arena Eurobike" OR "Ribeirão Shopping" show',

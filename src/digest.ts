@@ -7,6 +7,9 @@ import {
   pruneEventsBefore,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
+import { syncIngresso } from "./sources/ingresso.ts";
+import { fetchOgImage } from "./sources/ogimage.ts";
+import { syncSympla } from "./sources/sympla.ts";
 import { sendTelegram, sendTelegramPhoto } from "./telegram.ts";
 
 const TZ = "America/Sao_Paulo";
@@ -40,14 +43,19 @@ function eventLines(ev: Event): string {
 /** Extract events from pending items, post today's events + 7-day agenda. */
 export async function digest(): Promise<void> {
   const today = isoDay(new Date());
-  await extractEvents(today);
+  await Promise.allSettled([
+    extractEvents(today),
+    syncSympla(today),
+    syncIngresso(today),
+  ]);
   pruneEventsBefore(today);
 
   // Eventos de HOJE — um post por evento, com foto quando houver.
   const todays = eventsOn(today).filter((ev) => !ev.posted_today);
   for (const ev of todays) {
+    const image = ev.image ?? (ev.link ? await fetchOgImage(ev.link) : null);
     const body = `⚡ *É HOJE!*\n\n${eventLines(ev)}`;
-    if (ev.image) await sendTelegramPhoto(body, ev.image);
+    if (image) await sendTelegramPhoto(body, image);
     else await sendTelegram(body);
   }
   markEventsPosted(todays.map((ev) => ev.id));
@@ -69,7 +77,8 @@ export async function digest(): Promise<void> {
         ]
           .filter(Boolean)
           .join(" · ");
-        return `• *${ev.title}*${bits ? `\n  ${bits}` : ""}`;
+        const title = ev.link ? `[${ev.title}](${ev.link})` : `*${ev.title}*`;
+        return `• ${title}${bits ? `\n  ${bits}` : ""}`;
       });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
     });
