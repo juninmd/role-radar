@@ -51,5 +51,25 @@ Regras do digest:
       url: gnews("estreias séries streaming Netflix OR Prime OR Max"),
     },
     { name: "Papelpop (pop/estreias)", url: "https://www.papelpop.com/feed/" },
+    {
+      name: "Jornal da Franca",
+      url: "https://www.jornaldafranca.com.br/feed/",
+    },
+    {
+      name: "Franca e região (eventos)",
+      url: gnews('"Franca e região" eventos OR shows'),
+    },
+    {
+      name: "Cidades vizinhas",
+      url: gnews(
+        'eventos OR shows Batatais OR "São Joaquim da Barra" OR Sertãozinho',
+      ),
+    },
+    {
+      name: "Casas de show Ribeirão",
+      url: gnews(
+        '"Theatro Pedro II" OR "Arena Eurobike" OR "Ribeirão Shopping" show',
+      ),
+    },
   ],
 };
