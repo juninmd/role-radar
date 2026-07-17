@@ -2,9 +2,12 @@ import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 const CITIES = [
-  "https://www.sympla.com.br/eventos/ribeirao-preto-sp",
-  "https://www.sympla.com.br/eventos/franca-sp",
-];
+  "ribeirao-preto-sp",
+  "franca-sp",
+  "sertaozinho-sp",
+  "batatais-sp",
+  "sao-joaquim-da-barra-sp",
+].map((c) => `https://www.sympla.com.br/eventos/${c}`);
 
 interface SymplaEvent {
   name: string;

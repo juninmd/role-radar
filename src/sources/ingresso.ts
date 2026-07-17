@@ -16,13 +16,25 @@ interface Movie {
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
-/** Fetch upcoming movie premieres from Ingresso.com per city. */
+/** localDate ISO ("2026-07-23T00:00:00+00:00") → "2026-07-23", ou null. */
+function toIso(raw?: string): string | null {
+  return raw?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+}
+
+const addDays = (iso: string, n: number) => {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** Fetch upcoming movie premieres (next 14 days) from Ingresso.com per city. */
 export async function syncIngresso(today: string): Promise<number> {
+  const horizon = addDays(today, 14);
   let stored = 0;
   for (const city of CITIES) {
     try {
       const res = await fetch(
-        `https://api-content.ingresso.com/v0/templates/nowplaying/${city.id}?partnership=home`,
+        `https://api-content.ingresso.com/v0/templates/soon/${city.id}?partnership=home`,
         {
           headers: { "user-agent": "Mozilla/5.0" },
           signal: AbortSignal.timeout(15000),
@@ -31,9 +43,10 @@ export async function syncIngresso(today: string): Promise<number> {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const movies = (await res.json()) as Movie[];
       for (const m of movies) {
-        const premiere = m.premiereDate?.localDate?.slice(0, 10);
-        // Só estreias futuras (em cartaz há semanas não é "evento").
-        if (!m.title || !premiere || premiere < today) continue;
+        const premiere = toIso(m.premiereDate?.localDate);
+        // Só estreias na janela de 14 dias (senão flooda com meses de filmes).
+        if (!m.title || !premiere) continue;
+        if (premiere < today || premiere > horizon) continue;
         upsertEvent({
           id: hash(`${m.title.toLowerCase().trim()}|${premiere}`),
           title: `Estreia: ${m.title.trim()}`,
