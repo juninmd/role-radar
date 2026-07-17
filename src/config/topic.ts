@@ -58,6 +58,14 @@ Regras do digest:
     },
     { name: "Papelpop (pop/estreias)", url: "https://www.papelpop.com/feed/" },
     {
+      name: "ACidade ON Ribeirão",
+      url: "https://www.acidadeon.com/ribeiraopreto/rss/",
+    },
+    {
+      name: "Tribuna de Ribeirão",
+      url: "https://www.tribunaribeirao.com.br/feed/",
+    },
+    {
       name: "Jornal da Franca",
       url: "https://www.jornaldafranca.com.br/feed/",
     },

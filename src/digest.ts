@@ -8,6 +8,7 @@ import {
   pruneEventsBefore,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
+import { nowPlaying } from "./sources/cinema.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -71,6 +72,18 @@ export async function digest(): Promise<void> {
   }
   markEventsPosted(todays.map((ev) => ev.id));
   if (todays.length) console.log(`[digest] ${todays.length} evento(s) de hoje`);
+
+  // Filmes em cartaz HOJE — um post por cidade.
+  const cinema = await nowPlaying();
+  for (const day of cinema) {
+    const lines = day.movies.map((m) => {
+      const tag = [m.genre, m.rating].filter(Boolean).join(" · ");
+      return `• [${m.title}](${m.link})${tag ? ` — ${tag}` : ""}`;
+    });
+    await sendTelegram(
+      `🎬 *Em cartaz hoje — ${day.cinema}*\n\n${lines.join("\n")}`,
+    );
+  }
 
   // Agenda dos próximos 7 dias — um post agrupado por dia.
   const week = eventsBetween(addDays(today, 1), addDays(today, 7));
