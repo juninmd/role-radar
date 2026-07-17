@@ -146,6 +146,37 @@ export function pruneEventsBefore(date: string): void {
   db.prepare("DELETE FROM events WHERE date < ?").run(date);
 }
 
+/**
+ * Remove eventos de cidades fora da lista pedida. Preserva city nula,
+ * rótulos de cinema/streaming e notícias multi-cidade (ex.: "Ribeirão e Franca")
+ * — filtra só quando a cidade é claramente uma cidade de fora.
+ */
+export function pruneDisallowedCities(allowedNormalized: string[]): void {
+  const norm = (s: string) =>
+    s
+      .normalize("NFD")
+      // biome-ignore lint/suspicious/noMisleadingCharacterClass: diacríticos combinantes
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .trim();
+  const rows = db
+    .query<{ id: string; city: string | null }, []>(
+      "SELECT id, city FROM events",
+    )
+    .all();
+  const del = db.prepare<unknown, [string]>("DELETE FROM events WHERE id = ?");
+  const tx = db.transaction(() => {
+    for (const r of rows) {
+      if (!r.city) continue;
+      const c = norm(r.city);
+      if (c.startsWith("cinemas") || c.startsWith("streaming")) continue;
+      if (allowedNormalized.some((a) => c.includes(a))) continue;
+      del.run(r.id);
+    }
+  });
+  tx();
+}
+
 export function pendingItems(limit: number): Item[] {
   return db
     .query<Item, [number]>(

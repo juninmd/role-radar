@@ -25,6 +25,12 @@ Regras do digest:
       url: gnews('shows OR eventos OR festival "Franca" SP agenda'),
     },
     {
+      name: "Locais de show Franca",
+      url: gnews(
+        '"Teatro Municipal de Franca" OR "Franca Shopping" OR "Pequeno Teatro" show OR espetáculo',
+      ),
+    },
+    {
       name: "Shows/Eventos Ribeirão",
       url: gnews('shows OR eventos OR festival "Ribeirão Preto"'),
     },
@@ -62,7 +68,7 @@ Regras do digest:
     {
       name: "Cidades vizinhas",
       url: gnews(
-        'eventos OR shows Batatais OR "São Joaquim da Barra" OR Sertãozinho',
+        'eventos OR shows Itirapuã OR "Ribeirão Corrente" OR Restinga SP',
       ),
     },
     {

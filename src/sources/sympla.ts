@@ -2,12 +2,22 @@ import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 const CITIES = [
-  "ribeirao-preto-sp",
   "franca-sp",
-  "sertaozinho-sp",
-  "batatais-sp",
-  "sao-joaquim-da-barra-sp",
+  "ribeirao-preto-sp",
+  "itirapua-sp",
+  "ribeirao-corrente-sp",
+  "restinga-sp",
 ].map((c) => `https://www.sympla.com.br/eventos/${c}`);
+
+const norm = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+// Só cidades pedidas — páginas pequenas do Sympla vazam eventos de fora.
+const ALLOWED = new Set(
+  ["Franca", "Ribeirão Preto", "Itirapuã", "Ribeirão Corrente", "Restinga"].map(
+    norm,
+  ),
+);
 
 interface SymplaEvent {
   name: string;
@@ -39,6 +49,9 @@ export async function syncSympla(today: string): Promise<number> {
           continue;
         }
         if (!ev.name || !ev.url || !ev.start_date) continue;
+        // Páginas de cidade pequena vazam eventos de fora da região pedida.
+        if (!ev.location?.city || !ALLOWED.has(norm(ev.location.city)))
+          continue;
         // start_date vem em UTC; evento local = UTC-3.
         const local = new Date(ev.start_date);
         local.setUTCHours(local.getUTCHours() - 3);

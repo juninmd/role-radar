@@ -4,6 +4,7 @@ import {
   eventsBetween,
   eventsOn,
   markEventsPosted,
+  pruneDisallowedCities,
   pruneEventsBefore,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
@@ -49,6 +50,14 @@ export async function digest(): Promise<void> {
     syncIngresso(today),
   ]);
   pruneEventsBefore(today);
+  // Cidades pedidas (normalizadas sem acento).
+  pruneDisallowedCities([
+    "franca",
+    "ribeirao preto",
+    "itirapua",
+    "ribeirao corrente",
+    "restinga",
+  ]);
 
   // Eventos de HOJE — um post por evento, com foto quando houver.
   const todays = eventsOn(today).filter((ev) => !ev.posted_today);
