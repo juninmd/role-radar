@@ -13,7 +13,11 @@ import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { syncSympla } from "./sources/sympla.ts";
-import { sendTelegram, sendTelegramPhoto } from "./telegram.ts";
+import {
+  sendTelegram,
+  sendTelegramAlbum,
+  sendTelegramPhoto,
+} from "./telegram.ts";
 
 const TZ = "America/Sao_Paulo";
 
@@ -80,9 +84,11 @@ export async function digest(): Promise<void> {
       const tag = [m.genre, m.rating].filter(Boolean).join(" · ");
       return `• [${m.title}](${m.link})${tag ? ` — ${tag}` : ""}`;
     });
-    await sendTelegram(
-      `🎬 *Em cartaz hoje — ${day.cinema}*\n\n${lines.join("\n")}`,
-    );
+    const caption = `🎬 *Em cartaz hoje — ${day.cinema}*\n\n${lines.join("\n")}`;
+    const posters = day.movies
+      .map((m) => m.poster)
+      .filter((p): p is string => Boolean(p));
+    await sendTelegramAlbum(caption, posters);
   }
 
   // Agenda dos próximos 7 dias — um post agrupado por dia.

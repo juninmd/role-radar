@@ -20,6 +20,48 @@ export async function sendTelegram(text: string): Promise<void> {
   }
 }
 
+/**
+ * Send a photo album (sendMediaGroup, até 10 fotos). A legenda vai na 1ª foto.
+ * Cai para mensagem de texto se o álbum falhar ou não houver fotos.
+ */
+export async function sendTelegramAlbum(
+  caption: string,
+  photos: string[],
+): Promise<void> {
+  const imgs = photos.filter(Boolean).slice(0, 10);
+  if (!env.telegramToken || !env.telegramChatIds.length) {
+    console.log("[telegram] não configurado — imprimindo no console:\n");
+    console.log(`[álbum ${imgs.length} fotos]\n${caption}`);
+    return;
+  }
+  if (!imgs.length) return sendTelegram(caption);
+
+  for (const chatId of env.telegramChatIds) {
+    const media = imgs.map((url, i) => ({
+      type: "photo",
+      media: url,
+      ...(i === 0
+        ? { caption: caption.slice(0, 1000), parse_mode: "Markdown" }
+        : {}),
+    }));
+    const res = await fetch(
+      `https://api.telegram.org/bot${env.telegramToken}/sendMediaGroup`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, media }),
+      },
+    );
+    if (!res.ok) {
+      console.warn(`[telegram] sendMediaGroup ${res.status} — fallback texto`);
+      let alt = await send(chatId, caption, "Markdown");
+      if (alt.status === 400) alt = await send(chatId, caption);
+      if (!alt.ok)
+        console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
+    }
+  }
+}
+
 /** Send a photo with Markdown caption; falls back to text-only message. */
 export async function sendTelegramPhoto(
   caption: string,

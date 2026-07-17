@@ -10,6 +10,7 @@ interface Movie {
   siteURL?: string;
   urlKey?: string;
   isPlaying?: boolean;
+  images?: { url?: string; type?: string }[];
 }
 
 export interface CinemaDay {
@@ -20,7 +21,13 @@ export interface CinemaDay {
     rating: string | null;
     genre: string | null;
     link: string;
+    poster: string | null;
   }[];
+}
+
+function poster(m: Movie): string | null {
+  const portrait = m.images?.find((i) => i.type === "PosterPortrait")?.url;
+  return portrait ?? m.images?.[0]?.url ?? null;
 }
 
 /** Filmes em cartaz hoje por cidade (Ingresso.com nowplaying). */
@@ -44,6 +51,7 @@ export async function nowPlaying(): Promise<CinemaDay[]> {
           rating: m.contentRating ?? null,
           genre: m.genres?.[0] ?? null,
           link: m.siteURL ?? `https://www.ingresso.com/filme/${m.urlKey ?? ""}`,
+          poster: poster(m),
         }));
       if (list.length)
         out.push({ city: c.label, cinema: c.cinema, movies: list });
