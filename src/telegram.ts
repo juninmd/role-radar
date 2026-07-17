@@ -20,6 +20,41 @@ export async function sendTelegram(text: string): Promise<void> {
   }
 }
 
+/** Send a photo with Markdown caption; falls back to text-only message. */
+export async function sendTelegramPhoto(
+  caption: string,
+  photo: string,
+): Promise<void> {
+  if (!env.telegramToken || !env.telegramChatIds.length) {
+    console.log("[telegram] não configurado — imprimindo no console:\n");
+    console.log(`[foto: ${photo}]\n${caption}`);
+    return;
+  }
+  for (const chatId of env.telegramChatIds) {
+    const res = await fetch(
+      `https://api.telegram.org/bot${env.telegramToken}/sendPhoto`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          photo,
+          caption: caption.slice(0, 1000),
+          parse_mode: "Markdown",
+        }),
+      },
+    );
+    if (!res.ok) {
+      // Foto inacessível ou Markdown inválido — manda como texto.
+      console.warn(`[telegram] sendPhoto ${res.status} — fallback p/ texto`);
+      let alt = await send(chatId, caption, "Markdown");
+      if (alt.status === 400) alt = await send(chatId, caption);
+      if (!alt.ok)
+        console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
+    }
+  }
+}
+
 function send(
   chatId: string,
   text: string,

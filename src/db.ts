@@ -20,7 +20,28 @@ db.exec(`
     digested    INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_items_digested ON items(digested, fetched_at);
+  CREATE TABLE IF NOT EXISTS events (
+    id           TEXT PRIMARY KEY,
+    title        TEXT NOT NULL,
+    date         TEXT NOT NULL,
+    time         TEXT,
+    venue        TEXT,
+    city         TEXT,
+    price        TEXT,
+    link         TEXT,
+    image        TEXT,
+    posted_today INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
 `);
+
+// Migração: bancos criados antes da coluna image em items.
+try {
+  db.exec("ALTER TABLE items ADD COLUMN image TEXT");
+} catch {
+  // coluna já existe
+}
 
 export interface Item {
   id: string;
@@ -29,13 +50,14 @@ export interface Item {
   source: string;
   summary: string | null;
   published: string | null;
+  image: string | null;
   fetched_at: string;
   digested: number;
 }
 
 const insertStmt = db.prepare(`
-  INSERT OR IGNORE INTO items (id, title, link, source, summary, published, fetched_at, digested)
-  VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+  INSERT OR IGNORE INTO items (id, title, link, source, summary, published, image, fetched_at, digested)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
 `);
 
 export function insertItem(row: Omit<Item, "digested">): boolean {
@@ -46,9 +68,82 @@ export function insertItem(row: Omit<Item, "digested">): boolean {
     row.source,
     row.summary,
     row.published,
+    row.image,
     row.fetched_at,
   );
   return changes > 0;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string | null;
+  venue: string | null;
+  city: string | null;
+  price: string | null;
+  link: string | null;
+  image: string | null;
+  posted_today: number;
+  created_at: string;
+}
+
+const upsertEventStmt = db.prepare(`
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, posted_today, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  ON CONFLICT(id) DO UPDATE SET
+    time = COALESCE(excluded.time, time),
+    venue = COALESCE(excluded.venue, venue),
+    price = COALESCE(excluded.price, price),
+    image = COALESCE(excluded.image, image)
+`);
+
+export function upsertEvent(
+  ev: Omit<Event, "posted_today" | "created_at">,
+): void {
+  upsertEventStmt.run(
+    ev.id,
+    ev.title,
+    ev.date,
+    ev.time,
+    ev.venue,
+    ev.city,
+    ev.price,
+    ev.link,
+    ev.image,
+    new Date().toISOString(),
+  );
+}
+
+export function eventsOn(date: string): Event[] {
+  return db
+    .query<Event, [string]>(
+      "SELECT * FROM events WHERE date = ? ORDER BY time, title",
+    )
+    .all(date);
+}
+
+export function eventsBetween(from: string, to: string): Event[] {
+  return db
+    .query<Event, [string, string]>(
+      "SELECT * FROM events WHERE date >= ? AND date <= ? ORDER BY date, time, title",
+    )
+    .all(from, to);
+}
+
+export function markEventsPosted(ids: string[]): void {
+  if (!ids.length) return;
+  const stmt = db.prepare<unknown, [string]>(
+    "UPDATE events SET posted_today = 1 WHERE id = ?",
+  );
+  const tx = db.transaction((list: string[]) => {
+    for (const id of list) stmt.run(id);
+  });
+  tx(ids);
+}
+
+export function pruneEventsBefore(date: string): void {
+  db.prepare("DELETE FROM events WHERE date < ?").run(date);
 }
 
 export function pendingItems(limit: number): Item[] {

@@ -4,7 +4,18 @@ import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
 
-const parser = new Parser({ timeout: env.feedTimeoutMs });
+const parser = new Parser({
+  timeout: env.feedTimeoutMs,
+  customFields: { item: [["media:content", "media"]] },
+});
+
+const itemImage = (it: Record<string, unknown>): string | null => {
+  const enclosure = it.enclosure as { url?: string; type?: string } | undefined;
+  if (enclosure?.url && (enclosure.type ?? "").startsWith("image"))
+    return enclosure.url;
+  const media = it.media as { $?: { url?: string } } | undefined;
+  return media?.$?.url ?? null;
+};
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 const clean = (s?: string) =>
@@ -34,6 +45,7 @@ export async function ingest(): Promise<number> {
           source: feed.name,
           summary: clean(it.contentSnippet ?? it.content),
           published: it.isoDate ?? it.pubDate ?? null,
+          image: itemImage(it as unknown as Record<string, unknown>),
           fetched_at: now,
         });
         if (isNew) feedAdded++;
