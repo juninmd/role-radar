@@ -87,5 +87,11 @@ Regras do digest:
         '"Theatro Pedro II" OR "Arena Eurobike" OR "Ribeirão Shopping" show',
       ),
     },
+    {
+      name: "Castelinho/Museu Franca",
+      url: gnews(
+        '"Castelinho" OR "Museu Histórico" OR "Concha Acústica" Franca evento OR show',
+      ),
+    },
   ],
 };

@@ -10,6 +10,7 @@ import {
 import { extractEvents } from "./extract.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
+import { syncSesc } from "./sources/sesc.ts";
 import { syncSympla } from "./sources/sympla.ts";
 import { sendTelegram, sendTelegramPhoto } from "./telegram.ts";
 
@@ -48,6 +49,7 @@ export async function digest(): Promise<void> {
     extractEvents(today),
     syncSympla(today),
     syncIngresso(today),
+    syncSesc(today),
   ]);
   pruneEventsBefore(today);
   // Cidades pedidas (normalizadas sem acento).
