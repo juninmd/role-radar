@@ -1,0 +1,25 @@
+{
+  "name": "role-radar",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Radar de entretenimento em Franca-SP e Ribeirão Preto via Telegram (shows, cinema, séries, atrações — RSS + IA, pt-BR).",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "start": "bun run src/index.ts --loop",
+    "ingest": "bun run src/index.ts --ingest",
+    "digest": "bun run src/index.ts --digest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check --write ."
+  },
+  "dependencies": {
+    "node-cron": "^3.0.3",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.2",
+    "@types/bun": "^1.2.0",
+    "@types/node-cron": "^3.0.11",
+    "typescript": "^5.7.3"
+  }
+}

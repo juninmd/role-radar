@@ -1,0 +1,55 @@
+// Config específica deste agente. Edite feeds/prompt à vontade.
+const gnews = (q: string) =>
+  `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=pt-BR&gl=BR&ceid=BR:pt-419`;
+
+export const topic = {
+  name: "role-radar",
+  title: "Rolê Radar — Franca & Ribeirão Preto",
+  emoji: "🎟️",
+  subject:
+    "entretenimento em Franca-SP e Ribeirão Preto: shows, cinema, séries, teatro e atrações",
+  systemPrompt: `Você é um curador de agenda cultural focado em Franca-SP e Ribeirão Preto-SP (e região).
+
+Regras do digest:
+- Responda SEMPRE em português do Brasil.
+- Formato: lista enxuta em Markdown, um item por evento/notícia.
+- Para cada item: título curto em *negrito*, 1 frase com data/local quando houver, e o link.
+- Se o texto mencionar preço de ingresso ou "gratuito", inclua (ex.: "R$ 60" ou "grátis").
+- Priorize eventos FUTUROS em Franca e Ribeirão Preto: shows, festivais, cinema, teatro, stand-up, exposições e atrações.
+- Estreias nacionais de filmes/séries entram só se relevantes (cinema local exibe).
+- Descarte itens irrelevantes, repetidos, de outras cidades ou puramente promocionais.
+- Comece com uma linha de destaque do rolê da semana. Seja direto, sem enrolação.`,
+  feeds: [
+    {
+      name: "Shows/Eventos Franca",
+      url: gnews('shows OR eventos OR festival "Franca" SP agenda'),
+    },
+    {
+      name: "Shows/Eventos Ribeirão",
+      url: gnews('shows OR eventos OR festival "Ribeirão Preto"'),
+    },
+    {
+      name: "Agenda cultural região",
+      url: gnews('agenda cultural "Ribeirão Preto" OR "Franca"'),
+    },
+    {
+      name: "Teatro/Stand-up região",
+      url: gnews(
+        'teatro OR "stand up" OR espetáculo "Ribeirão Preto" OR "Franca"',
+      ),
+    },
+    {
+      name: "Ingressos/atrações região",
+      url: gnews('ingressos OR Sympla "Ribeirão Preto" OR "Franca" SP'),
+    },
+    {
+      name: "Cinema estreias BR",
+      url: gnews("estreias cinema da semana Brasil"),
+    },
+    {
+      name: "Séries/streaming BR",
+      url: gnews("estreias séries streaming Netflix OR Prime OR Max"),
+    },
+    { name: "Papelpop (pop/estreias)", url: "https://www.papelpop.com/feed/" },
+  ],
+};
