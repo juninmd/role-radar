@@ -88,6 +88,12 @@ Regras do digest:
       ),
     },
     {
+      name: "Casas de show Ribeirão 2",
+      url: gnews(
+        '"Pupo Nogueira" OR "Concha Acústica" OR "Vila do Golfe" OR "Country Club" Ribeirão show OR evento',
+      ),
+    },
+    {
       name: "Castelinho/Museu Franca",
       url: gnews(
         '"Castelinho" OR "Museu Histórico" OR "Concha Acústica" Franca evento OR show',

@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
-const CITIES = [
+const CITY_SLUGS = [
   "franca-sp",
   "ribeirao-preto-sp",
   "itirapua-sp",
   "ribeirao-corrente-sp",
   "restinga-sp",
-].map((c) => `https://www.sympla.com.br/eventos/${c}`);
+];
+// Páginas 1-2 por cidade (a 3 já vira evento corporativo/curso).
+const CITIES = CITY_SLUGS.flatMap((c) => [
+  `https://www.sympla.com.br/eventos/${c}`,
+  `https://www.sympla.com.br/eventos/${c}?page=2`,
+]);
 
 const norm = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
