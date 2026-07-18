@@ -86,6 +86,120 @@ export const FRANCA_SPOTS: SightSpot[] = [
     mapsUrl:
       "https://www.google.com/maps/search/?api=1&query=Ginasio+Pedrocao+Franca+SP",
   },
+  // ── Bares ──
+  {
+    name: "Tantra Bar",
+    description:
+      "O “restobar mais poético de Franca”: rodízio de comida de boteco (espetinhos, risotos, porções), drinks, chopp e karaokê num ambiente descontraído. Point clássico da noite francana.",
+    venue: "Tantra Bar (Rua Doutor Júlio Cardoso, 1511, Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Tantra+Bar+Franca+SP",
+  },
+  {
+    name: "Empório A Venda",
+    description:
+      "Cervejaria com 13 torneiras de chopp artesanal, porções caprichadas (bolinho de banana da terra com carne seca, queijo canastra) e boa música. Parada certa para os amantes de cerveja.",
+    venue:
+      "Empório A Venda (Av. Paulino Pucci, 922, Jardim Francano, Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Emporio+A+Venda+Franca+SP",
+  },
+  {
+    name: "Buteco de Skina",
+    description:
+      "Boteco acolhedor desde 2015, com comida de boteco raiz — maminha à moda, moela ao molho, frango na chapa e a famosa coxinha sem massa. Cerveja gelada e clima de bairro.",
+    venue: "Buteco de Skina (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Buteco+de+Skina+Franca+SP",
+  },
+  // ── Restaurantes ──
+  {
+    name: "Nonno Grill",
+    description:
+      "Buffet completo com saladas, pratos quentes e sobremesas num ambiente familiar. Boa pedida para um almoço farto no dia a dia ou fim de semana.",
+    venue:
+      "Nonno Grill (R. dos Pracinhas, 375, Residencial Paraíso, Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Nonno+Grill+Franca+SP",
+  },
+  {
+    name: "Bistrô Retrô",
+    description:
+      "Charme vintage e cozinha que mistura gastronomia brasileira e internacional. Ambiente aconchegante decorado com objetos antigos — ótimo para um jantar especial.",
+    venue: "Bistrô Retrô (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Bistro+Retro+Franca+SP",
+  },
+  {
+    name: "Saiko Nani Sushi Premium",
+    description:
+      "Culinária japonesa que combina frescor e sabor, para quem quer variar do tradicional. Rodízio e à la carte com boa reputação na cidade.",
+    venue: "Saiko Nani Sushi Premium (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Saiko+Nani+Sushi+Franca+SP",
+  },
+  // ── Cafeterias (Franca é da Alta Mogiana, terra do café) ──
+  {
+    name: "Zaz Cafeteria",
+    description:
+      "Referência em café especial em Franca, com três lojas na cidade. Cafés de várias regiões do Brasil, cookies e tortas deliciosas — perfeito para um café da tarde.",
+    venue: "Zaz Cafeteria (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Zaz+Cafeteria+Franca+SP",
+  },
+  {
+    name: "Labor Coffee & Business",
+    description:
+      "Cafeteria grande e convidativa, com cardápio de café da manhã, brunch, happy hour e cafés especiais. Bom lugar para trabalhar, conversar ou só tomar um bom café.",
+    venue: "Labor Coffee & Business (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Labor+Coffee+Franca+SP",
+  },
+  {
+    name: "Moscardini Café",
+    description:
+      "De uma das marcas mais tradicionais de café da Alta Mogiana, um espaço para se conectar com cafés de alta qualidade e harmonizações. Experiência para apreciadores.",
+    venue: "Moscardini Café (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Moscardini+Cafe+Franca+SP",
+  },
+  // ── Ao ar livre / praças ──
+  {
+    name: "Parque dos Pinhais",
+    description:
+      "Espaço verde para caminhada e lazer ao ar livre, ótimo para relaxar e curtir a natureza dentro da cidade. Leve água e tênis confortável.",
+    venue: "Parque dos Pinhais (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Parque+dos+Pinhais+Franca+SP",
+  },
+  {
+    name: "Casa do Artista Francano",
+    description:
+      "Centro cultural que promove exposições e apresentações de artistas locais. Vale conferir a programação e prestigiar a cena cultural da cidade.",
+    venue: "Casa do Artista Francano (Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Casa+do+Artista+Francano+Franca+SP",
+  },
+  {
+    name: "Praça Nossa Senhora da Conceição",
+    description:
+      "O coração de Franca, em frente à Catedral. Point de encontro no centro, com bancos à sombra, movimento e a arquitetura histórica ao redor — ótima para uma volta a pé.",
+    venue: "Praça Nossa Senhora da Conceição (Centro, Franca - SP)",
+    image: "",
+    mapsUrl:
+      "https://www.google.com/maps/search/?api=1&query=Praca+Nossa+Senhora+da+Conceicao+Franca+SP",
+  },
 ];
 
 /** Return a spot deterministically based on date so it shifts daily */
