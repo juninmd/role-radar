@@ -1,4 +1,4 @@
-import { inRegion } from "../config/region.ts";
+import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import { limpa, type Parsed, parseDataBr } from "./comum.ts";
@@ -8,7 +8,7 @@ import { limpa, type Parsed, parseDataBr } from "./comum.ts";
 const BUSCA = "https://www.ticket360.com.br/eventos/pesquisar?s=";
 const SITE = "https://www.ticket360.com.br";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-const TERMOS = ["franca", "ribeirao preto"];
+const TERMOS = SEARCH_CITIES;
 
 /** Extrai os cards de uma busca. Exportada para homologar com cidade cheia. */
 export async function scrapeTicket360(

@@ -1,4 +1,4 @@
-import { inRegion } from "../config/region.ts";
+import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import type { Parsed } from "./comum.ts";
@@ -9,7 +9,7 @@ import type { Parsed } from "./comum.ts";
 // é bem mais confiável que raspar o HTML visível.
 const BUSCA = "https://uhuu.com/busca?termo=";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-const TERMOS = ["franca", "ribeirao+preto", "batatais", "ituverava"];
+const TERMOS = SEARCH_CITIES;
 
 const campo = (bloco: string, chave: string) =>
   bloco.match(new RegExp(`${chave}:\\s*'([^']*)'`))?.[1]?.trim() ?? null;

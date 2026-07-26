@@ -1,19 +1,10 @@
-import { inRegion } from "../config/region.ts";
+import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 
-const CITY_SLUGS = [
-  "franca-sp",
-  "batatais-sp",
-  "ituverava-sp",
-  "orlandia-sp",
-  "patrocinio-paulista-sp",
-  "cristais-paulista-sp",
-  "pedregulho-sp",
-  "itirapua-sp",
-  "ribeirao-corrente-sp",
-  "restinga-sp",
-];
+// Derivado de SEARCH_CITIES: a lista de cidades vive num lugar só, então
+// incluir uma cidade nova na região passa a valer aqui automaticamente.
+const CITY_SLUGS = SEARCH_CITIES.map(citySlug);
 // Medido em 2026-07-26: as páginas 2-4 de franca-sp devolvem 24 eventos cada,
 // todos de FORA da região (o Sympla completa a lista com eventos de outras
 // cidades). Só Franca e Ribeirão têm volume pra justificar a página 2; nas
@@ -23,7 +14,6 @@ const CITY_SLUGS = [
 const CITIES = [
   ...CITY_SLUGS.map((c) => `https://www.sympla.com.br/eventos/${c}`),
   "https://www.sympla.com.br/eventos/franca-sp?page=2",
-  "https://www.sympla.com.br/eventos/ribeirao-preto-sp",
   "https://www.sympla.com.br/eventos/ribeirao-preto-sp?page=2",
 ];
 

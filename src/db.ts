@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { env } from "./config/env.ts";
-import { norm } from "./config/region.ts";
+import { norm, REGION_CITIES } from "./config/region.ts";
 
 mkdirSync(dirname(env.dbPath), { recursive: true });
 
@@ -134,6 +134,15 @@ const upsertEventStmt = db.prepare(`
  * o calculava por fora, bastava usar uma string diferente da que ia em `title`
  * pra o mesmo evento renascer com outra chave a cada rodada.
  */
+const CIDADE_CANONICA = new Map(REGION_CITIES.map((c) => [norm(c), c]));
+
+/**
+ * Cada fonte escreve a cidade do seu jeito ("Ribeirao Preto", "ribeirao preto",
+ * "RIBEIRÃO PRETO"). Sem isto viram cidades diferentes na agenda.
+ */
+const cidadeCanonica = (city: string | null) =>
+  city ? (CIDADE_CANONICA.get(norm(city)) ?? city) : null;
+
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<Event, "id" | "posted_today" | "created_at" | "trailer"> & {
@@ -146,7 +155,7 @@ export function upsertEvent(
     ev.date,
     ev.time,
     ev.venue,
-    ev.city,
+    cidadeCanonica(ev.city),
     ev.price,
     ev.link,
     ev.image,

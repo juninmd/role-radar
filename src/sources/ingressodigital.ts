@@ -1,4 +1,4 @@
-import { inRegion } from "../config/region.ts";
+import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 
@@ -8,9 +8,9 @@ import { pool } from "../pool.ts";
 const BASE =
   "https://www.ingressodigital.com/pesquisa.php?busca=S&pg=1&txt_busca=";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-// Só as duas cidades com catálogo real na plataforma; o filtro de região
-// abaixo é quem decide o que entra.
-const TERMOS = ["franca", "ribeirao+preto"];
+// Uma busca por cidade da região; o filtro de região abaixo é quem decide o
+// que entra (a busca do site casa por nome solto e traz cidade de fora).
+const TERMOS = SEARCH_CITIES;
 
 const MESES: Record<string, string> = {
   jan: "01",
@@ -64,7 +64,7 @@ export async function syncIngressoDigital(today: string): Promise<number> {
   const counts = await pool(TERMOS, 2, async (termo) => {
     let n = 0;
     try {
-      const res = await fetch(BASE + termo, {
+      const res = await fetch(BASE + encodeURIComponent(termo), {
         headers: { "user-agent": UA },
         signal: AbortSignal.timeout(15000),
       });
