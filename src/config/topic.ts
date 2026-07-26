@@ -72,5 +72,53 @@ Regras do digest:
       name: "Sampi Franca Notícias",
       url: gnews('site:sampi.net.br "Franca" "evento" OR "show" OR "agenda"'),
     },
+    {
+      name: "Bares e baladas Franca",
+      url: gnews(
+        'bar OR balada OR pub OR "casa noturna" "Franca" SP "ao vivo"',
+      ),
+    },
+    {
+      name: "Casas de evento Franca",
+      url: gnews(
+        '"Arena Branco" OR "Villa Eventos" OR "Espaço Cedro" OR "Parque de Exposições Fernando Costa" Franca',
+      ),
+    },
+    {
+      name: "Festas e festivais Franca",
+      url: gnews(
+        '"Festbar" OR "Expoagro" OR "Carnaval" OR "Festival" Franca SP',
+      ),
+    },
+    {
+      name: "Gastronomia/food truck Franca",
+      url: gnews(
+        'gastronomia OR "food truck" OR "festival gastronômico" OR "feira gastronômica" "Franca" SP',
+      ),
+    },
+    {
+      name: "Sertanejo/pagode/rock Franca",
+      url: gnews(
+        'sertanejo OR pagode OR samba OR rock show "Franca" SP ingressos',
+      ),
+    },
+    {
+      name: "Franca Basquete (jogos)",
+      url: gnews(
+        '"Sesi Franca" basquete jogo OR ingressos OR "Pedro Morilla" OR Pedrocão',
+      ),
+    },
+    {
+      name: "Corridas e esporte Franca",
+      url: gnews(
+        'corrida OR maratona OR "circuito" OR pedal "Franca" SP inscrições',
+      ),
+    },
+    {
+      name: "Divulgação em redes (Franca)",
+      url: gnews(
+        'site:instagram.com OR site:facebook.com "Franca" SP evento OR show',
+      ),
+    },
   ],
 };

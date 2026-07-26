@@ -1,3 +1,4 @@
+import { norm, REGION_CITIES } from "./config/region.ts";
 import { topic } from "./config/topic.ts";
 import {
   type Event,
@@ -8,12 +9,15 @@ import {
   pruneEventsBefore,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
+import { syncBasquete } from "./sources/basquete.ts";
 import { nowPlaying } from "./sources/cinema.ts";
+import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
+import { syncTurismo } from "./sources/turismo.ts";
 import {
   sendTelegram,
   sendTelegramAlbum,
@@ -60,19 +64,13 @@ export async function digest(): Promise<void> {
     syncSympla(today),
     syncIngresso(today),
     syncSesc(today),
+    syncTurismo(today),
+    syncDuoticket(today),
+    syncBasquete(today),
   ]);
   pruneEventsBefore(today);
-  // Cidades pedidas (normalizadas sem acento), focando exclusivamente em Franca e microregião imediata.
-  pruneDisallowedCities([
-    "franca",
-    "itirapua",
-    "ribeirao corrente",
-    "restinga",
-    "claraval",
-    "patrocinio paulista",
-    "cristais paulista",
-    "pedregulho",
-  ]);
+  // Foco exclusivo em Franca e microregião imediata.
+  pruneDisallowedCities(REGION_CITIES.map(norm));
 
   // Eventos de HOJE — um post por evento, com foto quando houver.
   const todays = eventsOn(today).filter((ev) => !ev.posted_today);

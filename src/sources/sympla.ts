@@ -1,8 +1,15 @@
 import { createHash } from "node:crypto";
+import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 
 const CITY_SLUGS = [
   "franca-sp",
+  "batatais-sp",
+  "ituverava-sp",
+  "orlandia-sp",
+  "patrocinio-paulista-sp",
+  "cristais-paulista-sp",
+  "pedregulho-sp",
   "itirapua-sp",
   "ribeirao-corrente-sp",
   "restinga-sp",
@@ -12,14 +19,6 @@ const CITIES = CITY_SLUGS.flatMap((c) => [
   `https://www.sympla.com.br/eventos/${c}`,
   `https://www.sympla.com.br/eventos/${c}?page=2`,
 ]);
-
-const norm = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-
-// Só cidades pedidas — páginas pequenas do Sympla vazam eventos de fora.
-const ALLOWED = new Set(
-  ["Franca", "Itirapuã", "Ribeirão Corrente", "Restinga"].map(norm),
-);
 
 interface SymplaEvent {
   name: string;
@@ -52,8 +51,9 @@ export async function syncSympla(today: string): Promise<number> {
         }
         if (!ev.name || !ev.url || !ev.start_date) continue;
         // Páginas de cidade pequena vazam eventos de fora da região pedida.
-        if (!ev.location?.city || !ALLOWED.has(norm(ev.location.city)))
-          continue;
+        if (!inRegion(ev.location?.city)) continue;
+        // Webinar/curso online não é rolê — o Sympla marca isso no nome do local.
+        if (/\bonline\b/i.test(ev.location?.name ?? "")) continue;
         // start_date vem em UTC; evento local = UTC-3.
         const local = new Date(ev.start_date);
         local.setUTCHours(local.getUTCHours() - 3);
