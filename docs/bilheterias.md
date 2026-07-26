@@ -1,110 +1,74 @@
-# Bilheterias — planilha de validação
+# Bilheterias — status da varredura
 
-Rastreio de quais plataformas de ingresso têm eventos de **Franca-SP e região**.
+Escopo do radar: **Franca-SP em primeiro lugar**, a microregião imediata como
+complemento e **Ribeirão Preto** também aceito. A ordem de exibição segue essa
+prioridade (`cityRank` em `src/config/region.ts`).
 
-> **Leia antes de confiar em qualquer linha "sem Franca":** a varredura automática
-> **chuta a URL de busca** de cada site. Quando o site é SPA, a URL chutada devolve
-> só o esqueleto HTML — nenhum evento aparece e a conclusão sai errada. Foi assim
-> que a Mega Bilheteria foi marcada como "sem Franca" indevidamente: a busca real
-> dela é uma API que não tem nada a ver com a URL testada.
-
-## Como validar (receita que resolveu a Mega Bilheteria)
-
-1. Abra o site, **F12 → aba Network → filtro Fetch/XHR**.
-2. Use a busca do próprio site (digite "Franca", escolha a cidade no seletor).
-3. Olhe a requisição que aparece: essa é a API real. Copie a URL completa.
-4. Cole na coluna **Endpoint real** da tabela.
-
-Exemplo resolvido:
-
-```
-GET https://web.megabilheteria.com/api/public/v2/events?size=15&name=franca&page=1
-```
-
-Detalhe achado nessa API: **nenhum** parâmetro de cidade funciona (`city`,
-`cityName`, `city_path`, `state`, `uf` — todos são ignorados e devolvem o
-catálogo inteiro). O que funciona é `name=franca` (casa cidade e nome) ou
-paginar tudo (~230 eventos, 3 páginas de 100) e filtrar pelo campo `city` de
-cada item. A integração usa a segunda opção, que não depende de o filtro existir.
+> **Lição do rastreio:** a varredura automática chutava a URL de busca de cada
+> site. Quando o site é SPA, a URL chutada devolve só o esqueleto e o veredito
+> sai errado — foi assim que Mega Bilheteria, OTicket, Blueticket e Ingresso
+> Digital foram marcadas como "sem Franca" indevidamente. As quatro têm eventos.
+> O jeito certo é abrir **F12 → Network → Fetch/XHR** e usar a busca do site.
 
 ## Integradas
 
-| Plataforma | Como entra | Observação |
+| Plataforma | Endpoint | Observação |
 |---|---|---|
-| Sympla | página por cidade, payload RSC | páginas 2+ das cidades pequenas não têm nada exclusivo |
+| Sympla | página por cidade (payload RSC) | páginas 2+ das cidades pequenas não têm nada exclusivo |
 | Duoticket | home + página de cada evento | local/horário/título completo só existem no detalhe |
-| Evento ON (vitrine da Q2) | `/cidade/franca-sp` | vende p/ Morada du Capiau, Teatro Municipal, Villa, Royal |
-| Mega Bilheteria | API pública v2, catálogo inteiro | **achada por você**; hoje 1 evento em Franca |
-| Ingresso.com | API de conteúdo | filmes em cartaz + estreias, com trailer e pôster |
+| Evento ON (vitrine da Q2) | `/cidade/franca-sp` | Morada du Capiau, Teatro Municipal, Villa, Royal |
+| Mega Bilheteria | `web.megabilheteria.com/api/public/v2/events` | filtro de cidade não existe: pagina tudo e filtra localmente |
+| OTicket | `api.oticket.com.br/search?city=&producer=` | empresa é de Franca; traz Club Show, Paggio, Unifran |
+| Blueticket | `api2.blueticket.com.br/events/?origin=capa&pdv=100` | `city` é ignorado; cobre Ribeirão Preto |
+| Ingresso Digital | `/pesquisa.php?busca=S&pg=1&txt_busca=` | HTML server-side; teatro e stand-up |
+| Ingresso.com | API de conteúdo | filmes em cartaz e estreias, com trailer e pôster |
 | Sesc Franca | API de atividades | |
 | Prefeitura (turismo) | HTML da agenda oficial | |
 | Franca Basquete | tabela de jogos | só mando de quadra; fora de temporada devolve 0 |
 | Franca Shopping | HTML de eventos | temporadas longas: circo, parque, exposição |
 
-## A validar — suspeitas ALTAS (resposta pequena demais = provável SPA)
+### Armadilhas de cada API integrada
 
-Estas devolveram HTTP 200 com corpo minúsculo, ou seja, o robô viu só o
-esqueleto da página. **Mesmo sintoma da Mega Bilheteria.** São as mais prováveis
-de estarem erradas.
+- **Mega Bilheteria** — `city`, `cityName`, `city_path`, `state` e `uf` são
+  todos ignorados e devolvem o catálogo inteiro (~230 itens, 3 páginas de 100).
+  Link do evento: `/evento?id={code}`, padrão que vazou no template do site.
+- **OTicket** — `?city=franca` funciona, mas só com match exato e sem acento
+  (`?city=ribeirao preto` devolve 0). Pedir `city=` vazio traz os ~96 eventos de
+  todas as cidades numa requisição. Link: `/event/{slug}`. O catálogo contém
+  evento de teste do operador ("EVENTO TESTE ALEXANDRE"), filtrado por nome.
+- **Blueticket** — `?city=Franca` devolve exatamente a mesma lista que
+  `?city=Ribeirão Preto`: o parâmetro é ignorado. O campo `url` do JSON é a
+  **imagem**, não a página; `listingUrl` vem vazio. A API às vezes responde 200
+  com corpo `null`.
+- **Ingresso Digital** — a data vem sem ano ("14 de Ago às 19:00"); assume-se o
+  próximo ano em que a data ainda é futura. Paginação morre na página 1.
 
-| Plataforma | URL que testei | Resposta | Endpoint real (preencher) | Tem Franca? |
-|---|---|---|---|---|
-| Blueticket | `blueticket.com.br/busca?q=franca` | 200, 3 KB | | |
-| Ingresso Nacional | `ingressonacional.com.br/?s=franca` | 200, 5 KB | | |
-| GuicheWeb | `guicheweb.com.br/busca?termo=franca` | 200, 10 KB | | |
-| Q2 Ingressos | `q2ingressos.com.br/api/events` | 200, mas é HTML de SPA | | via Evento ON |
-| OTicket | `oticket.com.br/eventos` | 200, RSC do Next | | "Franca" no HTML é o endereço da empresa |
+## Confirmadas sem eventos da região
 
-## A validar — suspeitas MÉDIAS (rota chutada deu 404)
-
-O 404 pode significar "não existe evento" ou simplesmente "a rota de busca tem
-outro nome". Não dá pra concluir nada.
-
-| Plataforma | URL que testei | Resposta | Endpoint real (preencher) | Tem Franca? |
-|---|---|---|---|---|
-| Ticket360 | `/busca?busca=franca` e `/api/eventos?cidade=franca` | 404 | | |
-| Ingresso Digital | `/busca?q=franca` | 404 | | |
-| Venda Ingresso | `/busca/franca` | 404 | | |
-| Ticket Fácil | `/busca?q=franca` | 404 | | |
-| Bilheteria Digital | `/eventos/franca` | 404 | | |
-| BaladApp | `/franca-sp` | 404 | | |
-| Uhuu (API) | `api.uhuu.com/v1/events?search=franca` | 404 | | |
-
-## A validar — suspeitas BAIXAS (página cheia veio e não citou Franca)
-
-Aqui o corpo veio grande de verdade e mesmo assim não apareceu "Franca". É o
-grupo mais confiável, mas ainda vale conferir o seletor de cidade do site.
-
-| Plataforma | URL que testei | Resposta | Tem Franca? |
-|---|---|---|---|
-| Clube do Ingresso | `/busca?q=franca` | 200, 817 KB | |
-| Bilheteria Express | `/?s=franca` | 200, 292 KB | |
-| Meu Bilhete | `/eventos?busca=franca` | 200, 201 KB | |
-| Total Acesso | `/busca?q=franca` | 200, 40 KB | |
-| Uhuu | `/busca?q=franca` | 200, 51 KB | |
-| Ingresse | `/busca?q=franca` | 200, 36 KB | |
-| Quero Ingresso | `/eventos/franca-sp` | 200, 27 KB | |
-| TicketMais | home | 200 | |
-| Alô Ingressos | home | 200 | |
-| Eventbrite | `/d/brazil--franca/` | JSON-LD é de eventos globais | não |
+Endpoint real localizado, busca respondeu, nenhum evento de Franca/região:
+Ticket360 (`/eventos/pesquisar?s=`), Ticket Fácil (`/search.html?q=`),
+Bilheteria Digital (`/busca/franca/as/1`), Uhuu (`/busca?termo=`),
+Bilheteria Express (`/agendas/`), GuicheWeb (`/pesquisa/`), BaladApp
+(`/?search=`), Ingresso Nacional (`/api/paginas/eventos.php`), Venda Ingresso,
+Clube do Ingresso, Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
+TicketMais, Alô Ingressos, Eventbrite.
 
 ## Sem resposta
 
 | Plataforma | Problema |
 |---|---|
 | Eventim | timeout em toda tentativa |
-| Ticket Club | conexão recusada |
-| Brasil Ticket | conexão recusada |
+| Ticket Club / Brasil Ticket | conexão recusada |
 | Songkick | 406 em qualquer User-Agent |
 | Bandsintown | 403 |
 
-## Redes sociais (todas inviáveis hoje)
+## Redes sociais
 
 | Rede | Situação |
 |---|---|
-| Reddit | 403 no `.json` e no subreddit, qualquer User-Agent |
-| Bluesky | 403 no `public.api.bsky.app` |
-| Facebook | `/events/explore/...` responde 200 sem nome de evento no HTML |
-| Twitter/X | exige auth; Nitter devolve corpo vazio |
-| Mastodon | API aberta e funcional, mas sem nada de Franca |
-| Instagram | sem API pública; cobertura indireta via Google News `site:instagram.com` |
+| Reddit | 403 no `.json` e no subreddit |
+| Bluesky | 403 na API pública |
+| Facebook | 200, sem nome de evento no HTML |
+| Twitter / X | exige auth; Nitter devolve vazio |
+| Mastodon | API aberta e funcional, sem nada de Franca |
+| Instagram | sem API; indireto via Google News `site:instagram.com` |

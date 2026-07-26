@@ -1,4 +1,4 @@
-import { norm, REGION_CITIES } from "./config/region.ts";
+import { cityRank, norm, REGION_CITIES } from "./config/region.ts";
 import { topic } from "./config/topic.ts";
 import {
   type Event,
@@ -11,13 +11,16 @@ import {
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
 import { syncBasquete } from "./sources/basquete.ts";
+import { syncBlueticket } from "./sources/blueticket.ts";
 import { nowPlaying } from "./sources/cinema.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
+import { syncIngressoDigital } from "./sources/ingressodigital.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
+import { syncOticket } from "./sources/oticket.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
@@ -75,14 +78,20 @@ export async function digest(): Promise<void> {
     syncBasquete(today),
     syncFrancaShopping(today),
     syncMegabilheteria(today),
+    syncOticket(today),
+    syncBlueticket(today),
+    syncIngressoDigital(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
   pruneDisallowedCities(REGION_CITIES.map(norm));
   pruneOnlineEvents();
 
-  // Eventos de HOJE — um post por evento, com foto quando houver.
-  const todays = eventsOn(today).filter((ev) => !ev.posted_today);
+  // Eventos de HOJE — um post por evento, com foto quando houver. Franca sai
+  // primeiro; Ribeirão Preto, por último.
+  const todays = eventsOn(today)
+    .filter((ev) => !ev.posted_today)
+    .sort((a, b) => cityRank(a.city) - cityRank(b.city));
   // og:image de todos de uma vez; o envio é que precisa ser serial (Telegram).
   const images = await Promise.all(
     todays.map(
@@ -141,15 +150,22 @@ export async function digest(): Promise<void> {
       byDay.set(ev.date, [...(byDay.get(ev.date) ?? []), ev]);
     }
     const blocks = [...byDay.entries()].map(([date, evs]) => {
-      const rows = evs.map((ev) => {
-        const bits = [ev.time, ev.venue, ev.price].filter(Boolean).join(" · ");
-        const title = ev.link ? `[${ev.title}](${ev.link})` : `*${ev.title}*`;
-        return `• ${title}${bits ? `\n  ${bits}` : ""}`;
-      });
+      const rows = [...evs]
+        .sort((a, b) => cityRank(a.city) - cityRank(b.city))
+        .map((ev) => {
+          // Fora de Franca, a cidade precisa aparecer — senão parece rolê local.
+          const where =
+            cityRank(ev.city) === 0
+              ? ev.venue
+              : [ev.venue, ev.city].filter(Boolean).join(", ");
+          const bits = [ev.time, where, ev.price].filter(Boolean).join(" · ");
+          const title = ev.link ? `[${ev.title}](${ev.link})` : `*${ev.title}*`;
+          return `• ${title}${bits ? `\n  ${bits}` : ""}`;
+        });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
     });
     await sendTelegram(
-      `${topic.emoji} *Agenda — próximos 7 dias em Franca-SP*\n\n${blocks.join("\n\n")}`,
+      `${topic.emoji} *Agenda — próximos 7 dias em Franca e região*\n\n${blocks.join("\n\n")}`,
     );
     console.log(`[digest] agenda com ${week.length} evento(s)`);
   }
