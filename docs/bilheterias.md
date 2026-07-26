@@ -21,6 +21,7 @@ prioridade (`cityRank` em `src/config/region.ts`).
 | OTicket | `api.oticket.com.br/search?city=&producer=` | empresa é de Franca; traz Club Show, Paggio, Unifran |
 | Blueticket | `api2.blueticket.com.br/events/?origin=capa&pdv=100` | `city` é ignorado; cobre Ribeirão Preto |
 | Ingresso Digital | `/pesquisa.php?busca=S&pg=1&txt_busca=` | HTML server-side; teatro e stand-up |
+| Ingresso Nacional | `/api/paginas/eventos.php` | **só responde JSON com os headers do AngularJS** (ver abaixo); Theatro Pedro II |
 | Ingresso.com | API de conteúdo | filmes em cartaz e estreias, com trailer e pôster |
 | Sesc Franca | API de atividades | |
 | Prefeitura (turismo) | HTML da agenda oficial | |
@@ -42,6 +43,23 @@ prioridade (`cityRank` em `src/config/region.ts`).
   com corpo `null`.
 - **Ingresso Digital** — a data vem sem ano ("14 de Ago às 19:00"); assume-se o
   próximo ano em que a data ainda é futura. Paginação morre na página 1.
+
+### Ingresso Nacional: o header é o segredo
+
+O endpoint é o que você achou, mas ele responde três coisas diferentes segundo
+o cabeçalho — e só uma delas é o catálogo:
+
+| Requisição | Resposta |
+|---|---|
+| `GET eventos.php` sem header especial | HTML da SPA (5 KB) |
+| `+ accept: application/json` | **406** |
+| `+ accept: application/json, text/plain, */*` e `x-requested-with: XMLHttpRequest` | **JSON, 175 KB, 212 eventos** |
+
+É o `Accept` do `$http` do AngularJS. Campos úteis: `DataOrdem` ("20260730",
+já ordenável), `Cidade`, `Local`, `Nome`, `IDEvento`, `urlEvento`, e as flags
+`Cancelado`/`Adiado`. Link: `/evento/{IDEvento}/{urlEvento}` — o roteador usa o
+id, então o slug pode variar. O payload traz só o nome do arquivo da imagem e
+não achei a base pública; o digest cobre com og:image.
 
 ## Armadilha do Telegram (custou um bug em produção)
 

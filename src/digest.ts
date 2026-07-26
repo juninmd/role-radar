@@ -20,6 +20,7 @@ import { syncEventoon } from "./sources/eventoon.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { syncIngressoDigital } from "./sources/ingressodigital.ts";
+import { syncIngressoNacional } from "./sources/ingressonacional.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
@@ -103,32 +104,45 @@ export async function digest(): Promise<void> {
     syncBilheteriaDigital(today),
     syncTicket360(today),
     syncTicketFacil(today),
+    syncIngressoNacional(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
   pruneDisallowedCities(REGION_CITIES.map(norm));
   pruneOnlineEvents();
 
-  // Eventos de HOJE — um post por evento, com foto quando houver. Franca sai
-  // primeiro; Ribeirão Preto, por último.
-  const todays = eventsOn(today)
-    .filter((ev) => !ev.posted_today)
-    .sort((a, b) => cityRank(a.city) - cityRank(b.city));
+  // O digest sai em dois blocos: tudo de Franca primeiro, depois as outras
+  // cidades. Misturar fazia rolê de Ribeirão parecer coisa daqui.
+  const todays = eventsOn(today).filter((ev) => !ev.posted_today);
+  const todaysFranca = todays.filter((ev) => cityRank(ev.city) === 0);
+  const todaysFora = todays.filter((ev) => cityRank(ev.city) !== 0);
+
   // og:image de todos de uma vez; o envio é que precisa ser serial (Telegram).
-  const images = await Promise.all(
-    todays.map(
-      (ev) =>
-        ev.image ?? (ev.link ? fetchOgImage(ev.link).catch(() => null) : null),
+  const capa = new Map(
+    await Promise.all(
+      todays.map(
+        async (ev) =>
+          [
+            ev.id,
+            ev.image ??
+              (ev.link ? await fetchOgImage(ev.link).catch(() => null) : null),
+          ] as const,
+      ),
     ),
   );
-  for (const [i, ev] of todays.entries()) {
-    const image = images[i];
-    const body = `⚡ *É HOJE!*\n\n${eventLines(ev)}`;
-    if (image) await sendTelegramPhoto(body, image);
-    else await sendTelegram(body);
-  }
-  markEventsPosted(todays.map((ev) => ev.id));
-  if (todays.length) console.log(`[digest] ${todays.length} evento(s) de hoje`);
+
+  const postaDia = async (lista: Event[], selo: string) => {
+    for (const ev of lista) {
+      const body = `${selo}\n\n${eventLines(ev)}`;
+      const image = capa.get(ev.id);
+      if (image) await sendTelegramPhoto(body, image);
+      else await sendTelegram(body);
+    }
+  };
+
+  await postaDia(todaysFranca, "⚡ *É HOJE EM FRANCA!*");
+  if (todaysFranca.length)
+    console.log(`[digest] ${todaysFranca.length} evento(s) de hoje em Franca`);
 
   // Filmes em cartaz HOJE — um post por cidade.
   const cinema = await nowPlaying();
@@ -164,39 +178,56 @@ export async function digest(): Promise<void> {
     await sendTelegram(spotBody);
   }
 
-  // Agenda dos próximos 7 dias — um post agrupado por dia.
+  // Agenda dos próximos 7 dias — um post agrupado por dia, também separada.
   const week = eventsBetween(addDays(today, 1), addDays(today, 7));
-  if (week.length) {
+  const agenda = async (lista: Event[], titulo: string, comCidade: boolean) => {
+    if (!lista.length) return;
     const byDay = new Map<string, Event[]>();
-    for (const ev of week) {
+    for (const ev of lista) {
       byDay.set(ev.date, [...(byDay.get(ev.date) ?? []), ev]);
     }
     const blocks = [...byDay.entries()].map(([date, evs]) => {
-      const rows = [...evs]
-        .sort((a, b) => cityRank(a.city) - cityRank(b.city))
-        .map((ev) => {
-          // Fora de Franca, a cidade precisa aparecer — senão parece rolê local.
-          const where =
-            cityRank(ev.city) === 0
-              ? ev.venue
-              : [ev.venue, ev.city].filter(Boolean).join(", ");
-          const bits = [ev.time, where, ev.price]
-            .filter(Boolean)
-            .map((s) => mdSafe(String(s)))
-            .join(" · ");
-          const title = ev.link
-            ? `[${mdSafe(ev.title)}](${ev.link})`
-            : `*${mdSafe(ev.title)}*`;
-          return `• ${title}${bits ? `\n  ${bits}` : ""}`;
-        });
+      const rows = evs.map((ev) => {
+        const where = comCidade
+          ? [ev.venue, ev.city].filter(Boolean).join(", ")
+          : ev.venue;
+        const bits = [ev.time, where, ev.price]
+          .filter(Boolean)
+          .map((s) => mdSafe(String(s)))
+          .join(" · ");
+        const title = ev.link
+          ? `[${mdSafe(ev.title)}](${ev.link})`
+          : `*${mdSafe(ev.title)}*`;
+        return `• ${title}${bits ? `\n  ${bits}` : ""}`;
+      });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
     });
+    await sendTelegram(`${titulo}\n\n${blocks.join("\n\n")}`);
+  };
+
+  const weekFranca = week.filter((ev) => cityRank(ev.city) === 0);
+  const weekFora = week.filter((ev) => cityRank(ev.city) !== 0);
+  await agenda(
+    weekFranca,
+    `${topic.emoji} *Agenda — próximos 7 dias em Franca*`,
+    false,
+  );
+
+  // ---- daqui pra baixo, só o que NÃO é de Franca ----
+  if (todaysFora.length || weekFora.length) {
     await sendTelegram(
-      `${topic.emoji} *Agenda — próximos 7 dias em Franca e região*\n\n${blocks.join("\n\n")}`,
+      "🗺️ *Fora de Franca — região e Ribeirão Preto*\n\nO que rola nas cidades vizinhas se você topar pegar a estrada.",
     );
-    console.log(`[digest] agenda com ${week.length} evento(s)`);
+    await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
+    await agenda(
+      weekFora,
+      `${topic.emoji} *Agenda — próximos 7 dias na região*`,
+      true,
+    );
   }
 
-  if (!todays.length && !week.length)
-    console.log("[digest] nenhum evento com data no período");
+  markEventsPosted(todays.map((ev) => ev.id));
+  console.log(
+    `[digest] hoje: ${todaysFranca.length} em Franca + ${todaysFora.length} fora | semana: ${weekFranca.length} + ${weekFora.length}`,
+  );
 }

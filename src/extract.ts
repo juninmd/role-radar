@@ -13,6 +13,8 @@ Regras:
 - A data de publicação da notícia NÃO é a data do evento — nunca a use. Texto sem data do evento → NÃO inclua.
 - SÓ eventos em Franca-SP (prioridade), nas cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, Batatais, Orlândia, etc.) ou em Ribeirão Preto. Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
 - Vale qualquer tipo de rolê com data: shows, teatro, stand-up, festivais, feiras/exposições, jogos de basquete (Sesi Franca) e futebol da região, passeios e eventos gratuitos.
+- Para JOGO, o título é só o confronto: "Francana x Ponte Preta" ou "Sesi Franca x Flamengo" — nunca a manchete ("Molecada em campo: times sub-13...").
+- O título é o NOME do evento, curto, como estaria no cartaz. Se a manchete não permitir extrair um nome de evento curto, NÃO inclua o item.
 - price só se o texto mencionar valor ou gratuidade.
 - Eventos passados em relação à data de hoje → NÃO inclua.
 - NUNCA invente eventos: cada evento precisa vir de um item da lista e "item" deve ser o número dele.
@@ -43,6 +45,22 @@ const DATE_HINT =
 
 const hasDateHint = (it: Item) =>
   DATE_HINT.test(`${it.title} ${it.summary ?? ""}`);
+
+// Verbo conjugado é o que separa manchete de nome de evento: "a Molecada
+// ENTRA em campo" é notícia; "Festival Cada Um na Sua" é evento.
+const VERBO_DE_MANCHETE =
+  /\b(t[êe]m|tem|entra[mr]?|acontece[rm]?|ser[áã]o?|vai|v[ãa]o|abre[mr]?|fecha[mr]?|recebe[mr]?|confira|veja|saiba|anuncia|divulga|come[çc]a[mr]?|termina[mr]?|est[áã]o?|faz|fazem|busca[mr]?|leva[mr]?|traz(em)?|pode[mr]?)\b/i;
+
+/**
+ * A IA às vezes devolve a manchete inteira como "evento". Rejeita título com
+ * cara de notícia — exceto confronto esportivo ("Francana x Ponte Preta"),
+ * que é nome de evento legítimo mesmo com poucas palavras.
+ */
+function pareceNoticia(title: string): boolean {
+  const t = title.trim();
+  if (/\s+x\s+/i.test(t) && t.split(/\s+/).length <= 8) return false;
+  return t.split(/\s+/).length > 10 || VERBO_DE_MANCHETE.test(t);
+}
 
 const chunk = <T>(list: T[], size: number): T[][] => {
   const out: T[][] = [];
@@ -89,9 +107,16 @@ async function runBatch(today: string, batch: Item[]): Promise<number> {
   }
 
   let stored = 0;
+  let recusados = 0;
   for (const ev of events) {
     if (!ev.title || !/^\d{4}-\d{2}-\d{2}$/.test(ev.date ?? "")) continue;
     if (ev.date < today) continue;
+    if (pareceNoticia(ev.title)) {
+      recusados++;
+      if (process.env.DEBUG_EXTRACT)
+        console.log(`[extract] recusado (manchete): ${ev.title}`);
+      continue;
+    }
     // Anti-alucinação: todo evento precisa apontar p/ um item real do lote.
     const src = batch[ev.item - 1];
     if (!src) continue;
@@ -107,6 +132,8 @@ async function runBatch(today: string, batch: Item[]): Promise<number> {
     });
     stored++;
   }
+  if (recusados)
+    console.log(`[extract] ${recusados} manchete(s) recusada(s) como evento`);
   return stored;
 }
 
