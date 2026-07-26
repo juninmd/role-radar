@@ -78,10 +78,23 @@ Regras do digest:
         'bar OR balada OR pub OR "casa noturna" "Franca" SP "ao vivo"',
       ),
     },
+    // Casas levantadas a partir do histórico de eventos da cidade.
     {
       name: "Casas de evento Franca",
       url: gnews(
-        '"Arena Branco" OR "Villa Eventos" OR "Espaço Cedro" OR "Parque de Exposições Fernando Costa" Franca',
+        '"Morada du Capiau" OR "Villa Eventos" OR "Arena Branco" OR "Espaço Cedro" OR "Parque de Exposições Fernando Costa" Franca',
+      ),
+    },
+    {
+      name: "Clubes e teatros Franca",
+      url: gnews(
+        '"Clube AEC Castelinho" OR "Clube de Campo da Franca" OR "Teatro Municipal José Cyrino Goulart" OR "Teatro Judas Iscariotes" OR "Green Hall" Franca',
+      ),
+    },
+    {
+      name: "Bares com show Franca",
+      url: gnews(
+        '"Barracão Skate Club" OR "The Roots" OR "Jardim dos Sonhos" OR "Espaço Creoulla" OR "Quintal do Rosa" OR "Agrobar" OR Santorini Franca',
       ),
     },
     {

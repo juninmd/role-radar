@@ -12,6 +12,7 @@ import { extractEvents } from "./extract.ts";
 import { syncBasquete } from "./sources/basquete.ts";
 import { nowPlaying } from "./sources/cinema.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
+import { syncEventoon } from "./sources/eventoon.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -66,6 +67,7 @@ export async function digest(): Promise<void> {
     syncSesc(today),
     syncTurismo(today),
     syncDuoticket(today),
+    syncEventoon(today),
     syncBasquete(today),
   ]);
   pruneEventsBefore(today);
