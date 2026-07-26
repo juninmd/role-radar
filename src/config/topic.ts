@@ -138,6 +138,40 @@ Regras do digest:
         'corrida OR maratona OR "circuito" OR pedal "Franca" SP inscrições',
       ),
     },
+    // Casas mapeadas no OpenStreetMap de Franca que não apareciam em nenhuma
+    // bilheteria — o levantamento saiu do Overpass (amenity=bar/pub/events_venue).
+    {
+      name: "Casas de evento (mapa) Franca",
+      url: gnews(
+        '"Clube da Velha Guarda" OR "Lolla Eventos" OR "Cry for Me" OR "Espaço Olympia" OR "Spazio" OR "Viola Mix" OR "Arena Premium" Franca SP',
+      ),
+    },
+    {
+      name: "Bares do mapa Franca",
+      url: gnews(
+        '"Armazém 43" OR "The Spot" OR "Pub Zé Brasil" OR "Bar do Coqueiro" OR "Kaká Espeto" OR "Moinho\'s" OR "Padrão 12" Franca SP',
+      ),
+    },
+    {
+      // Teatro popular e o circuito de praças/parques (Corredor Cultural).
+      name: "Teatro popular e praças Franca",
+      url: gnews(
+        '"Teatro Popular" OR "Corredor Cultural" OR "Bosque Allan Kardec" OR "Parque Francal" OR "Praça dos Angicos" Franca SP',
+      ),
+    },
+    {
+      // Futebol da cidade: a extração já pegou jogos de base pelo jornal local.
+      name: "Futebol de Franca (Francana/Veterana)",
+      url: gnews(
+        'Francana OR Veterana OR "Nho Chico" OR "Lanchão" jogo OR partida Franca SP',
+      ),
+    },
+    {
+      name: "Franca Shopping (temporadas)",
+      url: gnews(
+        '"Franca Shopping" circo OR exposição OR parque OR evento OR "Le Cirque"',
+      ),
+    },
     {
       name: "Divulgação em redes (Franca)",
       url: gnews(

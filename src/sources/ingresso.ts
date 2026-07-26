@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 const CITIES = [{ id: 192, label: "Cinema Moviecom Franca" }];
@@ -10,8 +9,6 @@ interface Movie {
   siteURL?: string;
   urlKey?: string;
 }
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
 /** localDate ISO ("2026-07-23T00:00:00+00:00") → "2026-07-23", ou null. */
 function toIso(raw?: string): string | null {
@@ -45,7 +42,6 @@ export async function syncIngresso(today: string): Promise<number> {
         if (!m.title || !premiere) continue;
         if (premiere < today || premiere > horizon) continue;
         upsertEvent({
-          id: hash(`${m.title.toLowerCase().trim()}|${premiere}`),
           title: `Estreia: ${m.title.trim()}`,
           date: premiere,
           time: null,

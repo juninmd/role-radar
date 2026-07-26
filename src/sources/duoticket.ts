@@ -1,15 +1,14 @@
-import { createHash } from "node:crypto";
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { pool } from "../pool.ts";
 
 // Duoticket é a bilheteria com maior presença em Franca (festas, sertanejo,
 // pagode, corridas). A home lista "Próximos Eventos" de todas as cidades.
 const BASE = "https://duoticket.com.br";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 // Teto de requisições de detalhe por execução (local/horário só existem lá).
-const MAX_DETAILS = 25;
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
+// Com o pool o custo é ~10 rodadas, então cabe mais fundo na lista da home.
+const MAX_DETAILS = 40;
 
 const decode = (s: string) =>
   s
@@ -93,12 +92,12 @@ export async function syncDuoticket(today: string): Promise<number> {
       });
     }
 
-    for (const ev of found.slice(0, MAX_DETAILS)) {
+    // Detalhes em pool: 25 páginas em série eram o trecho mais lento do digest.
+    await pool(found.slice(0, MAX_DETAILS), 4, async (ev) => {
       const { title = null, venue = null, time = null } = await detail(ev.link);
       // O título da listagem vem cortado; o da página do evento é o completo.
       const full = title ?? ev.title;
       upsertEvent({
-        id: hash(`${full.toLowerCase()}|${ev.date}`),
         title: full,
         date: ev.date,
         time,
@@ -109,7 +108,7 @@ export async function syncDuoticket(today: string): Promise<number> {
         image: ev.image,
       });
       stored++;
-    }
+    });
     if (found.length > MAX_DETAILS)
       console.warn(
         `[duoticket] ${found.length - MAX_DETAILS} evento(s) além do teto de ${MAX_DETAILS}`,

@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 // group_id de cada unidade SESC (via /wp/v1/unidades-atividades).
@@ -16,8 +15,6 @@ interface Atividade {
   gratuito?: string;
   unidade?: { name?: string }[];
 }
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
 /** SESC Franca via API pública de atividades (JSON, com imagem/data). */
 export async function syncSesc(today: string): Promise<number> {
@@ -39,7 +36,6 @@ export async function syncSesc(today: string): Promise<number> {
           ? `${a.titulo.trim()} (${a.complemento.trim()})`
           : a.titulo.trim();
         upsertEvent({
-          id: hash(`${a.titulo.toLowerCase().trim()}|${date}`),
           title,
           date,
           time,

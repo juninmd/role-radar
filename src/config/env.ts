@@ -33,6 +33,7 @@ export const env = {
 
   dbPath: process.env.DB_PATH ?? "./data/store.db",
   maxItemsPerFeed: num(process.env.MAX_ITEMS_PER_FEED, 20),
-  digestMaxItems: num(process.env.DIGEST_MAX_ITEMS, 40),
+  // Teto de itens enviados à IA por digest (em lotes paralelos, não numa call).
+  digestMaxItems: num(process.env.DIGEST_MAX_ITEMS, 120),
   feedTimeoutMs: num(process.env.FEED_TIMEOUT_MS, 12000),
 };

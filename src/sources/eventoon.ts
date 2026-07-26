@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 
@@ -6,8 +5,6 @@ import { upsertEvent } from "../db.ts";
 // como a Morada du Capiau e o Teatro Municipal, ausentes de Sympla/Duoticket.
 const URL = "https://www.eventoon.com.br/cidade/franca-sp";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
 const decode = (s: string) =>
   s
@@ -48,7 +45,6 @@ export async function syncEventoon(today: string): Promise<number> {
       if (!inRegion(city)) continue;
 
       upsertEvent({
-        id: hash(`${title.toLowerCase()}|${date}`),
         title,
         date,
         time: null,

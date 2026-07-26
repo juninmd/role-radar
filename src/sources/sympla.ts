@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { pool } from "../pool.ts";
 
 const CITY_SLUGS = [
   "franca-sp",
@@ -28,12 +28,11 @@ interface SymplaEvent {
   location?: { name?: string; city?: string };
 }
 
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
-
 /** Scrape Sympla city listings (RSC payload) into structured events. */
 export async function syncSympla(today: string): Promise<number> {
-  let stored = 0;
-  for (const url of CITIES) {
+  // 20 páginas em série pagavam 20x o timeout; em pool são ~4 rodadas.
+  const perUrl = await pool(CITIES, 5, async (url) => {
+    let n = 0;
     try {
       const res = await fetch(url, {
         headers: { "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
@@ -61,7 +60,6 @@ export async function syncSympla(today: string): Promise<number> {
         const time = local.toISOString().slice(11, 16);
         if (date < today) continue;
         upsertEvent({
-          id: hash(`${ev.name.toLowerCase().trim()}|${date}`),
           title: ev.name.trim(),
           date,
           time,
@@ -71,12 +69,15 @@ export async function syncSympla(today: string): Promise<number> {
           link: ev.url,
           image: ev.images?.lg ?? ev.images?.original ?? null,
         });
-        stored++;
+        n++;
       }
     } catch (err) {
       console.warn(`[sympla] falhou ${url}: ${err}`);
     }
-  }
+    return n;
+  });
+
+  const stored = perUrl.reduce((a, b) => a + b, 0);
   console.log(`[sympla] ${stored} eventos`);
   return stored;
 }

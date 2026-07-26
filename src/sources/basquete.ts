@@ -1,12 +1,9 @@
-import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 // Sesi Franca Basquete — só os jogos EM CASA (Pedrocão) interessam ao radar.
 // Fora de temporada (NBB vai de outubro a junho) a tabela não traz jogos futuros.
 const URL = "https://francabasquete.com.br/calendario/partidas";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
 const text = (html: string) =>
   html
@@ -55,7 +52,6 @@ export async function syncBasquete(today: string): Promise<number> {
       const title = `🏀 ${versus ?? "Sesi Franca"}${league ? ` — ${league}` : ""}`;
 
       upsertEvent({
-        id: hash(`basquete|${date}|${versus ?? league}`),
         title,
         date,
         time: when[4] ?? null,

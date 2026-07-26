@@ -1,7 +1,9 @@
 import { Database } from "bun:sqlite";
+import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { env } from "./config/env.ts";
+import { norm } from "./config/region.ts";
 
 mkdirSync(dirname(env.dbPath), { recursive: true });
 
@@ -74,6 +76,27 @@ export function insertItem(row: Omit<Item, "digested">): boolean {
   return changes > 0;
 }
 
+/**
+ * Título reduzido à sua forma canônica: sem acento, sem pontuação, sem a data
+ * embutida ("Livre - 26/07") e sem o sufixo de cidade ("em Franca/SP"). É o que
+ * faz o mesmo rolê vindo de Sympla, Duoticket, Evento ON e notícia virar UM
+ * evento só, em vez de quatro posts quase idênticos.
+ */
+const canonicalTitle = (title: string) =>
+  // norm() tira o acento ANTES do strip geral: sem isso "Família" viraria
+  // "fam lia" (o combinante vira espaço) e não casaria com "Familia".
+  norm(title)
+    .replace(/\d{1,2}\s*[/-]\s*\d{1,2}(\s*[/-]\s*\d{2,4})?/g, " ")
+    .replace(/\b(em|na|no)\s+franca\b|\bfranca\b|\bsp\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/** Identidade de um evento: título canônico + data. Só upsertEvent/rekey usam. */
+export const eventId = (title: string, date: string) =>
+  createHash("sha1")
+    .update(`${canonicalTitle(title)}|${date}`)
+    .digest("hex");
+
 export interface Event {
   id: string;
   title: string;
@@ -98,11 +121,16 @@ const upsertEventStmt = db.prepare(`
     image = COALESCE(excluded.image, image)
 `);
 
+/**
+ * Grava/atualiza um evento. O id é derivado aqui de propósito: quando a fonte
+ * o calculava por fora, bastava usar uma string diferente da que ia em `title`
+ * pra o mesmo evento renascer com outra chave a cada rodada.
+ */
 export function upsertEvent(
-  ev: Omit<Event, "posted_today" | "created_at">,
+  ev: Omit<Event, "id" | "posted_today" | "created_at">,
 ): void {
   upsertEventStmt.run(
-    ev.id,
+    eventId(ev.title, ev.date),
     ev.title,
     ev.date,
     ev.time,
@@ -114,6 +142,46 @@ export function upsertEvent(
     new Date().toISOString(),
   );
 }
+
+/**
+ * Migração idempotente: reescreve os ids antigos (sha1 do título cru) para a
+ * chave canônica, fundindo duplicatas. `posted_today` do grupo é preservado
+ * como OR — evento já anunciado não volta pro Telegram.
+ */
+function rekeyEvents(): void {
+  const rows = db
+    .query<
+      { id: string; title: string; date: string; posted_today: number },
+      []
+    >("SELECT id, title, date, posted_today FROM events")
+    .all();
+  if (!rows.length) return;
+  const del = db.prepare<unknown, [string]>("DELETE FROM events WHERE id = ?");
+  const upd = db.prepare<unknown, [string, number, string]>(
+    "UPDATE events SET id = ?, posted_today = ? WHERE id = ?",
+  );
+  const keep = new Map<string, { id: string; posted: number }>();
+  const tx = db.transaction(() => {
+    for (const r of rows) {
+      const nid = eventId(r.title, r.date);
+      const cur = keep.get(nid);
+      if (!cur) {
+        keep.set(nid, { id: r.id, posted: r.posted_today });
+        continue;
+      }
+      // Duplicata: fica a linha já escolhida, o flag de postado é o OR das duas.
+      cur.posted = Math.max(cur.posted, r.posted_today);
+      del.run(r.id);
+    }
+    // Sempre grava: o id pode não ter mudado, mas o flag fundido, sim.
+    for (const [nid, k] of keep) upd.run(nid, k.posted, k.id);
+  });
+  tx();
+  const merged = rows.length - keep.size;
+  if (merged) console.log(`[db] ${merged} evento(s) duplicado(s) fundido(s)`);
+}
+
+rekeyEvents();
 
 export function eventsOn(date: string): Event[] {
   return db
@@ -152,13 +220,6 @@ export function pruneEventsBefore(date: string): void {
  * — filtra só quando a cidade é claramente uma cidade de fora.
  */
 export function pruneDisallowedCities(allowedNormalized: string[]): void {
-  const norm = (s: string) =>
-    s
-      .normalize("NFD")
-      // biome-ignore lint/suspicious/noMisleadingCharacterClass: diacríticos combinantes
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .trim();
   const rows = db
     .query<{ id: string; city: string | null }, []>(
       "SELECT id, city FROM events",
@@ -169,12 +230,21 @@ export function pruneDisallowedCities(allowedNormalized: string[]): void {
     for (const r of rows) {
       if (!r.city) continue;
       const c = norm(r.city);
-      if (c.startsWith("cinemas") || c.startsWith("streaming")) continue;
+      // Rótulos genéricos de estreia. "Cinemas de Ribeirão Preto" NÃO é
+      // genérico — cai na checagem de cidade abaixo e é podado.
+      if (c === "cinema" || c === "cinemas" || c.startsWith("streaming"))
+        continue;
       if (allowedNormalized.some((a) => c.includes(a))) continue;
       del.run(r.id);
     }
   });
   tx();
+}
+
+/** Webinar/curso/live não é rolê — o local delata ("O evento será online"). */
+export function pruneOnlineEvents(): void {
+  // LIKE do SQLite já é case-insensitive em ASCII.
+  db.prepare("DELETE FROM events WHERE venue LIKE '%online%'").run();
 }
 
 export function pendingItems(limit: number): Item[] {

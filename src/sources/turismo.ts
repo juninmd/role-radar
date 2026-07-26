@@ -1,11 +1,8 @@
-import { createHash } from "node:crypto";
 import { upsertEvent } from "../db.ts";
 
 // Agenda oficial da Prefeitura de Franca (turismo). Página única, sem paginação.
 const BASE = "https://turismo.franca.sp.gov.br";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
-
-const hash = (s: string) => createHash("sha1").update(s).digest("hex");
 
 const decode = (s: string) =>
   s
@@ -55,7 +52,6 @@ export async function syncTurismo(today: string): Promise<number> {
       );
       const img = card.match(/<img src="(\/uploads\/[^"]+)"/)?.[1];
       upsertEvent({
-        id: hash(`${title.toLowerCase()}|${date}`),
         title,
         date,
         time: null,

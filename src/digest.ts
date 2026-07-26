@@ -7,12 +7,14 @@ import {
   markEventsPosted,
   pruneDisallowedCities,
   pruneEventsBefore,
+  pruneOnlineEvents,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
 import { syncBasquete } from "./sources/basquete.ts";
 import { nowPlaying } from "./sources/cinema.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
+import { syncFrancaShopping } from "./sources/francashopping.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -69,15 +71,24 @@ export async function digest(): Promise<void> {
     syncDuoticket(today),
     syncEventoon(today),
     syncBasquete(today),
+    syncFrancaShopping(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
   pruneDisallowedCities(REGION_CITIES.map(norm));
+  pruneOnlineEvents();
 
   // Eventos de HOJE — um post por evento, com foto quando houver.
   const todays = eventsOn(today).filter((ev) => !ev.posted_today);
-  for (const ev of todays) {
-    const image = ev.image ?? (ev.link ? await fetchOgImage(ev.link) : null);
+  // og:image de todos de uma vez; o envio é que precisa ser serial (Telegram).
+  const images = await Promise.all(
+    todays.map(
+      (ev) =>
+        ev.image ?? (ev.link ? fetchOgImage(ev.link).catch(() => null) : null),
+    ),
+  );
+  for (const [i, ev] of todays.entries()) {
+    const image = images[i];
     const body = `⚡ *É HOJE!*\n\n${eventLines(ev)}`;
     if (image) await sendTelegramPhoto(body, image);
     else await sendTelegram(body);
