@@ -55,6 +55,7 @@ function eventLines(ev: Event): string {
   if (where) lines.push(`📍 ${where}`);
   lines.push(`📆 ${humanDay(ev.date)}${ev.time ? ` às ${ev.time}` : ""}`);
   if (ev.price) lines.push(`💰 ${ev.price}`);
+  if (ev.trailer) lines.push(`▶️ [Ver trailer](${ev.trailer})`);
   if (ev.link) lines.push(`🔗 ${ev.link}`);
   return lines.join("\n");
 }
@@ -99,15 +100,26 @@ export async function digest(): Promise<void> {
   // Filmes em cartaz HOJE — um post por cidade.
   const cinema = await nowPlaying();
   for (const day of cinema) {
-    const lines = day.movies.map((m) => {
-      const tag = [m.genre, m.rating].filter(Boolean).join(" · ");
-      return `• [${m.title}](${m.link})${tag ? ` — ${tag}` : ""}`;
-    });
-    const caption = `🎬 *Em cartaz hoje — ${day.cinema}*\n\n${lines.join("\n")}`;
+    const header = `🎬 *Em cartaz hoje — ${day.cinema}*`;
     const posters = day.movies
       .map((m) => m.poster)
       .filter((p): p is string => Boolean(p));
-    await sendTelegramAlbum(caption, posters);
+    // Legenda de álbum é cortada em ~1000 chars: os pôsteres levam só o título
+    // e a ficha completa (estreia, trailer) vai na mensagem seguinte.
+    await sendTelegramAlbum(header, posters);
+
+    const lines = day.movies.map((m) => {
+      const tag = [m.genre, m.rating, m.duration].filter(Boolean).join(" · ");
+      const bits = [
+        m.premiere
+          ? `${m.premiere > today ? "🗓️ estreia" : "🗓️ estreou"} ${humanDay(m.premiere)}`
+          : null,
+        m.trailer ? `▶️ [trailer](${m.trailer})` : null,
+        `🎟️ [ingressos](${m.link})`,
+      ].filter(Boolean);
+      return `• *${m.title}*${tag ? ` — ${tag}` : ""}\n  ${bits.join(" · ")}`;
+    });
+    await sendTelegram(`${header}\n\n${lines.join("\n\n")}`);
   }
 
   // Dica de Passeio Permanente em Franca - SP (Surpresa diária com imagem e localização)

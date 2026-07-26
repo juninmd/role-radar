@@ -5,9 +5,10 @@ const CITIES = [{ id: 192, label: "Cinema Moviecom Franca" }];
 interface Movie {
   title?: string;
   premiereDate?: { localDate?: string };
-  images?: { url?: string }[];
+  images?: { url?: string; type?: string }[];
   siteURL?: string;
   urlKey?: string;
+  trailers?: { type?: string; url?: string }[];
 }
 
 /** localDate ISO ("2026-07-23T00:00:00+00:00") → "2026-07-23", ou null. */
@@ -49,7 +50,13 @@ export async function syncIngresso(today: string): Promise<number> {
           city: city.label,
           price: null,
           link: m.siteURL ?? `https://www.ingresso.com/filme/${m.urlKey}`,
-          image: m.images?.[0]?.url ?? null,
+          // Pôster em pé é o que o Telegram exibe melhor no sendPhoto.
+          image:
+            m.images?.find((i) => i.type === "PosterPortrait")?.url ??
+            m.images?.[0]?.url ??
+            null,
+          trailer:
+            m.trailers?.find((t) => t.type === "YouTube" && t.url)?.url ?? null,
         });
         stored++;
       }

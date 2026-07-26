@@ -38,11 +38,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
 `);
 
-// Migração: bancos criados antes da coluna image em items.
-try {
-  db.exec("ALTER TABLE items ADD COLUMN image TEXT");
-} catch {
-  // coluna já existe
+// Migrações: colunas adicionadas depois que bancos já existiam.
+for (const sql of [
+  "ALTER TABLE items ADD COLUMN image TEXT",
+  "ALTER TABLE events ADD COLUMN trailer TEXT",
+]) {
+  try {
+    db.exec(sql);
+  } catch {
+    // coluna já existe
+  }
 }
 
 export interface Item {
@@ -107,18 +112,21 @@ export interface Event {
   price: string | null;
   link: string | null;
   image: string | null;
+  /** Só estreias de cinema têm — vem do Ingresso.com. */
+  trailer: string | null;
   posted_today: number;
   created_at: string;
 }
 
 const upsertEventStmt = db.prepare(`
-  INSERT INTO events (id, title, date, time, venue, city, price, link, image, posted_today, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, posted_today, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
   ON CONFLICT(id) DO UPDATE SET
     time = COALESCE(excluded.time, time),
     venue = COALESCE(excluded.venue, venue),
     price = COALESCE(excluded.price, price),
-    image = COALESCE(excluded.image, image)
+    image = COALESCE(excluded.image, image),
+    trailer = COALESCE(excluded.trailer, trailer)
 `);
 
 /**
@@ -127,7 +135,10 @@ const upsertEventStmt = db.prepare(`
  * pra o mesmo evento renascer com outra chave a cada rodada.
  */
 export function upsertEvent(
-  ev: Omit<Event, "id" | "posted_today" | "created_at">,
+  // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
+  ev: Omit<Event, "id" | "posted_today" | "created_at" | "trailer"> & {
+    trailer?: string | null;
+  },
 ): void {
   upsertEventStmt.run(
     eventId(ev.title, ev.date),
@@ -139,6 +150,7 @@ export function upsertEvent(
     ev.price,
     ev.link,
     ev.image,
+    ev.trailer ?? null,
     new Date().toISOString(),
   );
 }

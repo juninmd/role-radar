@@ -14,11 +14,14 @@ const CITY_SLUGS = [
   "ribeirao-corrente-sp",
   "restinga-sp",
 ];
-// Páginas 1-2 por cidade (a 3 já vira evento corporativo/curso).
-const CITIES = CITY_SLUGS.flatMap((c) => [
-  `https://www.sympla.com.br/eventos/${c}`,
-  `https://www.sympla.com.br/eventos/${c}?page=2`,
-]);
+// Medido em 2026-07-26: as páginas 2-4 de franca-sp devolvem 24 eventos cada,
+// todos de FORA da região (o Sympla completa a lista com eventos de outras
+// cidades). Só Franca tem volume pra justificar a página 2; nas vizinhas era
+// requisição jogada fora.
+const CITIES = [
+  ...CITY_SLUGS.map((c) => `https://www.sympla.com.br/eventos/${c}`),
+  "https://www.sympla.com.br/eventos/franca-sp?page=2",
+];
 
 interface SymplaEvent {
   name: string;

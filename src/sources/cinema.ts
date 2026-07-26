@@ -7,7 +7,10 @@ interface Movie {
   siteURL?: string;
   urlKey?: string;
   isPlaying?: boolean;
+  duration?: string;
   images?: { url?: string; type?: string }[];
+  trailers?: { type?: string; url?: string }[];
+  premiereDate?: { localDate?: string };
 }
 
 export interface CinemaDay {
@@ -19,12 +22,24 @@ export interface CinemaDay {
     genre: string | null;
     link: string;
     poster: string | null;
+    trailer: string | null;
+    /** ISO "YYYY-MM-DD" da estreia nacional. */
+    premiere: string | null;
+    /** Já formatada, ex.: "2h52". */
+    duration: string | null;
   }[];
 }
 
 function poster(m: Movie): string | null {
   const portrait = m.images?.find((i) => i.type === "PosterPortrait")?.url;
   return portrait ?? m.images?.[0]?.url ?? null;
+}
+
+/** "172" (minutos) → "2h52". */
+function duration(raw?: string): string | null {
+  const min = Number(raw);
+  if (!min || Number.isNaN(min)) return null;
+  return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
 }
 
 /** Filmes em cartaz hoje por cidade (Ingresso.com nowplaying). */
@@ -49,6 +64,12 @@ export async function nowPlaying(): Promise<CinemaDay[]> {
           genre: m.genres?.[0] ?? null,
           link: m.siteURL ?? `https://www.ingresso.com/filme/${m.urlKey ?? ""}`,
           poster: poster(m),
+          // A API devolve vários trailers (teaser, dublado, legendado); o
+          // primeiro é o principal.
+          trailer:
+            m.trailers?.find((t) => t.type === "YouTube" && t.url)?.url ?? null,
+          premiere: m.premiereDate?.localDate?.slice(0, 10) ?? null,
+          duration: duration(m.duration),
         }));
       if (list.length)
         out.push({ city: c.label, cinema: c.cinema, movies: list });
