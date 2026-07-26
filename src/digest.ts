@@ -11,6 +11,8 @@ import {
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
 import { syncBasquete } from "./sources/basquete.ts";
+import { syncBilheteriaDigital } from "./sources/bilheteriadigital.ts";
+import { syncBilheteriaExpress } from "./sources/bilheteriaexpress.ts";
 import { syncBlueticket } from "./sources/blueticket.ts";
 import { nowPlaying } from "./sources/cinema.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
@@ -24,7 +26,10 @@ import { syncOticket } from "./sources/oticket.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
+import { syncTicket360 } from "./sources/ticket360.ts";
+import { syncTicketFacil } from "./sources/ticketfacil.ts";
 import { syncTurismo } from "./sources/turismo.ts";
+import { syncUhuu } from "./sources/uhuu.ts";
 import {
   sendTelegram,
   sendTelegramAlbum,
@@ -81,6 +86,11 @@ export async function digest(): Promise<void> {
     syncOticket(today),
     syncBlueticket(today),
     syncIngressoDigital(today),
+    syncUhuu(today),
+    syncBilheteriaExpress(today),
+    syncBilheteriaDigital(today),
+    syncTicket360(today),
+    syncTicketFacil(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
