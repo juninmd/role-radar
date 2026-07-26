@@ -16,11 +16,15 @@ const CITY_SLUGS = [
 ];
 // Medido em 2026-07-26: as páginas 2-4 de franca-sp devolvem 24 eventos cada,
 // todos de FORA da região (o Sympla completa a lista com eventos de outras
-// cidades). Só Franca tem volume pra justificar a página 2; nas vizinhas era
-// requisição jogada fora.
+// cidades). Só Franca e Ribeirão têm volume pra justificar a página 2; nas
+// vizinhas era requisição jogada fora.
+// Ribeirão Preto entra com as duas páginas: as 48 vagas vêm 100% preenchidas
+// com eventos da própria cidade (Hard Rock Cafe, Teatro Santarosa, GOA).
 const CITIES = [
   ...CITY_SLUGS.map((c) => `https://www.sympla.com.br/eventos/${c}`),
   "https://www.sympla.com.br/eventos/franca-sp?page=2",
+  "https://www.sympla.com.br/eventos/ribeirao-preto-sp",
+  "https://www.sympla.com.br/eventos/ribeirao-preto-sp?page=2",
 ];
 
 interface SymplaEvent {

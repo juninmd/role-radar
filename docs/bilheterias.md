@@ -14,7 +14,7 @@ prioridade (`cityRank` em `src/config/region.ts`).
 
 | Plataforma | Endpoint | Observação |
 |---|---|---|
-| Sympla | página por cidade (payload RSC) | páginas 2+ das cidades pequenas não têm nada exclusivo |
+| Sympla | página por cidade (payload RSC) | páginas 2+ das cidades pequenas não têm nada exclusivo; Ribeirão usa as duas páginas (48 vagas, 100% da cidade) |
 | Duoticket | home + página de cada evento | local/horário/título completo só existem no detalhe |
 | Evento ON (vitrine da Q2) | `/cidade/franca-sp` | Morada du Capiau, Teatro Municipal, Villa, Royal |
 | Mega Bilheteria | `web.megabilheteria.com/api/public/v2/events` | filtro de cidade não existe: pagina tudo e filtra localmente |
@@ -42,6 +42,21 @@ prioridade (`cityRank` em `src/config/region.ts`).
   com corpo `null`.
 - **Ingresso Digital** — a data vem sem ano ("14 de Ago às 19:00"); assume-se o
   próximo ano em que a data ainda é futura. Paginação morre na página 1.
+
+## Armadilha do Telegram (custou um bug em produção)
+
+No Markdown **legado** do Telegram, um `_` solto abre itálico e nunca fecha — a
+mensagem inteira volta 400 (`can't find end of the entity`). Links da Prefeitura
+têm `detalhe_evento`, então todo evento vindo dali perdia a foto e caía pra
+texto. Medido contra a API:
+
+| Forma | Resposta |
+|---|---|
+| `🔗 https://…/detalhe_evento?slug=19-festbar` | **400 recusado** |
+| `🔗 [Ingressos e detalhes](https://…/detalhe_evento?…)` | **200 aceito** |
+
+Regra: URL sempre dentro de `[rótulo](url)`, e texto vindo de fonte externa
+(título, local, preço) passa por `mdSafe()` antes de entrar na mensagem.
 
 ## Confirmadas sem eventos da região
 

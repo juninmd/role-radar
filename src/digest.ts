@@ -54,18 +54,30 @@ const humanDay = (iso: string) =>
     timeZone: "UTC",
   });
 
+/**
+ * No Markdown legado do Telegram um `_` solto abre itálico e nunca fecha, e a
+ * mensagem inteira volta como 400 — foi o que derrubou a foto dos eventos da
+ * Prefeitura, cujo link tem "detalhe_evento". Texto vindo de fonte externa
+ * precisa passar por aqui; URL vai sempre dentro de [rótulo](url).
+ */
+const mdSafe = (s: string) => s.replace(/([_*[\]`])/g, "\\$1");
+
 function eventLines(ev: Event): string {
-  const lines = [`🎟️ *${ev.title}*`];
-  let where = [ev.venue, ev.city].filter(Boolean).join(", ");
+  const lines = [`🎟️ *${mdSafe(ev.title)}*`];
+  const cidade = ev.city ? `, ${mdSafe(ev.city)}` : "";
+  let where = [ev.venue, ev.city]
+    .filter((s): s is string => Boolean(s))
+    .map(mdSafe)
+    .join(", ");
   if (ev.venue) {
-    const query = encodeURIComponent(`${ev.venue}, Franca, SP`);
-    where = `[${ev.venue}](https://www.google.com/maps/search/?api=1&query=${query})${ev.city ? `, ${ev.city}` : ""}`;
+    const query = encodeURIComponent(`${ev.venue}, ${ev.city ?? "Franca"}, SP`);
+    where = `[${mdSafe(ev.venue)}](https://www.google.com/maps/search/?api=1&query=${query})${cidade}`;
   }
   if (where) lines.push(`📍 ${where}`);
   lines.push(`📆 ${humanDay(ev.date)}${ev.time ? ` às ${ev.time}` : ""}`);
-  if (ev.price) lines.push(`💰 ${ev.price}`);
+  if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
   if (ev.trailer) lines.push(`▶️ [Ver trailer](${ev.trailer})`);
-  if (ev.link) lines.push(`🔗 ${ev.link}`);
+  if (ev.link) lines.push(`🔗 [Ingressos e detalhes](${ev.link})`);
   return lines.join("\n");
 }
 
@@ -138,7 +150,7 @@ export async function digest(): Promise<void> {
         m.trailer ? `▶️ [trailer](${m.trailer})` : null,
         `🎟️ [ingressos](${m.link})`,
       ].filter(Boolean);
-      return `• *${m.title}*${tag ? ` — ${tag}` : ""}\n  ${bits.join(" · ")}`;
+      return `• *${mdSafe(m.title)}*${tag ? ` — ${tag}` : ""}\n  ${bits.join(" · ")}`;
     });
     await sendTelegram(`${header}\n\n${lines.join("\n\n")}`);
   }
@@ -168,8 +180,13 @@ export async function digest(): Promise<void> {
             cityRank(ev.city) === 0
               ? ev.venue
               : [ev.venue, ev.city].filter(Boolean).join(", ");
-          const bits = [ev.time, where, ev.price].filter(Boolean).join(" · ");
-          const title = ev.link ? `[${ev.title}](${ev.link})` : `*${ev.title}*`;
+          const bits = [ev.time, where, ev.price]
+            .filter(Boolean)
+            .map((s) => mdSafe(String(s)))
+            .join(" · ");
+          const title = ev.link
+            ? `[${mdSafe(ev.title)}](${ev.link})`
+            : `*${mdSafe(ev.title)}*`;
           return `• ${title}${bits ? `\n  ${bits}` : ""}`;
         });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;

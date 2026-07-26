@@ -73,27 +73,76 @@ export async function sendTelegramPhoto(
     return;
   }
   for (const chatId of env.telegramChatIds) {
-    const res = await fetch(
-      `https://api.telegram.org/bot${env.telegramToken}/sendPhoto`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          photo,
-          caption: caption.slice(0, 1000),
-          parse_mode: "Markdown",
-        }),
-      },
-    );
+    // Degrada um problema por vez, preservando o máximo: Markdown -> texto puro
+    // (salva legenda com marcação inválida) -> upload dos bytes (salva host que
+    // o Telegram não consegue buscar) -> mensagem sem foto.
+    let res = await photoPorUrl(chatId, caption, photo, "Markdown");
+    if (!res.ok) res = await photoPorUrl(chatId, caption, photo);
+    if (!res.ok && (await uploadPhoto(chatId, caption, photo))) continue;
     if (!res.ok) {
-      // Foto inacessível ou Markdown inválido — manda como texto.
       console.warn(`[telegram] sendPhoto ${res.status} — fallback p/ texto`);
       let alt = await send(chatId, caption, "Markdown");
       if (alt.status === 400) alt = await send(chatId, caption);
       if (!alt.ok)
         console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
     }
+  }
+}
+
+function photoPorUrl(
+  chatId: string,
+  caption: string,
+  photo: string,
+  parseMode?: string,
+): Promise<Response> {
+  return fetch(`https://api.telegram.org/bot${env.telegramToken}/sendPhoto`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      photo,
+      caption: caption.slice(0, 1000),
+      ...(parseMode ? { parse_mode: parseMode } : {}),
+    }),
+  });
+}
+
+/**
+ * Baixa a imagem e envia como multipart. Serve para host que o Telegram não
+ * consegue buscar sozinho. Vai sem parse_mode: se chegou aqui, a legenda já
+ * falhou como Markdown.
+ */
+async function uploadPhoto(
+  chatId: string,
+  caption: string,
+  url: string,
+): Promise<boolean> {
+  try {
+    const img = await fetch(url, {
+      headers: { "user-agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!img.ok) return false;
+    const bytes = await img.arrayBuffer();
+    // Teto do Telegram para foto por upload.
+    if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) return false;
+
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append("caption", caption.slice(0, 1000));
+    form.append(
+      "photo",
+      new Blob([bytes], { type: "image/jpeg" }),
+      url.split("/").pop()?.split("?")[0] || "foto.jpg",
+    );
+    const res = await fetch(
+      `https://api.telegram.org/bot${env.telegramToken}/sendPhoto`,
+      { method: "POST", body: form },
+    );
+    if (res.ok) console.log("[telegram] foto enviada por upload");
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
