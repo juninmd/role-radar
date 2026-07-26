@@ -16,6 +16,7 @@ import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
+import { syncMegabilheteria } from "./sources/megabilheteria.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { getDailySpot } from "./sources/spots.ts";
@@ -73,6 +74,7 @@ export async function digest(): Promise<void> {
     syncEventoon(today),
     syncBasquete(today),
     syncFrancaShopping(today),
+    syncMegabilheteria(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
