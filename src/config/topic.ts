@@ -29,6 +29,17 @@ Regras do digest:
       url: "https://www.jornaldafranca.com.br/feed/",
     },
     {
+      // Cobre a cena de shows da região (achado ao rastrear a Feijoada do Pinheiro).
+      name: "A Tribuna Regional (entretenimento)",
+      url: "https://atribunaregional.com.br/feed/",
+    },
+    {
+      name: "Grandes festivais Franca",
+      url: gnews(
+        '"Franca Rodeo Music" OR "Expoagro Franca" OR rodeio OR "Feijoada do Pinheiro" Franca SP ingressos',
+      ),
+    },
+    {
       name: "Shows/Eventos Franca",
       url: gnews('shows OR eventos OR festival "Franca" SP agenda'),
     },
