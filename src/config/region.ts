@@ -29,6 +29,12 @@ export const REGION_CITIES = [
   "São Joaquim da Barra",
   "São José da Bela Vista",
   "Ribeirão Preto",
+  // Raio de ~100km, fora da microregião IBGE mas com eventos confirmados nos
+  // catálogos que já baixamos inteiros (OTicket, Mega Bilheteria, Duoticket) —
+  // custo zero, só ampliar o filtro (ver memória de pesquisa de fontes).
+  "Barretos",
+  "Sertãozinho",
+  "Bebedouro",
 ];
 
 /**
