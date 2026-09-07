@@ -186,5 +186,19 @@ Regras do digest:
       name: "Agenda Cultural Barretos",
       url: "https://barretosnews.com.br/category/agenda-cultural/feed/",
     },
+    {
+      // Categoria dedicada, quase 100% evento real (shows, festivais,
+      // exposições) — melhor sinal/ruído de toda a região, e às vezes cobre
+      // Franca também (ex.: Padre Fábio de Melo no Hallel Franca).
+      name: "Lazer e Cultura Ribeirão Preto",
+      url: "https://www.acidadeon.com/ribeiraopreto/lazer-e-cultura/feed/",
+    },
+    {
+      // Notícia geral de Sertãozinho, mesmo padrão do Jornal da Franca —
+      // maioria é saúde/política, mas capta evento real (teatro municipal
+      // etc.) que nenhuma bilheteria pega.
+      name: "Em Foco Sertãozinho",
+      url: "https://emfocosertaozinho.com.br/feed/",
+    },
   ],
 };
