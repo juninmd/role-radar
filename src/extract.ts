@@ -11,7 +11,7 @@ Responda APENAS com um array JSON válido (sem markdown, sem comentários). Cada
 Regras:
 - SÓ inclua eventos cuja data do EVENTO esteja escrita no título ou resumo (ex.: "dia 24", "nesta sexta (18)", "24 de julho").
 - A data de publicação da notícia NÃO é a data do evento — nunca a use. Texto sem data do evento → NÃO inclua.
-- SÓ eventos em Franca-SP (prioridade), nas cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, Batatais, Orlândia, etc.) ou em Ribeirão Preto. Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
+- SÓ eventos em Franca-SP (prioridade), nas cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, Batatais, Orlândia, etc.), em Ribeirão Preto ou em Barretos/Sertãozinho/Bebedouro (raio ~100km). Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
 - Vale qualquer tipo de rolê com data: shows, teatro, stand-up, festivais, feiras/exposições, jogos de basquete (Sesi Franca) e futebol da região, passeios e eventos gratuitos.
 - Para JOGO, o título é só o confronto: "Francana x Ponte Preta" ou "Sesi Franca x Flamengo" — nunca a manchete ("Molecada em campo: times sub-13...").
 - O título é o NOME do evento, curto, como estaria no cartaz. Se a manchete não permitir extrair um nome de evento curto, NÃO inclua o item.

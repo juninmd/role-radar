@@ -178,5 +178,13 @@ Regras do digest:
         'site:instagram.com OR site:facebook.com "Franca" SP evento OR show',
       ),
     },
+    {
+      // Barretos entrou em REGION_CITIES (raio ~100km) mas não tinha fonte
+      // própria — as bilheterias nacionais só pegam evento avulso. Este feed
+      // é notícia (data = publicação, não do evento), por isso passa pelo
+      // extractEvents() de IA em vez de um scraper estruturado.
+      name: "Agenda Cultural Barretos",
+      url: "https://barretosnews.com.br/category/agenda-cultural/feed/",
+    },
   ],
 };
