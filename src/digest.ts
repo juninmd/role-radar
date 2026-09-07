@@ -22,6 +22,7 @@ import { syncIngresso } from "./sources/ingresso.ts";
 import { syncIngressoDigital } from "./sources/ingressodigital.ts";
 import { syncIngressoNacional } from "./sources/ingressonacional.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
+import { syncMultiplanHall } from "./sources/multiplanhall.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -105,6 +106,7 @@ export async function digest(): Promise<void> {
     syncTicket360(today),
     syncTicketFacil(today),
     syncIngressoNacional(today),
+    syncMultiplanHall(today),
   ]);
   pruneEventsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
