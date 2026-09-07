@@ -32,25 +32,29 @@ export async function ingest(): Promise<number> {
 
   const results = await Promise.allSettled(
     topic.feeds.map(async (feed) => {
-      const parsed = await parser.parseURL(feed.url);
-      const items = (parsed.items ?? []).slice(0, env.maxItemsPerFeed);
-      let feedAdded = 0;
-      for (const it of items) {
-        const link = it.link ?? "";
-        if (!link || !it.title) continue;
-        const isNew = insertItem({
-          id: hash(link),
-          title: it.title.trim(),
-          link,
-          source: feed.name,
-          summary: clean(it.contentSnippet ?? it.content),
-          published: it.isoDate ?? it.pubDate ?? null,
-          image: itemImage(it as unknown as Record<string, unknown>),
-          fetched_at: now,
-        });
-        if (isNew) feedAdded++;
+      try {
+        const parsed = await parser.parseURL(feed.url);
+        const items = (parsed.items ?? []).slice(0, env.maxItemsPerFeed);
+        let feedAdded = 0;
+        for (const it of items) {
+          const link = it.link ?? "";
+          if (!link || !it.title) continue;
+          const isNew = insertItem({
+            id: hash(link),
+            title: it.title.trim(),
+            link,
+            source: feed.name,
+            summary: clean(it.contentSnippet ?? it.content),
+            published: it.isoDate ?? it.pubDate ?? null,
+            image: itemImage(it as unknown as Record<string, unknown>),
+            fetched_at: now,
+          });
+          if (isNew) feedAdded++;
+        }
+        return { name: feed.name, feedAdded };
+      } catch (err) {
+        throw new Error(`${feed.name}: ${err}`);
       }
-      return { name: feed.name, feedAdded };
     }),
   );
 

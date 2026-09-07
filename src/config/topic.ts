@@ -22,7 +22,7 @@ Regras do digest:
   feeds: [
     {
       name: "G1 Ribeirão e Franca",
-      url: "https://g1.globo.com/dynamo/sp/ribeirao-preto-franca/rss2.xml",
+      url: "https://g1.globo.com/rss/g1/sp/ribeirao-preto-franca/",
     },
     {
       name: "Jornal da Franca",
