@@ -5,9 +5,24 @@ import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
 
 const parser = new Parser({
-  timeout: env.feedTimeoutMs,
   customFields: { item: [["media:content", "media"]] },
 });
+
+/**
+ * rss-parser usa https.get cru e nunca descomprime — o G1 manda gzip mesmo
+ * pedindo Accept-Encoding: identity (visto saindo da rede do cluster, não
+ * daqui), e os bytes binários viram "Non-whitespace before first tag". O
+ * fetch() do runtime descomprime de verdade, então buscamos o texto por fora
+ * e só usamos o rss-parser pra interpretar o XML já decodificado.
+ */
+async function fetchFeed(url: string) {
+  const res = await fetch(url, {
+    headers: { "user-agent": "rss-parser" },
+    signal: AbortSignal.timeout(env.feedTimeoutMs),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parser.parseString(await res.text());
+}
 
 const itemImage = (it: Record<string, unknown>): string | null => {
   const enclosure = it.enclosure as { url?: string; type?: string } | undefined;
@@ -33,7 +48,7 @@ export async function ingest(): Promise<number> {
   const results = await Promise.allSettled(
     topic.feeds.map(async (feed) => {
       try {
-        const parsed = await parser.parseURL(feed.url);
+        const parsed = await fetchFeed(feed.url);
         const items = (parsed.items ?? []).slice(0, env.maxItemsPerFeed);
         let feedAdded = 0;
         for (const it of items) {
