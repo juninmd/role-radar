@@ -12,7 +12,7 @@ export const env = {
     process.env.LITELLM_BASE_URL ??
     "http://litellm.ai.svc.cluster.local:4000/v1",
   litellmKey: process.env.LITELLM_API_KEY ?? "",
-  litellmModel: process.env.LITELLM_MODEL ?? "cloud/gemma3",
+  litellmModel: process.env.LITELLM_MODEL ?? "cloud/auto",
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
   ollamaModel: process.env.OLLAMA_MODEL ?? "llama3.2",
   openaiKey: process.env.OPENAI_API_KEY ?? "",
