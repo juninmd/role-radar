@@ -40,6 +40,9 @@ import {
   sendTelegramAlbum,
   sendTelegramPhoto,
 } from "./telegram.ts";
+import { spotPlaces } from "./web/catalog.ts";
+import { geocodePlaces } from "./web/geocode.ts";
+import { saveSnapshot } from "./web/store.ts";
 
 const TZ = "America/Sao_Paulo";
 
@@ -169,6 +172,8 @@ export async function digest(): Promise<void> {
 
   // Filmes em cartaz HOJE — um post por cidade.
   const cinema = await nowPlaying();
+  // Dashboard web lê daqui — não bate na Ingresso.com a cada visita.
+  if (cinema.length) saveSnapshot("cinema", cinema);
   for (const day of cinema) {
     const header = `🎬 *Em cartaz hoje — ${day.cinema}*`;
     const posters = day.movies
@@ -263,6 +268,13 @@ export async function digest(): Promise<void> {
       ),
     );
   }
+
+  // Por último: são ~1s por local (limite do Nominatim) e o Telegram não espera.
+  const places = eventsBetween(today, "9999-12-31")
+    .filter((ev) => ev.venue)
+    .map((ev) => ({ venue: ev.venue as string, city: ev.city }));
+  const cinemas = cinema.map((d) => ({ venue: d.cinema, city: d.city }));
+  await geocodePlaces([...places, ...cinemas, ...spotPlaces()]);
 
   if (posted < todays.length)
     console.warn(

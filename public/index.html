@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#070914">
+  <title>Rolê Radar</title>
+  <meta name="description" content="Todos os rolês de Franca, região e Ribeirão Preto num radar: mapa, agenda, galeria e um modo que decide por você.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/controls.css">
+  <link rel="stylesheet" href="/css/shell.css">
+  <link rel="stylesheet" href="/css/radar.css">
+  <link rel="stylesheet" href="/css/lists.css">
+  <link rel="stylesheet" href="/css/play.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+  <a class="skip" href="#view">Pular para o conteúdo</a>
+
+  <header class="topbar glass">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <div>
+        <h1>Rolê Radar</h1>
+        <p class="muted small" id="updated">carregando…</p>
+      </div>
+    </div>
+    <ul class="stats" id="stats" aria-label="Resumo"></ul>
+    <div class="top-actions">
+      <button class="btn ghost" id="locate" type="button" aria-pressed="false">📍 Perto de mim</button>
+      <button class="btn ghost" id="share" type="button">🔗 Compartilhar filtros</button>
+      <button class="btn ghost only-mobile" id="toggle-filters" type="button" aria-controls="filters" aria-expanded="false">⚙️ Filtros</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="filters glass" id="filters" aria-label="Filtros"></aside>
+
+    <main class="main">
+      <div class="tabs glass" role="tablist" aria-label="Visões" id="tabs"></div>
+      <section id="view" class="view" tabindex="-1" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div class="dock glass" id="dock" hidden></div>
+  <div class="drawer-backdrop" id="backdrop" hidden></div>
+  <aside class="drawer glass" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden></aside>
+  <div class="toast glass" id="toast" role="status" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

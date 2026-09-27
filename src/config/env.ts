@@ -38,4 +38,6 @@ export const env = {
   feedTimeoutMs: num(process.env.FEED_TIMEOUT_MS, 12000),
   // Provider travado não pode pendurar o digest inteiro (CronJob).
   aiTimeoutMs: num(process.env.AI_TIMEOUT_MS, 60000),
+  // Locais geocodificados por rodada (Nominatim: 1 req/s) — 0 desliga.
+  geocodeMax: num(process.env.GEOCODE_MAX, 25),
 };

@@ -1,0 +1,214 @@
+/* ── Agenda ── */
+.agenda-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.heat {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+.heat-cell {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(
+    in srgb,
+    var(--accent-2) calc(var(--heat) * 85%),
+    rgb(255 255 255 / 0.03)
+  );
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+.heat-cell.wknd {
+  border-color: rgb(79 255 224 / 0.45);
+}
+.heat-cell[aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+}
+.heat-cell .wd {
+  color: var(--muted);
+}
+.heat-cell .dn {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.heat-cell b {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 0.62rem;
+}
+.day {
+  padding: 14px 16px;
+}
+.day-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 0.03);
+  border-left: 3px solid var(--cat);
+}
+.row-time {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--accent);
+}
+.row-main {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+.row-title {
+  font-weight: 600;
+}
+.row-meta {
+  font-size: 0.8rem;
+}
+.row-price {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.row-price.free {
+  color: var(--free);
+  font-weight: 700;
+}
+
+/* ── Cards ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.card {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--cat) 60%, transparent);
+}
+.card-hit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.card-img {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      color-mix(in srgb, var(--cat) 50%, transparent),
+      transparent 70%
+    ),
+    var(--bg-2);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.card-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card-emoji {
+  font-size: 3rem;
+}
+.badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(6px);
+}
+.badge.hot {
+  background: var(--hot);
+}
+.badge.free {
+  background: var(--free);
+  color: #04140b;
+}
+.card-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card-cat {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat);
+}
+.card-title {
+  font-size: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-meta {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.card.compact .card-img {
+  aspect-ratio: 16 / 8;
+}
