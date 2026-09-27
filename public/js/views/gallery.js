@@ -54,7 +54,11 @@ export function card(it, { compact = false, onPick = null } = {}) {
         h(
           "p",
           { class: "card-meta muted" },
-          [it.date ? humanDay(it.date, today) : "sempre aberto", it.time]
+          [
+            it.date ? humanDay(it.date, today) : "sempre aberto",
+            it.endDate && `até ${humanDay(it.endDate, today)}`,
+            it.time,
+          ]
             .filter(Boolean)
             .join(" · "),
         ),

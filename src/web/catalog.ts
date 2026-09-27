@@ -27,6 +27,8 @@ export interface CatalogEvent {
   link: string | null;
   image: string | null;
   trailer: string | null;
+  /** Último dia (festival/feira); `date` de evento em andamento já vem como hoje. */
+  endDate: string | null;
 }
 
 export interface CatalogSpot {
@@ -81,7 +83,8 @@ export function buildCatalog(today: string): Catalog {
     (ev): CatalogEvent => ({
       id: ev.id,
       title: ev.title,
-      date: ev.date,
+      // Em andamento conta como hoje: radar, agenda e "é hoje" batem sozinhos.
+      date: ev.date < today ? today : ev.date,
       time: ev.time,
       venue: ev.venue,
       city: ev.city,
@@ -96,6 +99,7 @@ export function buildCatalog(today: string): Catalog {
       link: safeUrl(ev.link),
       image: safeUrl(ev.image),
       trailer: safeUrl(ev.trailer),
+      endDate: ev.end_date,
     }),
   );
   const spots = FRANCA_SPOTS.map(

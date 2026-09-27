@@ -47,6 +47,8 @@ db.exec(`
 for (const sql of [
   "ALTER TABLE items ADD COLUMN image TEXT",
   "ALTER TABLE events ADD COLUMN trailer TEXT",
+  "ALTER TABLE events ADD COLUMN end_date TEXT",
+  "ALTER TABLE items ADD COLUMN body TEXT",
 ]) {
   try {
     db.exec(sql);
@@ -65,6 +67,8 @@ export interface Item {
   image: string | null;
   fetched_at: string;
   digested: number;
+  /** Texto da matéria original, buscado só para itens candidatos a evento. */
+  body?: string | null;
 }
 
 const insertStmt = db.prepare(`
@@ -72,7 +76,7 @@ const insertStmt = db.prepare(`
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
 `);
 
-export function insertItem(row: Omit<Item, "digested">): boolean {
+export function insertItem(row: Omit<Item, "digested" | "body">): boolean {
   const { changes } = insertStmt.run(
     row.id,
     row.title,
@@ -119,19 +123,22 @@ export interface Event {
   image: string | null;
   /** Só estreias de cinema têm — vem do Ingresso.com. */
   trailer: string | null;
+  /** Último dia de evento de vários dias (festival, feira); null = um dia só. */
+  end_date: string | null;
   posted_today: number;
   created_at: string;
 }
 
 const upsertEventStmt = db.prepare(`
-  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, posted_today, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, end_date, posted_today, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
   ON CONFLICT(id) DO UPDATE SET
     time = COALESCE(excluded.time, time),
     venue = COALESCE(excluded.venue, venue),
     price = COALESCE(excluded.price, price),
     image = COALESCE(excluded.image, image),
-    trailer = COALESCE(excluded.trailer, trailer)
+    trailer = COALESCE(excluded.trailer, trailer),
+    end_date = COALESCE(excluded.end_date, end_date)
 `);
 
 /**
@@ -146,12 +153,18 @@ const CIDADE_CANONICA = new Map(REGION_CITIES.map((c) => [norm(c), c]));
  * "RIBEIRÃO PRETO"). Sem isto viram cidades diferentes na agenda.
  */
 const cidadeCanonica = (city: string | null) =>
-  city ? (CIDADE_CANONICA.get(norm(city)) ?? city) : null;
+  city
+    ? (CIDADE_CANONICA.get(norm(city).replace(/[\s/-]+sp$/, "")) ?? city)
+    : null;
 
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
-  ev: Omit<Event, "id" | "posted_today" | "created_at" | "trailer"> & {
+  ev: Omit<
+    Event,
+    "id" | "posted_today" | "created_at" | "trailer" | "end_date"
+  > & {
     trailer?: string | null;
+    end_date?: string | null;
   },
 ): void {
   upsertEventStmt.run(
@@ -165,6 +178,8 @@ export function upsertEvent(
     ev.link,
     ev.image,
     ev.trailer ?? null,
+    // Fim antes do início é lixo da fonte: trata como evento de um dia.
+    ev.end_date && ev.end_date > ev.date ? ev.end_date : null,
     new Date().toISOString(),
   );
 }
@@ -212,7 +227,8 @@ rekeyEvents();
 export function eventsOn(date: string): Event[] {
   return db
     .query<Event, [string]>(
-      "SELECT * FROM events WHERE date = ? ORDER BY time, title",
+      // Festival que começou antes e ainda não acabou também é "hoje".
+      "SELECT * FROM events WHERE date <= ?1 AND COALESCE(end_date, date) >= ?1 ORDER BY time, title",
     )
     .all(date);
 }
@@ -220,7 +236,7 @@ export function eventsOn(date: string): Event[] {
 export function eventsBetween(from: string, to: string): Event[] {
   return db
     .query<Event, [string, string]>(
-      "SELECT * FROM events WHERE date >= ? AND date <= ? ORDER BY date, time, title",
+      "SELECT * FROM events WHERE date <= ?2 AND COALESCE(end_date, date) >= ?1 ORDER BY date, time, title",
     )
     .all(from, to);
 }
@@ -237,7 +253,7 @@ export function markEventsPosted(ids: string[]): void {
 }
 
 export function pruneEventsBefore(date: string): void {
-  db.prepare("DELETE FROM events WHERE date < ?").run(date);
+  db.prepare("DELETE FROM events WHERE COALESCE(end_date, date) < ?").run(date);
 }
 
 /**

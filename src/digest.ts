@@ -82,7 +82,10 @@ function eventLines(ev: Event): string {
     where = `[${mdSafe(ev.venue)}](https://www.google.com/maps/search/?api=1&query=${query})${cidade}`;
   }
   if (where) lines.push(`📍 ${where}`);
-  lines.push(`📆 ${humanDay(ev.date)}${ev.time ? ` às ${ev.time}` : ""}`);
+  const dias = ev.end_date
+    ? `${humanDay(ev.date)} a ${humanDay(ev.end_date)}`
+    : humanDay(ev.date);
+  lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}` : ""}`);
   if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
   if (ev.trailer) lines.push(`▶️ [Ver trailer](${ev.trailer})`);
   if (ev.link) lines.push(`🔗 [Ingressos e detalhes](${ev.link})`);
@@ -218,7 +221,10 @@ export async function digest(): Promise<void> {
     if (!lista.length) return true;
     const byDay = new Map<string, Event[]>();
     for (const ev of lista) {
-      byDay.set(ev.date, [...(byDay.get(ev.date) ?? []), ev]);
+      // Festival já em andamento aparece no 1º dia da agenda, não no passado.
+      const inicio = addDays(today, 1);
+      const dia = ev.date < inicio ? inicio : ev.date;
+      byDay.set(dia, [...(byDay.get(dia) ?? []), ev]);
     }
     const blocks = [...byDay.entries()].map(([date, evs]) => {
       const rows = evs.map((ev) => {
