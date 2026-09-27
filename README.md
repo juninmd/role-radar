@@ -12,6 +12,8 @@ Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos sho
 
 Google News RSS por query (shows/eventos Franca, Ribeirão Preto, agenda cultural, teatro/stand-up, ingressos/Sympla, estreias de cinema e séries) + Papelpop. Edite em `src/config/topic.ts`.
 
+Notícia com cara de rolê (ou com data) tem a matéria original lida antes da extração: o link do Google News é decodificado para a URL real e o corpo (JSON-LD `articleBody` ou parágrafos de `<article>`) vai pro prompt — é onde ficam data, local e gratuidade. Até `ARTICLE_MAX` matérias por rodada. Se o Google responder 429, a rodada para de consultá-lo e esses itens ficam na fila por até 48h. Com `GOOGLE_IPV6=1` (CronJob com `hostNetwork`) o Google é consultado direto pelo IPv6 do host, que não leva o 429 do IPv4 do cluster; todo link externo só é buscado se o host for público (também em cada redirect).
+
 ## Uso
 
 ```sh

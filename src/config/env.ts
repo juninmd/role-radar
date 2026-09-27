@@ -40,4 +40,8 @@ export const env = {
   aiTimeoutMs: num(process.env.AI_TIMEOUT_MS, 60000),
   // Locais geocodificados por rodada (Nominatim: 1 req/s) — 0 desliga.
   geocodeMax: num(process.env.GEOCODE_MAX, 25),
+  // Matérias abertas por rodada para ler o corpo (o RSS só traz a manchete).
+  articleMax: num(process.env.ARTICLE_MAX, 40),
+  // Google News por IPv6 (o IPv4 do cluster leva 429) — exige hostNetwork.
+  googleIpv6: process.env.GOOGLE_IPV6 === "1",
 };

@@ -35,7 +35,7 @@ test("lote com IA fora do ar continua na fila para a próxima rodada", async () 
 
 test("só o lote que falhou fica pendente; o resto sai da fila", async () => {
   for (let n = 1; n <= 25; n++) insertItem(item(n));
-  // 1º lote (itens 1..20) falha, 2º lote (21..25) responde.
+  // Lotes de 10: o 1º (itens 1..10) falha, os demais respondem.
   stubFetch(async (_url, init) =>
     String(init?.body).includes("Show 1 dia 30")
       ? json({}, 503)
@@ -43,7 +43,7 @@ test("só o lote que falhou fica pendente; o resto sai da fila", async () => {
   );
   await extractEvents(TODAY);
   const pending = pendingItems(50).map((i) => i.id);
-  expect(pending).toHaveLength(20);
+  expect(pending).toHaveLength(10);
   expect(pending).toContain("i1");
   expect(pending).not.toContain("i21");
 });
