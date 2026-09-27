@@ -36,4 +36,6 @@ export const env = {
   // Teto de itens enviados à IA por digest (em lotes paralelos, não numa call).
   digestMaxItems: num(process.env.DIGEST_MAX_ITEMS, 120),
   feedTimeoutMs: num(process.env.FEED_TIMEOUT_MS, 12000),
+  // Provider travado não pode pendurar o digest inteiro (CronJob).
+  aiTimeoutMs: num(process.env.AI_TIMEOUT_MS, 60000),
 };

@@ -1,12 +1,52 @@
 import { env } from "./config/env.ts";
 
-/** Send a Markdown message to every configured chat. No-op if unconfigured. */
-export async function sendTelegram(text: string): Promise<void> {
+// Tentativas por chamada quando o Telegram responde 429 (flood control).
+const MAX_TRIES = 3;
+
+/**
+ * Chama a Bot API; em 429 espera o retry_after pedido e tenta de novo. Erro
+ * de rede vira resposta de falha: derrubar o digest no meio perderia o
+ * registro do que já foi entregue.
+ */
+async function tg(method: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://api.telegram.org/bot${env.telegramToken}/${method}`,
+        { method: "POST", ...init },
+      );
+    } catch (err) {
+      console.error(`[telegram] ${method} falhou na rede: ${err}`);
+      return Response.error();
+    }
+    if (res.status !== 429 || attempt === MAX_TRIES) return res;
+    const body = (await res.json().catch(() => ({}))) as {
+      parameters?: { retry_after?: number };
+    };
+    const wait = Math.min(body.parameters?.retry_after ?? 1, 60);
+    console.warn(`[telegram] 429 em ${method}, aguardando ${wait}s`);
+    await Bun.sleep(wait * 1000);
+  }
+}
+
+const tgJson = (method: string, body: unknown) =>
+  tg(method, {
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+/**
+ * Send a Markdown message to every configured chat. Returns whether every
+ * chunk reached every chat; unconfigured prints to console and counts as sent.
+ */
+export async function sendTelegram(text: string): Promise<boolean> {
   if (!env.telegramToken || !env.telegramChatIds.length) {
     console.log("[telegram] não configurado — imprimindo no console:\n");
     console.log(text);
-    return;
+    return true;
   }
+  let delivered = true;
   for (const chatId of env.telegramChatIds) {
     for (const chunk of split(text, 3800)) {
       let res = await send(chatId, chunk, "Markdown");
@@ -14,10 +54,13 @@ export async function sendTelegram(text: string): Promise<void> {
         // Markdown malformado vindo da IA — reenvia como texto puro.
         res = await send(chatId, chunk);
       }
-      if (!res.ok)
+      if (!res.ok) {
+        delivered = false;
         console.error(`[telegram] ${res.status}: ${await res.text()}`);
+      }
     }
   }
+  return delivered;
 }
 
 /**
@@ -27,15 +70,16 @@ export async function sendTelegram(text: string): Promise<void> {
 export async function sendTelegramAlbum(
   caption: string,
   photos: string[],
-): Promise<void> {
+): Promise<boolean> {
   const imgs = photos.filter(Boolean).slice(0, 10);
   if (!env.telegramToken || !env.telegramChatIds.length) {
     console.log("[telegram] não configurado — imprimindo no console:\n");
     console.log(`[álbum ${imgs.length} fotos]\n${caption}`);
-    return;
+    return true;
   }
   if (!imgs.length) return sendTelegram(caption);
 
+  let delivered = true;
   for (const chatId of env.telegramChatIds) {
     const media = imgs.map((url, i) => ({
       type: "photo",
@@ -44,34 +88,26 @@ export async function sendTelegramAlbum(
         ? { caption: caption.slice(0, 1000), parse_mode: "Markdown" }
         : {}),
     }));
-    const res = await fetch(
-      `https://api.telegram.org/bot${env.telegramToken}/sendMediaGroup`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, media }),
-      },
-    );
+    const res = await tgJson("sendMediaGroup", { chat_id: chatId, media });
     if (!res.ok) {
       console.warn(`[telegram] sendMediaGroup ${res.status} — fallback texto`);
-      let alt = await send(chatId, caption, "Markdown");
-      if (alt.status === 400) alt = await send(chatId, caption);
-      if (!alt.ok)
-        console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
+      if (!(await textFallback(chatId, caption))) delivered = false;
     }
   }
+  return delivered;
 }
 
 /** Send a photo with Markdown caption; falls back to text-only message. */
 export async function sendTelegramPhoto(
   caption: string,
   photo: string,
-): Promise<void> {
+): Promise<boolean> {
   if (!env.telegramToken || !env.telegramChatIds.length) {
     console.log("[telegram] não configurado — imprimindo no console:\n");
     console.log(`[foto: ${photo}]\n${caption}`);
-    return;
+    return true;
   }
+  let delivered = true;
   for (const chatId of env.telegramChatIds) {
     // Degrada um problema por vez, preservando o máximo: Markdown -> texto puro
     // (salva legenda com marcação inválida) -> upload dos bytes (salva host que
@@ -81,12 +117,18 @@ export async function sendTelegramPhoto(
     if (!res.ok && (await uploadPhoto(chatId, caption, photo))) continue;
     if (!res.ok) {
       console.warn(`[telegram] sendPhoto ${res.status} — fallback p/ texto`);
-      let alt = await send(chatId, caption, "Markdown");
-      if (alt.status === 400) alt = await send(chatId, caption);
-      if (!alt.ok)
-        console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
+      if (!(await textFallback(chatId, caption))) delivered = false;
     }
   }
+  return delivered;
+}
+
+/** Última degradação de foto/álbum: a legenda como mensagem de texto. */
+async function textFallback(chatId: string, caption: string): Promise<boolean> {
+  let alt = await send(chatId, caption, "Markdown");
+  if (alt.status === 400) alt = await send(chatId, caption);
+  if (!alt.ok) console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
+  return alt.ok;
 }
 
 function photoPorUrl(
@@ -95,15 +137,11 @@ function photoPorUrl(
   photo: string,
   parseMode?: string,
 ): Promise<Response> {
-  return fetch(`https://api.telegram.org/bot${env.telegramToken}/sendPhoto`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      photo,
-      caption: caption.slice(0, 1000),
-      ...(parseMode ? { parse_mode: parseMode } : {}),
-    }),
+  return tgJson("sendPhoto", {
+    chat_id: chatId,
+    photo,
+    caption: caption.slice(0, 1000),
+    ...(parseMode ? { parse_mode: parseMode } : {}),
   });
 }
 
@@ -135,10 +173,7 @@ async function uploadPhoto(
       new Blob([bytes], { type: "image/jpeg" }),
       url.split("/").pop()?.split("?")[0] || "foto.jpg",
     );
-    const res = await fetch(
-      `https://api.telegram.org/bot${env.telegramToken}/sendPhoto`,
-      { method: "POST", body: form },
-    );
+    const res = await tg("sendPhoto", { body: form });
     if (res.ok) console.log("[telegram] foto enviada por upload");
     return res.ok;
   } catch {
@@ -151,15 +186,11 @@ function send(
   text: string,
   parseMode?: string,
 ): Promise<Response> {
-  return fetch(`https://api.telegram.org/bot${env.telegramToken}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      ...(parseMode ? { parse_mode: parseMode } : {}),
-      disable_web_page_preview: true,
-    }),
+  return tgJson("sendMessage", {
+    chat_id: chatId,
+    text,
+    ...(parseMode ? { parse_mode: parseMode } : {}),
+    disable_web_page_preview: true,
   });
 }
 

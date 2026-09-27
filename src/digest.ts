@@ -1,10 +1,13 @@
 import { cityRank, norm, REGION_CITIES } from "./config/region.ts";
 import { topic } from "./config/topic.ts";
 import {
+  blockSent,
   type Event,
   eventsBetween,
   eventsOn,
+  markBlockSent,
   markEventsPosted,
+  pruneDigestRunsBefore,
   pruneDisallowedCities,
   pruneEventsBefore,
   pruneOnlineEvents,
@@ -83,6 +86,16 @@ function eventLines(ev: Event): string {
   return lines.join("\n");
 }
 
+/** Envia um bloco no máximo uma vez por dia; só registra se `send` entregar. */
+async function oncePerDay(
+  today: string,
+  block: string,
+  send: () => Promise<boolean>,
+): Promise<void> {
+  if (blockSent(today, block)) return;
+  if (await send()) markBlockSent(today, block);
+}
+
 /** Extract events from pending items, post today's events + 7-day agenda + sightseeing spots. */
 export async function digest(): Promise<void> {
   const today = isoDay(new Date());
@@ -109,6 +122,7 @@ export async function digest(): Promise<void> {
     syncMultiplanHall(today),
   ]);
   pruneEventsBefore(today);
+  pruneDigestRunsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
   pruneDisallowedCities(REGION_CITIES.map(norm));
   pruneOnlineEvents();
@@ -133,12 +147,19 @@ export async function digest(): Promise<void> {
     ),
   );
 
+  // Só o que o Telegram confirmou vira "postado", e na hora: o resto tenta de
+  // novo numa próxima rodada do dia.
+  let posted = 0;
   const postaDia = async (lista: Event[], selo: string) => {
     for (const ev of lista) {
       const body = `${selo}\n\n${eventLines(ev)}`;
       const image = capa.get(ev.id);
-      if (image) await sendTelegramPhoto(body, image);
-      else await sendTelegram(body);
+      const ok = image
+        ? await sendTelegramPhoto(body, image)
+        : await sendTelegram(body);
+      if (!ok) continue;
+      markEventsPosted([ev.id]);
+      posted++;
     }
   };
 
@@ -153,10 +174,6 @@ export async function digest(): Promise<void> {
     const posters = day.movies
       .map((m) => m.poster)
       .filter((p): p is string => Boolean(p));
-    // Legenda de álbum é cortada em ~1000 chars: os pôsteres levam só o título
-    // e a ficha completa (estreia, trailer) vai na mensagem seguinte.
-    await sendTelegramAlbum(header, posters);
-
     const lines = day.movies.map((m) => {
       const tag = [m.genre, m.rating, m.duration].filter(Boolean).join(" · ");
       const bits = [
@@ -168,22 +185,32 @@ export async function digest(): Promise<void> {
       ].filter(Boolean);
       return `• *${mdSafe(m.title)}*${tag ? ` — ${tag}` : ""}\n  ${bits.join(" · ")}`;
     });
-    await sendTelegram(`${header}\n\n${lines.join("\n\n")}`);
+    await oncePerDay(today, `cinema:${day.cinema}`, async () => {
+      // Legenda de álbum é cortada em ~1000 chars: os pôsteres levam só o
+      // título e a ficha completa (estreia, trailer) vai na mensagem seguinte.
+      const album = await sendTelegramAlbum(header, posters);
+      const ficha = await sendTelegram(`${header}\n\n${lines.join("\n\n")}`);
+      return album && ficha;
+    });
   }
 
   // Dica de Passeio Permanente em Franca - SP (Surpresa diária com imagem e localização)
   const spot = getDailySpot(today);
   const spotBody = `✨ *Dica de Passeio em Franca!* ✨\n\n*${spot.name}*\n${spot.description}\n\n📍 [${spot.venue}](${spot.mapsUrl})`;
-  if (spot.image) {
-    await sendTelegramPhoto(spotBody, spot.image);
-  } else {
-    await sendTelegram(spotBody);
-  }
+  await oncePerDay(today, "spot", () =>
+    spot.image
+      ? sendTelegramPhoto(spotBody, spot.image)
+      : sendTelegram(spotBody),
+  );
 
   // Agenda dos próximos 7 dias — um post agrupado por dia, também separada.
   const week = eventsBetween(addDays(today, 1), addDays(today, 7));
-  const agenda = async (lista: Event[], titulo: string, comCidade: boolean) => {
-    if (!lista.length) return;
+  const agenda = async (
+    lista: Event[],
+    titulo: string,
+    comCidade: boolean,
+  ): Promise<boolean> => {
+    if (!lista.length) return true;
     const byDay = new Map<string, Event[]>();
     for (const ev of lista) {
       byDay.set(ev.date, [...(byDay.get(ev.date) ?? []), ev]);
@@ -204,31 +231,43 @@ export async function digest(): Promise<void> {
       });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
     });
-    await sendTelegram(`${titulo}\n\n${blocks.join("\n\n")}`);
+    return sendTelegram(`${titulo}\n\n${blocks.join("\n\n")}`);
   };
 
   const weekFranca = week.filter((ev) => cityRank(ev.city) === 0);
   const weekFora = week.filter((ev) => cityRank(ev.city) !== 0);
-  await agenda(
-    weekFranca,
-    `${topic.emoji} *Agenda — próximos 7 dias em Franca*`,
-    false,
+  await oncePerDay(today, "agenda:franca", () =>
+    agenda(
+      weekFranca,
+      `${topic.emoji} *Agenda — próximos 7 dias em Franca*`,
+      false,
+    ),
   );
 
   // ---- daqui pra baixo, só o que NÃO é de Franca ----
   if (todaysFora.length || weekFora.length) {
-    await sendTelegram(
-      "🗺️ *Fora de Franca — região e Ribeirão Preto*\n\nO que rola nas cidades vizinhas se você topar pegar a estrada.",
-    );
+    const cabecalho = () =>
+      sendTelegram(
+        "🗺️ *Fora de Franca — região e Ribeirão Preto*\n\nO que rola nas cidades vizinhas se você topar pegar a estrada.",
+      );
+    // Evento de fora reenviado sem o cabeçalho pareceria rolê de Franca.
+    if (todaysFora.length) {
+      if (await cabecalho()) markBlockSent(today, "fora:cabecalho");
+    } else await oncePerDay(today, "fora:cabecalho", cabecalho);
     await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
-    await agenda(
-      weekFora,
-      `${topic.emoji} *Agenda — próximos 7 dias na região*`,
-      true,
+    await oncePerDay(today, "agenda:fora", () =>
+      agenda(
+        weekFora,
+        `${topic.emoji} *Agenda — próximos 7 dias na região*`,
+        true,
+      ),
     );
   }
 
-  markEventsPosted(todays.map((ev) => ev.id));
+  if (posted < todays.length)
+    console.warn(
+      `[digest] ${todays.length - posted} evento(s) de hoje não entregue(s) — ficam para a próxima rodada`,
+    );
   console.log(
     `[digest] hoje: ${todaysFranca.length} em Franca + ${todaysFora.length} fora | semana: ${weekFranca.length} + ${weekFora.length}`,
   );

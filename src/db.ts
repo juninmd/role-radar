@@ -36,6 +36,11 @@ db.exec(`
     created_at   TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
+  CREATE TABLE IF NOT EXISTS digest_runs (
+    date  TEXT NOT NULL,
+    block TEXT NOT NULL,
+    PRIMARY KEY (date, block)
+  );
 `);
 
 // Migrações: colunas adicionadas depois que bancos já existiam.
@@ -266,6 +271,28 @@ export function pruneDisallowedCities(allowedNormalized: string[]): void {
 export function pruneOnlineEvents(): void {
   // LIKE do SQLite já é case-insensitive em ASCII.
   db.prepare("DELETE FROM events WHERE venue LIKE '%online%'").run();
+}
+
+/**
+ * Bloco do digest (cinema, dica, agenda) já entregue no dia: um retry do
+ * CronJob ou disparo manual não repete no grupo o que já saiu.
+ */
+export function blockSent(date: string, block: string): boolean {
+  return !!db
+    .query<unknown, [string, string]>(
+      "SELECT 1 FROM digest_runs WHERE date = ? AND block = ?",
+    )
+    .get(date, block);
+}
+
+export function markBlockSent(date: string, block: string): void {
+  db.prepare(
+    "INSERT OR IGNORE INTO digest_runs (date, block) VALUES (?, ?)",
+  ).run(date, block);
+}
+
+export function pruneDigestRunsBefore(date: string): void {
+  db.prepare("DELETE FROM digest_runs WHERE date < ?").run(date);
 }
 
 export function pendingItems(limit: number): Item[] {

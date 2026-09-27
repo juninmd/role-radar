@@ -21,12 +21,14 @@ bun run dev      # 1 ciclo: ingest + digest
 bun start        # loop com cron (ingest a cada 30min, digest 11h)
 bun run ingest   # só coleta
 bun run digest   # só envia digest
+bun test         # testes (rede e Telegram mockados)
 bun run typecheck
 ```
 
 ## Fallbacks
 
-- IA fora do ar → digest envia lista bruta dos itens.
+- IA fora do ar ou travada (`AI_TIMEOUT_MS`) → o lote fica na fila e é reprocessado no próximo digest.
+- Telegram falhou (429 é reenviado respeitando `retry_after`) → evento não é marcado como postado; outra rodada no mesmo dia reenvia só o que faltou (blocos já entregues ficam em `digest_runs`).
 - Sem `TELEGRAM_BOT_TOKEN` → imprime o digest no console.
 - Feed que falha não derruba os demais (`Promise.allSettled`).
 
