@@ -1,6 +1,6 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { env } from "../src/config/env.ts";
-import { resolveLink } from "../src/sources/article.ts";
+import { GoogleBlocked, resolveLink } from "../src/sources/article.ts";
 import { stubFetch } from "./fetch.ts";
 
 // O Google dá 429 ao IPv4 do cluster; com GOOGLE_IPV6=1 a conexão vai
@@ -68,4 +68,20 @@ test("desligado (padrão) nem consulta o DNS", async () => {
   expect(await resolveLink(LINK)).toBe(REAL);
   expect(lookup).not.toHaveBeenCalled();
   lookup.mockRestore();
+});
+
+test("302 para google.com/sorry conta como bloqueio (dispara o breaker)", async () => {
+  let hits = 0;
+  stubFetch(async (url) => {
+    hits++;
+    if (url.includes("/sorry/")) return new Response("captcha");
+    return new Response("", {
+      status: 302,
+      headers: {
+        location: `https://www.google.com/sorry/index?continue=${url}`,
+      },
+    });
+  });
+  await expect(resolveLink(LINK)).rejects.toBeInstanceOf(GoogleBlocked);
+  expect(hits).toBe(1); // não segue até a página de captcha
 });

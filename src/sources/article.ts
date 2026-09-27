@@ -59,9 +59,11 @@ export async function resolveLink(link: string): Promise<string> {
   // Já com os parâmetros do redirect: nenhum salto volta pelo hostname.
   const res0 = await googleGet(
     `https://news.google.com/articles/${id}?hl=en-US&gl=US&ceid=US:en`,
+    { redirect: "manual" },
   );
-  if (res0.status === 429)
-    throw new GoogleBlocked("Google News bloqueou (HTTP 429)");
+  // O bloqueio chega como 429 ou como 302 para google.com/sorry.
+  if (res0.status === 429 || res0.headers.get("location")?.includes("/sorry/"))
+    throw new GoogleBlocked(`Google News bloqueou (HTTP ${res0.status})`);
   const page = await res0.text();
   const sg = page.match(/data-n-a-sg="([^"]+)"/)?.[1];
   const ts = page.match(/data-n-a-ts="([^"]+)"/)?.[1];

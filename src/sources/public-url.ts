@@ -44,6 +44,8 @@ export async function fetchPublic(
     if (!isPublicUrl(current)) throw new Error(`URL não pública: ${current}`);
     const res = await fetch(current, { ...init, redirect: "manual" });
     const next = res.headers.get("location");
+    // redirect "manual" pedido pelo chamador: devolve o 3xx para ele decidir.
+    if (init.redirect === "manual") return res;
     if (res.status < 300 || res.status >= 400 || !next) return res;
     current = new URL(next, current).toString();
   }
