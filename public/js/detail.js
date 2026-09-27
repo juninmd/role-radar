@@ -66,7 +66,7 @@ export function openDetail(it) {
   const img = safeUrl(it.image);
   const fav = state.favs.has(it.id);
   const when = it.date
-    ? `${humanDay(it.date, state.catalog.today)}${it.time ? ` às ${it.time}` : ""} (${relDays(it.date, state.catalog.today)})`
+    ? `${humanDay(it.date, state.catalog.today)}${it.endDate ? ` até ${humanDay(it.endDate, state.catalog.today)}` : ""}${it.time ? ` às ${it.time}` : ""} (${relDays(it.date, state.catalog.today)})`
     : "Sempre aberto — é só chegar";
 
   const close = h(

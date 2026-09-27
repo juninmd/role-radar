@@ -105,14 +105,19 @@ export function weekendDays(today) {
 
 function matchesWhen(it, f, today) {
   if (!it.date) return true; // lugar fixo: sempre aberto pro radar
-  if (f.day) return it.date === f.day;
+  // Festival de vários dias vale para qualquer dia que ele cubra.
+  const overlaps = (from, to) =>
+    it.date <= to && (it.endDate ?? it.date) >= from;
+  if (f.day) return overlaps(f.day, f.day);
   switch (f.when) {
     case "hoje":
-      return it.date === today;
+      return overlaps(today, today);
     case "amanha":
-      return it.date === addDays(today, 1);
-    case "fds":
-      return weekendDays(today).includes(it.date);
+      return overlaps(addDays(today, 1), addDays(today, 1));
+    case "fds": {
+      const wk = weekendDays(today);
+      return overlaps(wk[0], wk.at(-1));
+    }
     case "7d":
       return it.daysAhead <= 7;
     case "30d":

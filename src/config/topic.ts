@@ -29,6 +29,11 @@ Regras do digest:
       url: "https://www.jornaldafranca.com.br/feed/",
     },
     {
+      // Cobriu o Festival Mundo Asiático que o Google News não trouxe.
+      name: "Verdade ON",
+      url: "https://verdadeon.com.br/portal/feed/",
+    },
+    {
       // Cobre a cena de shows da região (achado ao rastrear a Feijoada do Pinheiro).
       name: "A Tribuna Regional (entretenimento)",
       url: "https://atribunaregional.com.br/feed/",

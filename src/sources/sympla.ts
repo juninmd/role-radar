@@ -21,9 +21,19 @@ interface SymplaEvent {
   name: string;
   url: string;
   start_date: string;
+  end_date?: string;
   images?: { lg?: string; original?: string };
   location?: { name?: string; city?: string };
 }
+
+/** Dia local (UTC-3) de um timestamp UTC do Sympla. */
+const localDay = (utc: string): string | null => {
+  const d = new Date(utc);
+  // Data inválida faria toISOString lançar e derrubar a página inteira.
+  if (Number.isNaN(d.getTime())) return null;
+  d.setUTCHours(d.getUTCHours() - 3);
+  return d.toISOString().slice(0, 10);
+};
 
 /** Scrape Sympla city listings (RSC payload) into structured events. */
 export async function syncSympla(today: string): Promise<number> {
@@ -55,7 +65,11 @@ export async function syncSympla(today: string): Promise<number> {
         local.setUTCHours(local.getUTCHours() - 3);
         const date = local.toISOString().slice(0, 10);
         const time = local.toISOString().slice(11, 16);
-        if (date < today) continue;
+        const day = ev.end_date ? localDay(ev.end_date) : null;
+        // Fim antes do início é lixo da fonte: evento de um dia.
+        const endDate = day && day > date ? day : null;
+        // Festival que começou ontem e vai até domingo ainda é rolê.
+        if ((endDate ?? date) < today) continue;
         upsertEvent({
           title: ev.name.trim(),
           date,
@@ -65,6 +79,7 @@ export async function syncSympla(today: string): Promise<number> {
           price: null,
           link: ev.url,
           image: ev.images?.lg ?? ev.images?.original ?? null,
+          end_date: endDate,
         });
         n++;
       }
