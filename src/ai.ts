@@ -55,6 +55,7 @@ async function openaiCompatible(
       ],
       temperature: 0.4,
     }),
+    signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
   if (!res.ok) throw new Error(`AI ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as {
@@ -77,6 +78,7 @@ async function anthropic(system: string, user: string): Promise<string> {
       system,
       messages: [{ role: "user", content: user }],
     }),
+    signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as { content: { text: string }[] };
@@ -92,6 +94,7 @@ async function google(system: string, user: string): Promise<string> {
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
     }),
+    signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as {

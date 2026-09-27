@@ -83,8 +83,11 @@ function parseJson(raw: string): Extracted[] {
   return JSON.parse(json) as Extracted[];
 }
 
-/** Manda um lote pra IA e grava os eventos válidos. Devolve quantos gravou. */
-async function runBatch(today: string, batch: Item[]): Promise<number> {
+/**
+ * Manda um lote pra IA e grava os eventos válidos. Devolve quantos gravou, ou
+ * null se a IA/parse falhou — aí o lote fica na fila para a próxima rodada.
+ */
+async function runBatch(today: string, batch: Item[]): Promise<number | null> {
   const list = batch
     .map(
       (it, i) =>
@@ -101,9 +104,9 @@ async function runBatch(today: string, batch: Item[]): Promise<number> {
     if (process.env.DEBUG_EXTRACT) console.log(`[extract:raw]\n${raw}`);
     events = parseJson(raw);
   } catch (err) {
-    // Falha isolada: só este lote se perde, os outros seguem.
-    console.error(`[extract] IA/parse falhou (${err})`);
-    return 0;
+    // Falha isolada: este lote volta na próxima rodada, os outros seguem.
+    console.error(`[extract] IA/parse falhou, lote fica pendente (${err})`);
+    return null;
   }
 
   let stored = 0;
@@ -157,12 +160,12 @@ export async function extractEvents(today: string): Promise<number> {
       `[extract] ${candidates.length - batch.length} candidato(s) além do teto de ${env.digestMaxItems} — ficam pendentes`,
     );
 
-  const counts = await pool(chunk(batch, BATCH), CONCURRENCY, (b) =>
-    runBatch(today, b),
-  );
-  const stored = counts.reduce((a, b) => a + b, 0);
+  const batches = chunk(batch, BATCH);
+  const counts = await pool(batches, CONCURRENCY, (b) => runBatch(today, b));
+  const stored = counts.reduce<number>((a, b) => a + (b ?? 0), 0);
+  const done = batches.filter((_, i) => counts[i] !== null).flat();
 
-  markDigested([...batch, ...skipped].map((it) => it.id));
+  markDigested([...done, ...skipped].map((it) => it.id));
   console.log(
     `[extract] ${stored} eventos de ${batch.length} itens com data (${skipped.length} sem data descartados, ${queue.length} na fila)`,
   );

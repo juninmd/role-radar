@@ -9,6 +9,7 @@
     "start": "bun run src/index.ts --loop",
     "ingest": "bun run src/index.ts --ingest",
     "digest": "bun run src/index.ts --digest",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write ."
   },
