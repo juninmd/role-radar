@@ -10,6 +10,7 @@ process.env.TELEGRAM_BOT_TOKEN = "";
 process.env.TELEGRAM_CHAT_IDS = "";
 process.env.AI_PROVIDER = "litellm";
 process.env.LITELLM_BASE_URL = "http://llm.test/v1";
+process.env.GEOCODE_MAX = "0";
 
 // Import dinâmico: env.ts precisa ler o process.env já neutralizado acima.
 const { env } = await import("../src/config/env.ts");

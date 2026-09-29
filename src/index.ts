@@ -3,6 +3,7 @@ import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { digest } from "./digest.ts";
 import { ingest } from "./ingest.ts";
+import { serve } from "./web/server.ts";
 
 const args = new Set(process.argv.slice(2));
 
@@ -11,7 +12,9 @@ async function once() {
   await digest();
 }
 
-if (args.has("--ingest")) {
+if (args.has("--serve")) {
+  serve(Number(process.env.PORT ?? 3000));
+} else if (args.has("--ingest")) {
   await ingest();
 } else if (args.has("--digest")) {
   await digest();
