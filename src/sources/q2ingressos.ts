@@ -17,6 +17,8 @@ interface Q2Event {
   Place?: string | null;
   City?: string | null;
   Slug?: string | null;
+  Artists?: string | null;
+  Description?: string | null;
 }
 
 /** Eventos da Q2 Ingressos na região de Franca. */
@@ -38,6 +40,16 @@ export async function syncQ2Ingressos(today: string): Promise<number> {
       if ((validEnd ?? date) < today) continue;
 
       const link = ev.Slug ? `${SITE}/events/${ev.Slug}` : `${SITE}/events`;
+      const descParts = [
+        ev.Artists ? `Atrações: ${ev.Artists.trim()}` : null,
+        ev.Description
+          ? ev.Description.replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+          : null,
+      ].filter(Boolean);
+      const description =
+        descParts.length > 0 ? descParts.join(" — ").slice(0, 300) : null;
 
       upsertEvent({
         title: ev.Name.trim(),
@@ -47,6 +59,7 @@ export async function syncQ2Ingressos(today: string): Promise<number> {
         venue: ev.Place ? ev.Place.trim() : null,
         city: ev.City ?? null,
         price: null,
+        description,
         link,
         image: ev.ImageHomeEvent ?? ev.ImageEvent ?? null,
       });

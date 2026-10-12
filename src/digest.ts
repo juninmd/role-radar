@@ -114,6 +114,13 @@ function eventLines(ev: Event): string {
   lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}` : ""}`);
   if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
 
+  if (ev.description) {
+    const descClean = mdSafe(ev.description.trim().slice(0, 280));
+    lines.push(
+      `\n> 💡 ${descClean}${ev.description.length > 280 ? "..." : ""}`,
+    );
+  }
+
   // Se não houver botões interativos (ex.: link inválido ou inexistente), mantém link no texto
   const hasInteractiveButtons =
     Boolean(ev.link && /^https?:\/\//i.test(ev.link)) ||

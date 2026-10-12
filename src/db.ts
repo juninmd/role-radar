@@ -51,6 +51,7 @@ for (const sql of [
   "ALTER TABLE events ADD COLUMN end_date TEXT",
   "ALTER TABLE items ADD COLUMN body TEXT",
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE events ADD COLUMN description TEXT",
 ]) {
   try {
     db.exec(sql);
@@ -123,6 +124,7 @@ export interface Event {
   price: string | null;
   link: string | null;
   image: string | null;
+  description?: string | null;
   /** Só estreias de cinema têm — vem do Ingresso.com. */
   trailer: string | null;
   /** Último dia de evento de vários dias (festival, feira); null = um dia só. */
@@ -133,13 +135,14 @@ export interface Event {
 }
 
 const upsertEventStmt = db.prepare(`
-  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, end_date, posted_today, posted_launch, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, description, trailer, end_date, posted_today, posted_launch, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
   ON CONFLICT(id) DO UPDATE SET
     time = COALESCE(excluded.time, time),
     venue = COALESCE(excluded.venue, venue),
     price = COALESCE(excluded.price, price),
     image = COALESCE(excluded.image, image),
+    description = COALESCE(excluded.description, description),
     trailer = COALESCE(excluded.trailer, trailer),
     end_date = COALESCE(excluded.end_date, end_date)
 `);
@@ -170,9 +173,11 @@ export function upsertEvent(
     | "created_at"
     | "trailer"
     | "end_date"
+    | "description"
   > & {
     trailer?: string | null;
     end_date?: string | null;
+    description?: string | null;
   },
 ): void {
   upsertEventStmt.run(
@@ -185,6 +190,7 @@ export function upsertEvent(
     ev.price,
     ev.link,
     ev.image,
+    ev.description ?? null,
     ev.trailer ?? null,
     // Fim antes do início é lixo da fonte: trata como evento de um dia.
     ev.end_date && ev.end_date > ev.date ? ev.end_date : null,

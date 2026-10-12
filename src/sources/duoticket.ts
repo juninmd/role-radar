@@ -41,7 +41,61 @@ async function detail(url: string) {
     const title = decode(
       html.match(/<meta property="og:title" content="([^"]+)"/)?.[1] ?? "",
     ).replace(/\s*-\s*Duoticket$/, "");
-    if (!box) return { title: title || null };
+    const ogDesc = decode(
+      html.match(/<meta property="og:description" content="([^"]+)"/)?.[1] ??
+        "",
+    );
+
+    const descBlock =
+      html.match(
+        /<div class="content-detail-event[^"]*"[^>]*>([\s\S]*?)<\/div>/,
+      )?.[1] ??
+      html.match(
+        /<div class="post-content[^"]*"[^>]*>([\s\S]*?)<\/div>/,
+      )?.[1] ??
+      ogDesc;
+    const cleanDesc = descBlock
+      ? decode(
+          descBlock
+            .replace(/<[^>]+>/g, " ")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+      : null;
+
+    let price: string | null = null;
+    const tidnv = html.match(/<span hidden id="tidnv">([^<]+)<\/span>/)?.[1];
+    if (tidnv) {
+      try {
+        const lotesHtml = await get(
+          `${BASE}/blocks/evento_lotes?e=${encodeURIComponent(tidnv)}`,
+        );
+        const matches = [
+          ...lotesHtml.matchAll(/R\$\s*(\d{1,3}(?:\.\d{3})*,\d{2})/g),
+        ];
+        if (matches.length > 0) {
+          const values = matches
+            .map((m) =>
+              Number.parseFloat(m[1].replace(/\./g, "").replace(",", ".")),
+            )
+            .filter((n) => !Number.isNaN(n) && n > 0);
+          if (values.length > 0) {
+            const min = Math.min(...values);
+            price = `A partir de R$ ${min.toFixed(2).replace(".", ",")}`;
+          }
+        }
+      } catch {
+        // lotes indisponíveis
+      }
+    }
+
+    if (!box) {
+      return {
+        title: title || null,
+        description: cleanDesc ? cleanDesc.slice(0, 300) : null,
+        price,
+      };
+    }
     const line = decode(box.split("<br>")[0] ?? "");
     const [venue, hours] = line.split("|").map((s) => s.trim());
     const hm = hours?.match(/(\d{1,2})h(\d{2})?/);
@@ -49,6 +103,8 @@ async function detail(url: string) {
       title: title || null,
       venue: venue || null,
       time: hm ? `${hm[1].padStart(2, "0")}:${hm[2] ?? "00"}` : null,
+      description: cleanDesc ? cleanDesc.slice(0, 300) : null,
+      price,
     };
   } catch {
     return {};
@@ -94,7 +150,13 @@ export async function syncDuoticket(today: string): Promise<number> {
 
     // Detalhes em pool: 25 páginas em série eram o trecho mais lento do digest.
     await pool(found.slice(0, MAX_DETAILS), 4, async (ev) => {
-      const { title = null, venue = null, time = null } = await detail(ev.link);
+      const {
+        title = null,
+        venue = null,
+        time = null,
+        price = null,
+        description = null,
+      } = await detail(ev.link);
       // O título da listagem vem cortado; o da página do evento é o completo.
       const full = title ?? ev.title;
       upsertEvent({
@@ -103,7 +165,8 @@ export async function syncDuoticket(today: string): Promise<number> {
         time,
         venue,
         city: ev.city,
-        price: null,
+        price,
+        description,
         link: ev.link,
         image: ev.image,
       });

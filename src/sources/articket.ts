@@ -16,6 +16,9 @@ interface ArticketEvent {
   image?: string | null;
   location?: string | null;
   url?: string | null;
+  price?: number | string | null;
+  price_min?: number | null;
+  description?: string | null;
 }
 
 interface ArticketResponse {
@@ -46,6 +49,19 @@ export async function syncArticket(today: string): Promise<number> {
         if ((validEnd ?? date) < today) continue;
 
         const time = ev.start_date.slice(11, 16);
+        const priceStr =
+          typeof ev.price_min === "number"
+            ? `A partir de R$ ${ev.price_min.toFixed(2).replace(".", ",")}`
+            : typeof ev.price === "string"
+              ? ev.price
+              : null;
+        const description = ev.description
+          ? ev.description
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 300)
+          : null;
 
         upsertEvent({
           title: ev.title.trim(),
@@ -54,7 +70,8 @@ export async function syncArticket(today: string): Promise<number> {
           time: time === "00:00" ? null : time,
           venue: ev.location ? ev.location.trim() : null,
           city,
-          price: null,
+          price: priceStr,
+          description,
           link: ev.url || `https://articket.com.br/e/${ev.id}`,
           image: ev.image ?? null,
         });

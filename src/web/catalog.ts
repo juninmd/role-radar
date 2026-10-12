@@ -22,6 +22,7 @@ export interface CatalogEvent {
   city: string | null;
   price: string | null;
   priceMin: number | null;
+  description: string | null;
   category: Category;
   pin: Pin | null;
   link: string | null;
@@ -90,6 +91,7 @@ export function buildCatalog(today: string): Catalog {
       city: ev.city,
       price: ev.price,
       priceMin: parsePrice(ev.price),
+      description: ev.description ?? null,
       category: categorize(ev.title, ev.venue),
       pin: pinFor(
         ev.venue ? { venue: ev.venue, city: ev.city } : null,
