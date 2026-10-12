@@ -12,6 +12,7 @@ Este documento cataloga de forma exaustiva todas as fontes de eventos pesquisada
 | **Q2 Ingressos** | `https://cdn.q2ingressos.com.br/assets/api/nextEvents.json` | Franca (sede da empresa), Batatais, RP | Catálogo JSON leve e oficial servido via CDN. Traz Villa Eventos, Agrobar, Morada du Capiau, congressos e shows regionais. Link: `/events/{Slug}`. |
 | **Guichê Web** | `POST https://www.guicheweb.com.br/webservices/api/api.php` | Sertãozinho, Ribeirão Preto, Franca | Requisição multipart com `a=carregar_home&pesquisa={cidade}`. Cobre tardezinhas, festivais cervejeiros, Oktoberfest e shows sertanejos. |
 | **Zig.tickets** | `https://zig.tickets/` (`__NEXT_DATA__`) | Ribeirão Preto, Franca, Altinópolis | Next.js SSR. Objeto `props.pageProps.events.events` expõe catálogo nacional com filtragem regional instantânea. Pubs, Art House, Old Barn, baladas. Link: `/eventos/{slug}`. |
+| **Articket** | `GET https://articket.com.br/api/search?q={cidade}` | Ribeirão Preto, região | API JSON aberta. Foco em shows de rock, tributos e casas underground (Toca do Jack Pub, Armazém Baixada). |
 | **OTicket** | `GET https://api.oticket.com.br/search?city=&producer=` | Franca (empresa local), Orlândia, RP | API aberta JSON. `city=` vazio traz ~100 eventos da região sem paginação. Club Show Franca, Paggio Gastrobar, Unifran. |
 | **Mega Bilheteria** | `GET https://web.megabilheteria.com/api/public/v2/events` | Franca, Bebedouro, Batatais, RP | Filtro de cidade da API é ignorado; radar busca páginas e filtra localmente via `inRegion()`. Teatros municipais e stand-up comedy. |
 | **Duoticket** | Home + detalhe de cada evento | Franca e região | Requer raspagem de detalhe para obter endereço e horários precisos. |
@@ -67,7 +68,15 @@ Este documento cataloga de forma exaustiva todas as fontes de eventos pesquisada
 | **Sampi (GCN Franca)** | `/franca/noticias/cultura` | 404 | Sem feed RSS público ou rota de cultura direta. Monitorado via busca do Google News. |
 | **Portal Pop Mundi** | `popmundi.com.br/feed/` | 200 (0 itens RSS) | O feed existe mas devolve XML vazio / redireciona para HTML. |
 | **Prefeitura de Batatais** | `batatais.sp.gov.br/feed/` | 200 (0 itens RSS) | Feed institucional vazio. |
-| **Portal da Cidade (Rede)** | Várias cidades | 403 Forbidden / sem RSS | Não há unidade própria em Franca/Batatais/Sertãozinho. |
+| **AppTicket** | `https://appticket.com.br/busca?q={cidade}` | 200 (Nuxt 3 sem dados públicos) | Nuxt SSR com store Pinia fechada. Sem catálogo público aberto. Eventos (Lavoux, Hard Rock RP) são cobertos via notícias. |
+| **Comédia Ingressos** | `https://comediaingressos.com.br/` | 200 (RSC sem Franca/RP) | Plataforma de stand-up. No momento sem apresentações agendadas em teatros da região. |
+| **Olha o Ingresso** | `https://olhaoingresso.com.br/` | 200 (Showare engine) | Atende eventos pontuais de comédia (ex: Maurício Dollenz no Teatro Judas Iscariotes). Engine Showare é fechada para busca pública. |
+| **Redticket** | `https://redticket.com.br/` | 200 (0 eventos na região) | Foco em Piracicaba e região metropolitana de Campinas. |
+| **CheersApp** | `https://cheersapp.com.br/` | Sem eventos na região | Foco em festas atléticas de outros estados e capitais. |
+| **UniTicket** | `https://uniticket.com.br/` | Sem eventos na região | Sem aderência na região de Franca. |
+| **Showpass** | `https://showpass.com.br/` | Sem eventos na região | Sem cobertura no interior de SP. |
+| **Disk Ingressos** | `https://diskingressos.com.br/` | 200 (0 eventos na região) | Foco no Paraná/Curitiba. |
+| **Shotgun.live** | `https://shotgun.live/` | 200 (0 eventos na região) | Foco na capital SP e capitais. |
 | **Instagram / Facebook** | Web scraping | Exige autenticação / WAF | Monitorado de forma limpa e resiliente via dorks do Google News (`site:instagram.com Franca evento`). |
 
 ---

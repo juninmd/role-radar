@@ -13,6 +13,7 @@ import {
   pruneOnlineEvents,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
+import { syncArticket } from "./sources/articket.ts";
 import { syncBasquete } from "./sources/basquete.ts";
 import { syncBilheteriaDigital } from "./sources/bilheteriadigital.ts";
 import { syncBilheteriaExpress } from "./sources/bilheteriaexpress.ts";
@@ -136,6 +137,7 @@ export async function digest(): Promise<void> {
     syncQ2Ingressos(today),
     syncGuicheWeb(today),
     syncZigTickets(today),
+    syncArticket(today),
   ]);
   pruneEventsBefore(today);
   pruneDigestRunsBefore(today);
