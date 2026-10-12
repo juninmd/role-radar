@@ -55,6 +55,7 @@ export async function syncMegabilheteria(today: string): Promise<number> {
         venue: ev.local?.trim() || null,
         city: ev.city ?? null,
         price: null,
+        description: ev.kind ? `Gênero: ${ev.kind.trim()}` : null,
         // Padrão que o próprio front do site usa: /evento?id={code}.
         link: ev.code ? `${SITE}/evento?id=${ev.code}` : SITE,
         image: ev.image ? `${SITE}${ev.image}` : null,

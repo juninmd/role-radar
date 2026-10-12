@@ -40,3 +40,24 @@ test("foto entregue é reportada", async () => {
   stubFetch(async () => json({ ok: true }));
   expect(await sendTelegramPhoto("oi", "https://img.test/a.jpg")).toBe(true);
 });
+
+test("mensagem e foto enviam reply_markup com inline_keyboard quando botões são fornecidos", async () => {
+  const payloads: Record<string, unknown>[] = [];
+  stubFetch(async (_url, init) => {
+    payloads.push(JSON.parse(String(init?.body)));
+    return json({ ok: true });
+  });
+
+  const buttons = [
+    [
+      { text: "🎟️ Ingressos", url: "https://ingressos.test" },
+      { text: "📍 Maps", url: "https://maps.test" },
+    ],
+  ];
+
+  await sendTelegram("texto com botão", buttons);
+  await sendTelegramPhoto("foto com botão", "https://img.test/a.jpg", buttons);
+
+  expect(payloads[0].reply_markup).toEqual({ inline_keyboard: buttons });
+  expect(payloads[1].reply_markup).toEqual({ inline_keyboard: buttons });
+});

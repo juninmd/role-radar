@@ -86,7 +86,12 @@ test("geocode: respeita o teto por rodada e não repete o que já está no cache
 });
 
 test("catálogo: pin real do cache, aproximado pela cidade, nulo sem cidade", async () => {
-  const ev = (title: string, venue: string | null, city: string | null) =>
+  const ev = (
+    title: string,
+    venue: string | null,
+    city: string | null,
+    description: string | null = null,
+  ) =>
     upsertEvent({
       title,
       date: today,
@@ -96,8 +101,9 @@ test("catálogo: pin real do cache, aproximado pela cidade, nulo sem cidade", as
       price: "R$ 20",
       link: "javascript:x",
       image: null,
+      description,
     });
-  ev("Com endereço", "Teatro Bom", "Franca");
+  ev("Com endereço", "Teatro Bom", "Franca", "Show intimista acústico");
   ev("Só cidade", null, "Batatais");
   ev("Sem cidade", null, "Cinemas");
   stubFetch(async () => json([{ lat: "-20.54", lon: "-47.40" }]));
@@ -114,6 +120,8 @@ test("catálogo: pin real do cache, aproximado pela cidade, nulo sem cidade", as
   expect(by("Sem cidade")?.pin).toBeNull();
   expect(by("Com endereço")?.link).toBeNull();
   expect(by("Com endereço")?.priceMin).toBe(20);
+  expect(by("Com endereço")?.description).toBe("Show intimista acústico");
+  expect(by("Só cidade")?.description).toBeNull();
   expect(cat.spots.length).toBeGreaterThan(0);
   expect(cat.spots.some((s) => s.id === cat.dailySpot)).toBe(true);
 });

@@ -23,7 +23,13 @@ interface SymplaEvent {
   start_date: string;
   end_date?: string;
   images?: { lg?: string; original?: string };
-  location?: { name?: string; city?: string };
+  location?: {
+    name?: string;
+    city?: string;
+    neighborhood?: string;
+    address?: string;
+  };
+  organizer?: { name?: string };
 }
 
 /** Dia local (UTC-3) de um timestamp UTC do Sympla. */
@@ -70,6 +76,17 @@ export async function syncSympla(today: string): Promise<number> {
         const endDate = day && day > date ? day : null;
         // Festival que começou ontem e vai até domingo ainda é rolê.
         if ((endDate ?? date) < today) continue;
+        const descParts = [
+          ev.organizer?.name ? `Produção: ${ev.organizer.name}` : null,
+          ev.location?.address
+            ? [ev.location.address, ev.location.neighborhood]
+                .filter(Boolean)
+                .join(", ")
+            : null,
+        ].filter(Boolean);
+        const description =
+          descParts.length > 0 ? descParts.join(" · ").slice(0, 300) : null;
+
         upsertEvent({
           title: ev.name.trim(),
           date,
@@ -77,6 +94,7 @@ export async function syncSympla(today: string): Promise<number> {
           venue: ev.location?.name ?? null,
           city: ev.location?.city ?? null,
           price: null,
+          description,
           link: ev.url,
           image: ev.images?.lg ?? ev.images?.original ?? null,
           end_date: endDate,

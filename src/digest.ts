@@ -47,6 +47,7 @@ import {
   sendTelegram,
   sendTelegramAlbum,
   sendTelegramPhoto,
+  type TelegramButton,
 } from "./telegram.ts";
 import { spotPlaces } from "./web/catalog.ts";
 import { geocodePlaces } from "./web/geocode.ts";
@@ -78,25 +79,58 @@ const humanDay = (iso: string) =>
  */
 const mdSafe = (s: string) => s.replace(/([_*[\]`])/g, "\\$1");
 
+function eventButtons(ev: Event): TelegramButton[][] {
+  const row: TelegramButton[] = [];
+  if (ev.link && /^https?:\/\//i.test(ev.link)) {
+    row.push({ text: "🎟️ Ingressos e Detalhes", url: ev.link });
+  }
+  if (ev.venue) {
+    const query = encodeURIComponent(`${ev.venue}, ${ev.city ?? "Franca"}, SP`);
+    row.push({
+      text: "📍 Como Chegar",
+      url: `https://www.google.com/maps/search/?api=1&query=${query}`,
+    });
+  }
+  const rows: TelegramButton[][] = [];
+  if (row.length) rows.push(row);
+  if (ev.trailer && /^https?:\/\//i.test(ev.trailer)) {
+    rows.push([{ text: "▶️ Ver Trailer", url: ev.trailer }]);
+  }
+  return rows;
+}
+
 function eventLines(ev: Event): string {
   const lines = [`🎟️ *${mdSafe(ev.title)}*`];
   const cidade = ev.city ? `, ${mdSafe(ev.city)}` : "";
-  let where = [ev.venue, ev.city]
-    .filter((s): s is string => Boolean(s))
-    .map(mdSafe)
-    .join(", ");
-  if (ev.venue) {
-    const query = encodeURIComponent(`${ev.venue}, ${ev.city ?? "Franca"}, SP`);
-    where = `[${mdSafe(ev.venue)}](https://www.google.com/maps/search/?api=1&query=${query})${cidade}`;
-  }
+  const where = ev.venue
+    ? `${mdSafe(ev.venue)}${cidade}`
+    : ev.city
+      ? mdSafe(ev.city)
+      : "";
   if (where) lines.push(`📍 ${where}`);
   const dias = ev.end_date
     ? `${humanDay(ev.date)} a ${humanDay(ev.end_date)}`
     : humanDay(ev.date);
   lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}` : ""}`);
   if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
-  if (ev.trailer) lines.push(`▶️ [Ver trailer](${ev.trailer})`);
-  if (ev.link) lines.push(`🔗 [Ingressos e detalhes](${ev.link})`);
+
+  if (ev.description) {
+    const descClean = mdSafe(ev.description.trim().slice(0, 280));
+    lines.push(
+      `\n> 💡 ${descClean}${ev.description.length > 280 ? "..." : ""}`,
+    );
+  }
+
+  // Se não houver botões interativos (ex.: link inválido ou inexistente), mantém link no texto
+  const hasInteractiveButtons =
+    Boolean(ev.link && /^https?:\/\//i.test(ev.link)) ||
+    Boolean(ev.venue) ||
+    Boolean(ev.trailer && /^https?:\/\//i.test(ev.trailer));
+
+  if (!hasInteractiveButtons) {
+    if (ev.trailer) lines.push(`▶️ [Ver trailer](${ev.trailer})`);
+    if (ev.link) lines.push(`🔗 [Ingressos e detalhes](${ev.link})`);
+  }
   return lines.join("\n");
 }
 
@@ -179,9 +213,10 @@ export async function digest(): Promise<void> {
     for (const ev of lista) {
       const body = `${selo}\n\n${eventLines(ev)}`;
       const image = capa.get(ev.id);
+      const buttons = eventButtons(ev);
       const ok = image
-        ? await sendTelegramPhoto(body, image)
-        : await sendTelegram(body);
+        ? await sendTelegramPhoto(body, image, buttons)
+        : await sendTelegram(body, buttons);
       if (!ok) continue;
       markEventsPosted([ev.id]);
       posted++;
@@ -192,9 +227,10 @@ export async function digest(): Promise<void> {
     for (const ev of lista) {
       const body = `${selo}\n\n${eventLines(ev)}`;
       const image = capa.get(ev.id);
+      const buttons = eventButtons(ev);
       const ok = image
-        ? await sendTelegramPhoto(body, image)
-        : await sendTelegram(body);
+        ? await sendTelegramPhoto(body, image, buttons)
+        : await sendTelegram(body, buttons);
       if (!ok) continue;
       markEventsLaunched([ev.id]);
     }
@@ -241,11 +277,14 @@ export async function digest(): Promise<void> {
 
   // Dica de Passeio Permanente em Franca - SP (Surpresa diária com imagem e localização)
   const spot = getDailySpot(today);
-  const spotBody = `✨ *Dica de Passeio em Franca!* ✨\n\n*${spot.name}*\n${spot.description}\n\n📍 [${spot.venue}](${spot.mapsUrl})`;
+  const spotBody = `✨ *Dica de Passeio em Franca!* ✨\n\n*${spot.name}*\n${spot.description}`;
+  const spotButtons: TelegramButton[][] = [
+    [{ text: `📍 Ver ${spot.venue} no Maps`, url: spot.mapsUrl }],
+  ];
   await oncePerDay(today, "spot", () =>
     spot.image
-      ? sendTelegramPhoto(spotBody, spot.image)
-      : sendTelegram(spotBody),
+      ? sendTelegramPhoto(spotBody, spot.image, spotButtons)
+      : sendTelegram(spotBody, spotButtons),
   );
 
   // Agenda dos próximos 7 dias — um post agrupado por dia, também separada.
