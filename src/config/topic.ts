@@ -205,5 +205,15 @@ Regras do digest:
       name: "Em Foco Sertãozinho",
       url: "https://emfocosertaozinho.com.br/feed/",
     },
+    {
+      // Cobertura regional de Bebedouro (cultura, eventos comunitários e festas locais)
+      name: "Gazeta de Bebedouro",
+      url: "https://gazetadebebedouro.com.br/feed/",
+    },
+    {
+      // Notícias e editais sociais/culturais de Franca
+      name: "24h SP Franca",
+      url: "https://franca.24hsp.com.br/feed/",
+    },
   ],
 };

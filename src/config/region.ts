@@ -52,6 +52,8 @@ export const SEARCH_CITIES = [
   "São Joaquim da Barra",
   "Igarapava",
   "Morro Agudo",
+  "Sertãozinho",
+  "Bebedouro",
 ];
 
 /** "São Joaquim da Barra" → "sao-joaquim-da-barra-sp" (formato do Sympla). */
