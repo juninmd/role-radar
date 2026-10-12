@@ -90,3 +90,65 @@ test("evento de fora reenviado volta com o cabeçalho de fora", async () => {
   expect(bodies).toHaveLength(2);
   expect(eventsOn(today)[0]?.posted_today).toBe(1);
 });
+
+test("evento futuro novo é anunciado imediatamente como novo rolê e marcado como posted_launch", async () => {
+  db.exec("DELETE FROM events;");
+  evento("Mega Show Futuro", "2026-12-31", "Franca");
+
+  const sentBodies: string[] = [];
+  stubFetch(async (url, init) => {
+    if (!url.startsWith("https://api.telegram.org/"))
+      return new Response("", { status: 404 });
+    sentBodies.push(String(init?.body));
+    return json({ ok: true });
+  });
+
+  await digest();
+
+  const launchMsg = sentBodies.find(
+    (b) => b.includes("NOVO ROLÊ EM FRANCA") && b.includes("Mega Show Futuro"),
+  );
+  expect(launchMsg).toBeDefined();
+
+  const row = db
+    .query<{ posted_launch: number; posted_today: number }, [string]>(
+      "SELECT posted_launch, posted_today FROM events WHERE title = ?",
+    )
+    .get("Mega Show Futuro");
+  expect(row?.posted_launch).toBe(1);
+  expect(row?.posted_today).toBe(0);
+
+  // Rodada seguinte não relança o evento
+  sentBodies.length = 0;
+  await digest();
+  const relancado = sentBodies.find((b) => b.includes("Mega Show Futuro"));
+  expect(relancado).toBeUndefined();
+});
+
+test("evento futuro na região recebe selo de região e cabeçalho de fora", async () => {
+  db.exec("DELETE FROM events;");
+  evento("Réveillon BBQ Select", "2026-12-31", "Rifaina");
+
+  const sentBodies: string[] = [];
+  stubFetch(async (url, init) => {
+    if (!url.startsWith("https://api.telegram.org/"))
+      return new Response("", { status: 404 });
+    sentBodies.push(String(init?.body));
+    return json({ ok: true });
+  });
+
+  await digest();
+
+  const launchMsg = sentBodies.find(
+    (b) =>
+      b.includes("NOVO ROLÊ NA REGIÃO") && b.includes("Réveillon BBQ Select"),
+  );
+  expect(launchMsg).toBeDefined();
+
+  const row = db
+    .query<{ posted_launch: number }, [string]>(
+      "SELECT posted_launch FROM events WHERE title = ?",
+    )
+    .get("Réveillon BBQ Select");
+  expect(row?.posted_launch).toBe(1);
+});

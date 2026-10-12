@@ -6,11 +6,13 @@ import {
   eventsBetween,
   eventsOn,
   markBlockSent,
+  markEventsLaunched,
   markEventsPosted,
   pruneDigestRunsBefore,
   pruneDisallowedCities,
   pruneEventsBefore,
   pruneOnlineEvents,
+  unannouncedFutureEvents,
 } from "./db.ts";
 import { extractEvents } from "./extract.ts";
 import { syncArticket } from "./sources/articket.ts";
@@ -151,10 +153,15 @@ export async function digest(): Promise<void> {
   const todaysFranca = todays.filter((ev) => cityRank(ev.city) === 0);
   const todaysFora = todays.filter((ev) => cityRank(ev.city) !== 0);
 
+  // Eventos futuros recém-lançados: avisados imediatamente para não perder shows e lotes.
+  const novos = unannouncedFutureEvents(today, 20);
+  const novosFranca = novos.filter((ev) => cityRank(ev.city) === 0);
+  const novosFora = novos.filter((ev) => cityRank(ev.city) !== 0);
+
   // og:image de todos de uma vez; o envio é que precisa ser serial (Telegram).
   const capa = new Map(
     await Promise.all(
-      todays.map(
+      [...todays, ...novos].map(
         async (ev) =>
           [
             ev.id,
@@ -181,9 +188,27 @@ export async function digest(): Promise<void> {
     }
   };
 
+  const postaLancamento = async (lista: Event[], selo: string) => {
+    for (const ev of lista) {
+      const body = `${selo}\n\n${eventLines(ev)}`;
+      const image = capa.get(ev.id);
+      const ok = image
+        ? await sendTelegramPhoto(body, image)
+        : await sendTelegram(body);
+      if (!ok) continue;
+      markEventsLaunched([ev.id]);
+    }
+  };
+
   await postaDia(todaysFranca, "⚡ *É HOJE EM FRANCA!*");
   if (todaysFranca.length)
     console.log(`[digest] ${todaysFranca.length} evento(s) de hoje em Franca`);
+
+  await postaLancamento(novosFranca, "🚀 *NOVO ROLÊ EM FRANCA!*");
+  if (novosFranca.length)
+    console.log(
+      `[digest] ${novosFranca.length} novo(s) evento(s) anunciado(s) em Franca`,
+    );
 
   // Filmes em cartaz HOJE — um post por cidade.
   const cinema = await nowPlaying();
@@ -268,16 +293,21 @@ export async function digest(): Promise<void> {
   );
 
   // ---- daqui pra baixo, só o que NÃO é de Franca ----
-  if (todaysFora.length || weekFora.length) {
+  if (todaysFora.length || weekFora.length || novosFora.length) {
     const cabecalho = () =>
       sendTelegram(
         "🗺️ *Fora de Franca — região e Ribeirão Preto*\n\nO que rola nas cidades vizinhas se você topar pegar a estrada.",
       );
     // Evento de fora reenviado sem o cabeçalho pareceria rolê de Franca.
-    if (todaysFora.length) {
+    if (todaysFora.length || novosFora.length) {
       if (await cabecalho()) markBlockSent(today, "fora:cabecalho");
     } else await oncePerDay(today, "fora:cabecalho", cabecalho);
     await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
+    await postaLancamento(novosFora, "🚀 *NOVO ROLÊ NA REGIÃO!*");
+    if (novosFora.length)
+      console.log(
+        `[digest] ${novosFora.length} novo(s) evento(s) anunciado(s) na região`,
+      );
     await oncePerDay(today, "agenda:fora", () =>
       agenda(
         weekFora,
@@ -299,6 +329,6 @@ export async function digest(): Promise<void> {
       `[digest] ${todays.length - posted} evento(s) de hoje não entregue(s) — ficam para a próxima rodada`,
     );
   console.log(
-    `[digest] hoje: ${todaysFranca.length} em Franca + ${todaysFora.length} fora | semana: ${weekFranca.length} + ${weekFora.length}`,
+    `[digest] hoje: ${todaysFranca.length} em Franca + ${todaysFora.length} fora | novos: ${novosFranca.length} + ${novosFora.length} | semana: ${weekFranca.length} + ${weekFora.length}`,
   );
 }

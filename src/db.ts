@@ -33,6 +33,7 @@ db.exec(`
     link         TEXT,
     image        TEXT,
     posted_today INTEGER NOT NULL DEFAULT 0,
+    posted_launch INTEGER NOT NULL DEFAULT 0,
     created_at   TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
@@ -49,6 +50,7 @@ for (const sql of [
   "ALTER TABLE events ADD COLUMN trailer TEXT",
   "ALTER TABLE events ADD COLUMN end_date TEXT",
   "ALTER TABLE items ADD COLUMN body TEXT",
+  "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
 ]) {
   try {
     db.exec(sql);
@@ -126,12 +128,13 @@ export interface Event {
   /** Último dia de evento de vários dias (festival, feira); null = um dia só. */
   end_date: string | null;
   posted_today: number;
+  posted_launch: number;
   created_at: string;
 }
 
 const upsertEventStmt = db.prepare(`
-  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, end_date, posted_today, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, trailer, end_date, posted_today, posted_launch, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
   ON CONFLICT(id) DO UPDATE SET
     time = COALESCE(excluded.time, time),
     venue = COALESCE(excluded.venue, venue),
@@ -161,7 +164,12 @@ export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<
     Event,
-    "id" | "posted_today" | "created_at" | "trailer" | "end_date"
+    | "id"
+    | "posted_today"
+    | "posted_launch"
+    | "created_at"
+    | "trailer"
+    | "end_date"
   > & {
     trailer?: string | null;
     end_date?: string | null;
@@ -186,36 +194,52 @@ export function upsertEvent(
 
 /**
  * Migração idempotente: reescreve os ids antigos (sha1 do título cru) para a
- * chave canônica, fundindo duplicatas. `posted_today` do grupo é preservado
- * como OR — evento já anunciado não volta pro Telegram.
+ * chave canônica, fundindo duplicatas. `posted_today` e `posted_launch` do grupo
+ * são preservados como OR — evento já anunciado não volta pro Telegram.
  */
 function rekeyEvents(): void {
   const rows = db
     .query<
-      { id: string; title: string; date: string; posted_today: number },
+      {
+        id: string;
+        title: string;
+        date: string;
+        posted_today: number;
+        posted_launch: number;
+      },
       []
-    >("SELECT id, title, date, posted_today FROM events")
+    >("SELECT id, title, date, posted_today, posted_launch FROM events")
     .all();
   if (!rows.length) return;
   const del = db.prepare<unknown, [string]>("DELETE FROM events WHERE id = ?");
-  const upd = db.prepare<unknown, [string, number, string]>(
-    "UPDATE events SET id = ?, posted_today = ? WHERE id = ?",
+  const upd = db.prepare<unknown, [string, number, number, string]>(
+    "UPDATE events SET id = ?, posted_today = ?, posted_launch = ? WHERE id = ?",
   );
-  const keep = new Map<string, { id: string; posted: number }>();
+  const keep = new Map<
+    string,
+    { id: string; posted_today: number; posted_launch: number }
+  >();
   const tx = db.transaction(() => {
     for (const r of rows) {
       const nid = eventId(r.title, r.date);
       const cur = keep.get(nid);
       if (!cur) {
-        keep.set(nid, { id: r.id, posted: r.posted_today });
+        keep.set(nid, {
+          id: r.id,
+          posted_today: r.posted_today,
+          posted_launch: r.posted_launch,
+        });
         continue;
       }
       // Duplicata: fica a linha já escolhida, o flag de postado é o OR das duas.
-      cur.posted = Math.max(cur.posted, r.posted_today);
+      cur.posted_today = Math.max(cur.posted_today, r.posted_today);
+      cur.posted_launch = Math.max(cur.posted_launch, r.posted_launch);
       del.run(r.id);
     }
     // Sempre grava: o id pode não ter mudado, mas o flag fundido, sim.
-    for (const [nid, k] of keep) upd.run(nid, k.posted, k.id);
+    for (const [nid, k] of keep) {
+      upd.run(nid, k.posted_today, k.posted_launch, k.id);
+    }
   });
   tx();
   const merged = rows.length - keep.size;
@@ -241,10 +265,33 @@ export function eventsBetween(from: string, to: string): Event[] {
     .all(from, to);
 }
 
+export function unannouncedFutureEvents(today: string, limit = 20): Event[] {
+  return db
+    .query<Event, [string, number]>(
+      `SELECT * FROM events
+       WHERE posted_launch = 0
+         AND date > ?1
+       ORDER BY date, time, title
+       LIMIT ?2`,
+    )
+    .all(today, limit);
+}
+
+export function markEventsLaunched(ids: string[]): void {
+  if (!ids.length) return;
+  const stmt = db.prepare<unknown, [string]>(
+    "UPDATE events SET posted_launch = 1 WHERE id = ?",
+  );
+  const tx = db.transaction((list: string[]) => {
+    for (const id of list) stmt.run(id);
+  });
+  tx(ids);
+}
+
 export function markEventsPosted(ids: string[]): void {
   if (!ids.length) return;
   const stmt = db.prepare<unknown, [string]>(
-    "UPDATE events SET posted_today = 1 WHERE id = ?",
+    "UPDATE events SET posted_today = 1, posted_launch = 1 WHERE id = ?",
   );
   const tx = db.transaction((list: string[]) => {
     for (const id of list) stmt.run(id);
