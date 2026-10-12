@@ -23,7 +23,12 @@ prioridade (`cityRank` em `src/config/region.ts`).
 | Ingresso Digital | `/pesquisa.php?busca=S&pg=1&txt_busca=` | HTML server-side; teatro e stand-up |
 | Ingresso Nacional | `/api/paginas/eventos.php` | **só responde JSON com os headers do AngularJS** (ver abaixo); Theatro Pedro II |
 | Ingresso.com | API de conteúdo | filmes em cartaz e estreias, com trailer e pôster |
-| Sesc Franca | API de atividades | |
+| Sesc Franca | API de atividades | Franca (1005) e Ribeirão Preto (35) |
+| Q2 Ingressos | `cdn.q2ingressos.com.br/assets/api/nextEvents.json` | Sede em Franca; cobre Villa Eventos, Agrobar, Morada du Capiau, Batatais |
+| Guichê Web | `/webservices/api/api.php` (`carregar_home`) | POST multipart por cidade; cobre Sertãozinho (Tardezinha, Oktoberfest) e Ribeirão |
+| Zig Tickets | `zig.tickets/` (`__NEXT_DATA__`) | Pubs e baladas (Old Barn Pub, Art House, shows em Ribeirão/Franca) |
+| Minha Entrada | `/buscar-eventos?buscaNome=&buscaLocal=<cidade>` | fragmento HTML; só Ribeirão tem resultado (Franca/Batatais: 0) |
+| Theatro Pedro II (agenda própria) | `/agenda.php` | HTML com horário e capa; complementa a Ingresso Nacional |
 | Prefeitura (turismo) | HTML da agenda oficial | |
 | Franca Basquete | tabela de jogos | só mando de quadra; fora de temporada devolve 0 |
 | Franca Shopping | HTML de eventos | temporadas longas: circo, parque, exposição |
@@ -81,7 +86,7 @@ Regra: URL sempre dentro de `[rótulo](url)`, e texto vindo de fonte externa
 Endpoint real localizado, busca respondeu, nenhum evento de Franca/região:
 Ticket360 (`/eventos/pesquisar?s=`), Ticket Fácil (`/search.html?q=`),
 Bilheteria Digital (`/busca/franca/as/1`), Uhuu (`/busca?termo=`),
-Bilheteria Express (`/agendas/`), GuicheWeb (`/pesquisa/`), BaladApp
+Bilheteria Express (`/agendas/`), BaladApp
 (`/?search=`), Ingresso Nacional (`/api/paginas/eventos.php`), Venda Ingresso,
 Clube do Ingresso, Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
 TicketMais, Alô Ingressos, Eventbrite.
@@ -91,6 +96,7 @@ TicketMais, Alô Ingressos, Eventbrite.
 | Plataforma | Problema |
 |---|---|
 | Eventim | timeout em toda tentativa |
+| Ticketmaker (BR) | catch-all: toda URL devolve a home, sem endpoint de busca localizado |
 | Ticket Club / Brasil Ticket | conexão recusada |
 | Songkick | 406 em qualquer User-Agent |
 | Bandsintown | 403 |
@@ -105,3 +111,10 @@ TicketMais, Alô Ingressos, Eventbrite.
 | Twitter / X | exige auth; Nitter devolve vazio |
 | Mastodon | API aberta e funcional, sem nada de Franca |
 | Instagram | sem API; indireto via Google News `site:instagram.com` |
+
+## Descartadas na rodada de 2026-10
+
+- **Eventbrite**: páginas `/d/brazil--<cidade>/events/` devolvem lista genérica global (mesmos 16 eventos, online/exterior) - inútil.
+- **Ticketmaker**: ver tabela acima.
+- **SESI-SP**, prefeituras de Batatais/Ituverava: HTML de notícias, sem agenda estruturada.
+

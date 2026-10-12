@@ -21,20 +21,25 @@ import { nowPlaying } from "./sources/cinema.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
+import { syncGuicheWeb } from "./sources/guicheweb.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
 import { syncIngressoDigital } from "./sources/ingressodigital.ts";
 import { syncIngressoNacional } from "./sources/ingressonacional.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
+import { syncMinhaEntrada } from "./sources/minhaentrada.ts";
 import { syncMultiplanHall } from "./sources/multiplanhall.ts";
 import { fetchOgImage } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
+import { syncQ2Ingressos } from "./sources/q2ingressos.ts";
 import { syncSesc } from "./sources/sesc.ts";
 import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
+import { syncTheatroPedro2 } from "./sources/theatropedro2.ts";
 import { syncTicket360 } from "./sources/ticket360.ts";
 import { syncTicketFacil } from "./sources/ticketfacil.ts";
 import { syncTurismo } from "./sources/turismo.ts";
 import { syncUhuu } from "./sources/uhuu.ts";
+import { syncZigTickets } from "./sources/zigtickets.ts";
 import {
   sendTelegram,
   sendTelegramAlbum,
@@ -126,6 +131,11 @@ export async function digest(): Promise<void> {
     syncTicketFacil(today),
     syncIngressoNacional(today),
     syncMultiplanHall(today),
+    syncTheatroPedro2(today),
+    syncMinhaEntrada(today),
+    syncQ2Ingressos(today),
+    syncGuicheWeb(today),
+    syncZigTickets(today),
   ]);
   pruneEventsBefore(today);
   pruneDigestRunsBefore(today);

@@ -1,7 +1,10 @@
 import { upsertEvent } from "../db.ts";
 
 // group_id de cada unidade SESC (via /wp/v1/unidades-atividades).
-const UNITS = [{ id: 1005, city: "Franca" }];
+const UNITS = [
+  { id: 1005, city: "Franca" },
+  { id: 35, city: "Ribeirão Preto" },
+];
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
