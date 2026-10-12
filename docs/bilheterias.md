@@ -27,6 +27,7 @@ prioridade (`cityRank` em `src/config/region.ts`).
 | Q2 Ingressos | `cdn.q2ingressos.com.br/assets/api/nextEvents.json` | Sede em Franca; cobre Villa Eventos, Agrobar, Morada du Capiau, Batatais |
 | Guichê Web | `/webservices/api/api.php` (`carregar_home`) | POST multipart por cidade; cobre Sertãozinho (Tardezinha, Oktoberfest) e Ribeirão |
 | Zig Tickets | `zig.tickets/` (`__NEXT_DATA__`) | Pubs e baladas (Old Barn Pub, Art House, shows em Ribeirão/Franca) |
+| Articket | `articket.com.br/api/search?q=<cidade>` | Shows de rock e casas underground (Toca do Jack Pub, Armazém Baixada) |
 | Minha Entrada | `/buscar-eventos?buscaNome=&buscaLocal=<cidade>` | fragmento HTML; só Ribeirão tem resultado (Franca/Batatais: 0) |
 | Theatro Pedro II (agenda própria) | `/agenda.php` | HTML com horário e capa; complementa a Ingresso Nacional |
 | Prefeitura (turismo) | HTML da agenda oficial | |
