@@ -63,7 +63,7 @@ const addDays = (iso: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
-const humanDay = (iso: string) =>
+export const humanDay = (iso: string) =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString("pt-BR", {
     weekday: "short",
     day: "2-digit",
@@ -77,9 +77,9 @@ const humanDay = (iso: string) =>
  * Prefeitura, cujo link tem "detalhe_evento". Texto vindo de fonte externa
  * precisa passar por aqui; URL vai sempre dentro de [rótulo](url).
  */
-const mdSafe = (s: string) => s.replace(/([_*[\]`])/g, "\\$1");
+export const mdSafe = (s: string) => s.replace(/([_*[\]`])/g, "\\$1");
 
-function eventButtons(ev: Event): TelegramButton[][] {
+export function eventButtons(ev: Event): TelegramButton[][] {
   const row: TelegramButton[] = [];
   if (ev.link && /^https?:\/\//i.test(ev.link)) {
     row.push({ text: "🎟️ Ingressos e Detalhes", url: ev.link });
@@ -99,7 +99,7 @@ function eventButtons(ev: Event): TelegramButton[][] {
   return rows;
 }
 
-function eventLines(ev: Event): string {
+export function eventLines(ev: Event): string {
   const lines = [`🎟️ *${mdSafe(ev.title)}*`];
   const cidade = ev.city ? `, ${mdSafe(ev.city)}` : "";
   const where = ev.venue
