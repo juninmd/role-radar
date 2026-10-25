@@ -70,6 +70,14 @@ test("catálogo sai em gzip quando o cliente aceita, JSON puro caso contrário",
   expect(get("/api/catalog").headers.get("content-encoding")).toBeNull();
 });
 
+// q=0 é recusa explícita (RFC 9110): não pode ganhar gzip só por citar a palavra.
+test("gzip recusado com q=0 não é enviado", () => {
+  const res = get("/api/catalog", "GET", {
+    "accept-encoding": "gzip;q=0, identity",
+  });
+  expect(res.headers.get("content-encoding")).toBeNull();
+});
+
 test("asset estático também sai em gzip, com o content-type da extensão", async () => {
   const res = get("/js/main.js", "GET", { "accept-encoding": "gzip, br" });
   expect(res.headers.get("content-encoding")).toBe("gzip");

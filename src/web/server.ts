@@ -25,8 +25,15 @@ const SECURITY_HEADERS = {
   "referrer-policy": "strict-origin-when-cross-origin",
 };
 
+// Aceita gzip se algum item da lista for "gzip" sem q=0 (recusa explícita).
 const wantsGzip = (req: Request) =>
-  /\bgzip\b/.test(req.headers.get("accept-encoding") ?? "");
+  (req.headers.get("accept-encoding") ?? "").split(",").some((item) => {
+    const [coding, ...params] = item.trim().split(";");
+    return (
+      coding?.toLowerCase() === "gzip" &&
+      !params.some((p) => /^\s*q\s*=\s*0(\.0*)?\s*$/.test(p))
+    );
+  });
 
 /** Manda a variante gzip só quando o cliente pede; a comprimida já vem pronta. */
 function send(
