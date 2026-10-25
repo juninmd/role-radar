@@ -22,6 +22,7 @@
 <body>
   <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
   <a class="skip" href="#view">Pular para o conteúdo</a>
+  <noscript><p class="pad center">Este radar precisa de JavaScript para mostrar os rolês.</p></noscript>
 
   <header class="topbar glass">
     <div class="brand">
@@ -44,7 +45,8 @@
 
     <main class="main">
       <div class="tabs glass" role="tablist" aria-label="Visões" id="tabs"></div>
-      <section id="view" class="view" tabindex="-1" aria-live="polite"></section>
+      <p id="count" class="sr-only" role="status"></p>
+      <section id="view" class="view" role="tabpanel" tabindex="-1"></section>
     </main>
   </div>
 
