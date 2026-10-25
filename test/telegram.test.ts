@@ -61,3 +61,37 @@ test("mensagem e foto enviam reply_markup com inline_keyboard quando botões sã
   expect(payloads[0].reply_markup).toEqual({ inline_keyboard: buttons });
   expect(payloads[1].reply_markup).toEqual({ inline_keyboard: buttons });
 });
+
+// Upload de foto baixa a imagem no próprio servidor: host interno não pode ser
+// buscado, e corpo acima do teto não pode entrar inteiro na memória.
+test("fallback de upload não busca imagem de host interno", async () => {
+  const hits: string[] = [];
+  stubFetch(async (url) => {
+    hits.push(url);
+    if (url.startsWith("https://api.telegram.org/"))
+      return json({ ok: false }, 400);
+    return new Response(new Uint8Array(100), { status: 200 });
+  });
+  expect(await sendTelegramPhoto("oi", "http://127.0.0.1/a.jpg")).toBe(false);
+  expect(hits.some((u) => u.includes("127.0.0.1"))).toBe(false);
+});
+
+test("imagem acima do teto de upload não é lida inteira", async () => {
+  const mb = new Uint8Array(1024 * 1024);
+  let pulled = 0;
+  stubFetch(async (url) => {
+    if (url.startsWith("https://api.telegram.org/"))
+      return json({ ok: false }, 400);
+    return new Response(
+      new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (pulled >= 40) return controller.close();
+          pulled++;
+          controller.enqueue(mb);
+        },
+      }),
+    );
+  });
+  await sendTelegramPhoto("oi", "https://img.test/grande.jpg");
+  expect(pulled).toBeLessThan(15);
+});
