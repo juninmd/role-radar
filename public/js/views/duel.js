@@ -54,9 +54,12 @@ export function renderDuel(root, items) {
     {
       type: "button",
       class: "btn",
+      "data-focus": "novo-duelo",
       onclick: () => {
         start(items);
         renderDuel(root, items);
+        // O botão é refeito pelo render: sem isto, o foco do teclado cai no body.
+        root.querySelector('[data-focus="novo-duelo"]')?.focus();
       },
     },
     "🔄 Novo duelo",
