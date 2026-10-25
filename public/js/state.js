@@ -26,6 +26,8 @@ export const DEFAULT_FILTERS = {
 
 // Opções do slider de distância; o hash só aceita estas (0 = sem limite).
 export const KM_STEPS = [0, 2, 5, 10, 20, 50, 100, 150];
+// Opções dos chips de preço (filters.js); o hash só aceita estas.
+export const PRICE_STEPS = ["qualquer", "gratis", "50", "100"];
 const ARRAYS = ["kinds", "periods", "cities", "cats"];
 const listeners = new Set();
 
@@ -93,6 +95,8 @@ export function readHash() {
     else if (typeof def === "boolean") state.filters[k] = raw === "true";
     else if (k === "maxKm")
       state.filters[k] = KM_STEPS.includes(Number(raw)) ? Number(raw) : 0;
+    else if (k === "price")
+      state.filters[k] = PRICE_STEPS.includes(raw) ? raw : "qualquer";
     else if (typeof def === "number") state.filters[k] = Number(raw) || 0;
     else state.filters[k] = raw.slice(0, 120);
   }
