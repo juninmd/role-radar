@@ -143,8 +143,20 @@ export function createHandler(
   };
 }
 
-export function serve(port: number) {
-  const server = Bun.serve({ port, fetch: createHandler() });
+export function serve(port: number, handler = createHandler()) {
+  const server = Bun.serve({
+    port,
+    fetch: handler,
+    // Sem isto o modo dev do Bun responde 500 com mensagem, caminhos e código.
+    development: false,
+    error(err) {
+      console.error("[web] erro não tratado:", err);
+      return new Response("erro interno", {
+        status: 500,
+        headers: { "content-type": "text/plain;charset=utf-8" },
+      });
+    },
+  });
   console.log(`[web] dashboard em http://localhost:${server.port}`);
   return server;
 }
