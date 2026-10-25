@@ -61,7 +61,8 @@ export function layout(items, mode, maxKm) {
   // Teto de 90 dias: um evento de daqui a um ano não pode esmagar a semana.
   const maxDays = Math.min(90, Math.max(7, ...pts.map((it) => it.daysAhead)));
   const scale = (d) =>
-    18 + (R - 18) * Math.sqrt(Math.min(d, maxDays) / maxDays);
+    // Evento em andamento (d < 0) cai no anel de hoje, não em NaN.
+    18 + (R - 18) * Math.sqrt(Math.min(Math.max(d, 0), maxDays) / maxDays);
   const span = 360 / Math.max(cats.length, 1);
   const sectors = cats.map((c, i) => ({
     cat: c,
