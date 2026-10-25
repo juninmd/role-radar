@@ -219,8 +219,10 @@ export function upsertEvent(
     semVazio(ev.image),
     semVazio(ev.description),
     semVazio(ev.trailer),
-    // Fim antes do início é lixo da fonte: trata como evento de um dia.
-    ev.end_date && ev.end_date > ev.date ? ev.end_date : null,
+    // Fim antes do início, ou que não é data, é lixo da fonte: evento de um dia.
+    ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
+      ? ev.end_date
+      : null,
     new Date().toISOString(),
   );
 }
