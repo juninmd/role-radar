@@ -75,3 +75,24 @@ test("syncQ2Ingressos importa eventos da região e filtra fora e passados", asyn
   expect(ribeiraoEvs[0].title).toBe("Festival Multidias Ribeirão");
   expect(ribeiraoEvs[0].end_date).toBe("2026-10-13");
 });
+
+test("catálogo gigante do Q2 não é lido até o fim", async () => {
+  // Corpo de 8 MB em chunks de 64 KB, contando quantos foram lidos.
+  const CHUNKS = 128;
+  const head = new TextEncoder().encode("[");
+  const pad = new Uint8Array(64 * 1024).fill(0x20); // espaço é whitespace JSON
+  let pulled = 0;
+  stubFetch(async () => {
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (sent++ >= CHUNKS) return ctrl.close();
+        pulled++;
+        ctrl.enqueue(sent === 1 ? Buffer.concat([head, pad]) : pad);
+      },
+    });
+    return new Response(body);
+  });
+  await syncQ2Ingressos(TODAY);
+  expect(pulled).toBeLessThan(CHUNKS);
+});

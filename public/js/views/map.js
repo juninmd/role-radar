@@ -9,6 +9,9 @@ import { CATS, fmtKm, h, humanDay } from "../util.js";
 let map = null;
 let layer = null;
 let originLayer = null;
+// Enquadramento só muda quando o conjunto de pinos muda; senão cada favorito
+// desfazia o zoom e o pan que o usuário tinha feito.
+let fittedKey = null;
 const box = h("div", {
   class: "map",
   role: "region",
@@ -178,12 +181,14 @@ export function renderMap(root, items) {
       .addTo(layer);
   }
   // O container acabou de voltar pro DOM: Leaflet precisa remedir.
+  const key = pts.map((it) => it.id).join("|");
   requestAnimationFrame(() => {
     map.invalidateSize();
-    if (pts.length)
+    if (pts.length && key !== fittedKey)
       map.fitBounds(
         L.latLngBounds(pts.map((it) => [it.pin.lat, it.pin.lng])).pad(0.15),
         { maxZoom: 14 },
       );
+    fittedKey = key;
   });
 }

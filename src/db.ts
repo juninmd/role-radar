@@ -45,20 +45,25 @@ db.exec(`
 `);
 
 // Migrações: colunas adicionadas depois que bancos já existiam.
-for (const sql of [
+/** Coluna que já existe é o caso esperado; outro erro não pode sumir. */
+export function runMigrations(statements: string[]): void {
+  for (const sql of statements) {
+    try {
+      db.exec(sql);
+    } catch (err) {
+      if (!/duplicate column name/.test(String(err))) throw err;
+    }
+  }
+}
+
+runMigrations([
   "ALTER TABLE items ADD COLUMN image TEXT",
   "ALTER TABLE events ADD COLUMN trailer TEXT",
   "ALTER TABLE events ADD COLUMN end_date TEXT",
   "ALTER TABLE items ADD COLUMN body TEXT",
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN description TEXT",
-]) {
-  try {
-    db.exec(sql);
-  } catch {
-    // coluna já existe
-  }
-}
+]);
 
 export interface Item {
   id: string;
@@ -163,6 +168,14 @@ const cidadeCanonica = (city: string | null) =>
     ? (CIDADE_CANONICA.get(norm(city).replace(/[\s/-]+sp$/, "")) ?? city)
     : null;
 
+// Dia que existe no calendário: 2026-02-31 é recusado antes de virar linha.
+const dataValida = (iso: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  return d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia;
+};
+
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<
@@ -180,6 +193,12 @@ export function upsertEvent(
     description?: string | null;
   },
 ): void {
+  if (!dataValida(ev.date)) {
+    console.warn(
+      `[db] "${ev.title}" com data inválida (${ev.date}), descartado`,
+    );
+    return;
+  }
   upsertEventStmt.run(
     eventId(ev.title, ev.date),
     ev.title,

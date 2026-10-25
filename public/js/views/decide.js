@@ -1,4 +1,3 @@
-import { applyFilters } from "../data.js";
 import { openDetail } from "../detail.js";
 import { state } from "../state.js";
 import {
@@ -10,7 +9,7 @@ import {
   reducedMotion,
   store,
 } from "../util.js";
-import { pickWeighted, Q, score } from "./decide-score.js";
+import { pickWeighted, Q, score, spotsPool } from "./decide-score.js";
 import { card } from "./gallery.js";
 
 let answers = store.get("rr:decide", {
@@ -90,7 +89,7 @@ export function renderDecide(root, items) {
     answers.spots && !state.filters.kinds.includes("lugar")
       ? [
           ...items,
-          ...applyFilters(
+          ...spotsPool(
             state.items.filter((it) => it.kind === "lugar"),
             state.filters,
             today,

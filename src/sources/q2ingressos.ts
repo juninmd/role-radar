@@ -1,11 +1,14 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { readCapped } from "./public-url.ts";
 
 // Q2 Ingressos: sede em Franca (Av. Ver. José Granzotte, 2345).
 // O catálogo público de próximos eventos é disponibilizado pelo CDN oficial.
 const API = "https://cdn.q2ingressos.com.br/assets/api/nextEvents.json";
 const SITE = "https://q2ingressos.com.br";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+// O catálogo tem ~100 KB; o teto só corta resposta fora do normal.
+const MAX_CATALOG = 5_000_000;
 
 interface Q2Event {
   Id?: number;
@@ -30,7 +33,7 @@ export async function syncQ2Ingressos(today: string): Promise<number> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const list = (await res.json()) as Q2Event[];
+    const list = JSON.parse(await readCapped(res, MAX_CATALOG)) as Q2Event[];
 
     for (const ev of list) {
       if (!ev.Name || !ev.StartDate || !inRegion(ev.City)) continue;

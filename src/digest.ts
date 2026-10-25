@@ -31,7 +31,7 @@ import { syncIngressoNacional } from "./sources/ingressonacional.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
 import { syncMinhaEntrada } from "./sources/minhaentrada.ts";
 import { syncMultiplanHall } from "./sources/multiplanhall.ts";
-import { fetchOgImage } from "./sources/ogimage.ts";
+import { fetchOgImages } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
 import { syncQ2Ingressos } from "./sources/q2ingressos.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -192,19 +192,8 @@ export async function digest(): Promise<void> {
   const novosFranca = novos.filter((ev) => cityRank(ev.city) === 0);
   const novosFora = novos.filter((ev) => cityRank(ev.city) !== 0);
 
-  // og:image de todos de uma vez; o envio é que precisa ser serial (Telegram).
-  const capa = new Map(
-    await Promise.all(
-      [...todays, ...novos].map(
-        async (ev) =>
-          [
-            ev.id,
-            ev.image ??
-              (ev.link ? await fetchOgImage(ev.link).catch(() => null) : null),
-          ] as const,
-      ),
-    ),
-  );
+  // og:image em lote limitado; o envio é que precisa ser serial (Telegram).
+  const capa = await fetchOgImages([...todays, ...novos]);
 
   // Só o que o Telegram confirmou vira "postado", e na hora: o resto tenta de
   // novo numa próxima rodada do dia.

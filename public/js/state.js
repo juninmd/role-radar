@@ -24,6 +24,8 @@ export const DEFAULT_FILTERS = {
   onlyFav: false,
 };
 
+// Opções do slider de distância; o hash só aceita estas (0 = sem limite).
+export const KM_STEPS = [0, 2, 5, 10, 20, 50, 100, 150];
 const ARRAYS = ["kinds", "periods", "cities", "cats"];
 const listeners = new Set();
 
@@ -89,6 +91,8 @@ export function readHash() {
     if (ARRAYS.includes(k))
       state.filters[k] = raw ? raw.split(",").slice(0, 50) : [];
     else if (typeof def === "boolean") state.filters[k] = raw === "true";
+    else if (k === "maxKm")
+      state.filters[k] = KM_STEPS.includes(Number(raw)) ? Number(raw) : 0;
     else if (typeof def === "number") state.filters[k] = Number(raw) || 0;
     else state.filters[k] = raw.slice(0, 120);
   }

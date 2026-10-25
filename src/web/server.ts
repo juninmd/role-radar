@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { buildCatalog, type Catalog } from "./catalog.ts";
+import { buildIcs } from "./ics.ts";
 
 const TZ = "America/Sao_Paulo";
 const PUBLIC_DIR = join(import.meta.dir, "..", "..", "public");
@@ -23,6 +24,8 @@ const SECURITY_HEADERS = {
   "content-security-policy": CSP,
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
+  // A tela nunca usa câmera, microfone nem localização.
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
 
 // Aceita gzip se algum item da lista for "gzip" sem q=0 (recusa explícita).
@@ -92,6 +95,7 @@ export function createHandler(
     string,
     {
       mtime: number;
+      etag: string;
       type: string;
       raw: Uint8Array<ArrayBuffer>;
       gz: Uint8Array<ArrayBuffer>;
@@ -104,6 +108,8 @@ export function createHandler(
     const raw = new Uint8Array(readFileSync(path));
     const entry = {
       mtime,
+      // Fraco: a mesma tag serve para a versão com e sem gzip.
+      etag: `W/"${mtime.toString(36)}-${raw.byteLength.toString(36)}"`,
       type: Bun.file(path).type,
       raw,
       gz: new Uint8Array(Bun.gzipSync(raw)),
@@ -112,7 +118,7 @@ export function createHandler(
     return entry;
   };
 
-  return (req: Request): Response => {
+  const route = (req: Request): Response => {
     const { pathname } = new URL(req.url);
     if (req.method !== "GET" && req.method !== "HEAD")
       return new Response("método não permitido", { status: 405 });
@@ -121,6 +127,16 @@ export function createHandler(
       return Response.json({
         ok: true,
         events: current().catalog.events.length,
+      });
+    }
+    if (pathname === "/agenda.ics") {
+      return new Response(buildIcs(current().catalog.events), {
+        headers: {
+          ...SECURITY_HEADERS,
+          "content-type": "text/calendar;charset=utf-8",
+          "content-disposition": 'attachment; filename="role-radar.ics"',
+          "cache-control": "public, max-age=300",
+        },
       });
     }
     if (pathname === "/api/catalog") {
@@ -133,18 +149,43 @@ export function createHandler(
     }
     const file = files.get(pathname === "/" ? "/index.html" : pathname);
     if (!file) return new Response("não encontrado", { status: 404 });
-    const { type, raw, gz } = asset(file);
+    const { type, raw, gz, etag } = asset(file);
     // no-cache: módulos ES de versões diferentes misturados quebram o app após deploy.
-    return send(req, raw, gz, {
+    const headers = {
       ...SECURITY_HEADERS,
       "content-type": type,
       "cache-control": "no-cache",
-    });
+      etag,
+    };
+    // Revalidação barata: arquivo que não mudou volta como 304, sem corpo.
+    if (req.headers.get("if-none-match") === etag)
+      return new Response(null, { status: 304, headers });
+    return send(req, raw, gz, headers);
+  };
+
+  // Toda resposta sai com os cabeçalhos de segurança, inclusive health e 404.
+  return (req: Request): Response => {
+    const res = route(req);
+    for (const [nome, valor] of Object.entries(SECURITY_HEADERS))
+      if (!res.headers.has(nome)) res.headers.set(nome, valor);
+    return res;
   };
 }
 
-export function serve(port: number) {
-  const server = Bun.serve({ port, fetch: createHandler() });
+export function serve(port: number, handler = createHandler()) {
+  const server = Bun.serve({
+    port,
+    fetch: handler,
+    // Sem isto o modo dev do Bun responde 500 com mensagem, caminhos e código.
+    development: false,
+    error(err) {
+      console.error("[web] erro não tratado:", err);
+      return new Response("erro interno", {
+        status: 500,
+        headers: { "content-type": "text/plain;charset=utf-8" },
+      });
+    },
+  });
   console.log(`[web] dashboard em http://localhost:${server.port}`);
   return server;
 }
