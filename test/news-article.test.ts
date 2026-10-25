@@ -213,3 +213,42 @@ test("evento de vários dias continua no radar até o último dia", async () => 
   pruneEventsBefore("2026-09-28");
   expect(eventsBetween("2026-09-28", "2026-10-05")).toEqual([]);
 });
+
+test("interstitial do Google é lido só até o teto, não inteiro", async () => {
+  insertItem({
+    id: "gn-big",
+    title: "Festival em Franca",
+    link: "https://news.google.com/rss/articles/CBMiBIG?oc=5",
+    source: "Google News",
+    summary: null,
+    published: null,
+    image: null,
+    fetched_at: "2026-09-24T16:00:00Z",
+  });
+  // 4 MB finitos: sem teto o teste lê tudo; com teto para em ~256 KB.
+  const CHUNKS = 64;
+  let pulled = 0;
+  stubFetch(async (url) => {
+    if (url.startsWith("https://news.google.com/articles/")) {
+      const head = new TextEncoder().encode(
+        '<div data-n-a-sg="SIG" data-n-a-ts="123"></div>',
+      );
+      const pad = new Uint8Array(64 * 1024).fill(0x20);
+      let sent = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(ctrl) {
+          if (sent++ >= CHUNKS) return ctrl.close();
+          pulled++;
+          ctrl.enqueue(sent === 1 ? Buffer.concat([head, pad]) : pad);
+        },
+      });
+      return new Response(body);
+    }
+    return new Response("", { status: 404 });
+  });
+  const items = db
+    .query<Item, []>("SELECT * FROM items WHERE id = 'gn-big'")
+    .all();
+  await enrichItems(items);
+  expect(pulled).toBeLessThan(CHUNKS);
+});

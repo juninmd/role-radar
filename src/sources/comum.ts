@@ -25,15 +25,49 @@ const MESES: Record<string, string> = {
   dez: "12",
 };
 
+// Dia que existe no calendário: rejeita 31/02 e 00/13.
+const valido = (ano: number, mes: number, dia: number) => {
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  return (
+    d.getUTCFullYear() === ano &&
+    d.getUTCMonth() === mes - 1 &&
+    d.getUTCDate() === dia
+  );
+};
+
+// HTML trata nomes de entidade sem diferenciar caixa (&AMP; é &).
+const NOMES = new Map([
+  ["amp", "&"],
+  ["lt", "<"],
+  ["gt", ">"],
+  ["quot", '"'],
+  ["apos", "'"],
+  ["nbsp", " "],
+]);
+
+// Surrogate isolado e código fora de Unicode não viram caractere.
+function entidade(nome: string): string | null {
+  if (nome[0] !== "#") return NOMES.get(nome.toLowerCase()) ?? null;
+  const hex = nome[1] === "x" || nome[1] === "X";
+  const cod = Number.parseInt(nome.slice(hex ? 2 : 1), hex ? 16 : 10);
+  if (
+    !Number.isFinite(cod) ||
+    cod > 0x10ffff ||
+    (cod >= 0xd800 && cod <= 0xdfff)
+  )
+    return null;
+  return String.fromCodePoint(cod);
+}
+
 /** Tira tags e entidades, colapsa espaço. */
 export const limpa = (s: string) =>
   s
     .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(
+      /&(#[xX][0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g,
+      (m, nome: string) => entidade(nome) ?? m,
+    )
     .replace(/\s+/g, " ")
     .trim();
 
@@ -55,15 +89,19 @@ export function parseDataBr(
 
   // dd/mm/aaaa
   const completa = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (completa)
+  if (completa) {
+    const [dia, mes, ano] = [completa[1], completa[2], completa[3]].map(Number);
+    if (!valido(ano, mes, dia)) return null;
     return {
       date: `${completa[3]}-${completa[2].padStart(2, "0")}-${completa[1].padStart(2, "0")}`,
       time: hora,
     };
+  }
 
   // "14 de Ago", "21 de agosto" e também "01 AGO" (cards sem a preposição).
+  // Mês inteiro e sem letra colada: "10 Maria" e "2 dezenas" não são datas.
   const porExtenso = texto.match(
-    /(\d{1,2})\s*(?:de\s*)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/i,
+    /(?<!\d)(\d{1,2})\s*(?:de\s*)?(jan(?:eiro)?|fev(?:ereiro)?|mar(?:ço|co)?|abr(?:il)?|mai(?:o)?|jun(?:ho)?|jul(?:ho)?|ago(?:sto)?|set(?:embro)?|out(?:ubro)?|nov(?:embro)?|dez(?:embro)?)(?![a-zà-ú])/i,
   );
   // dd/mm sem ano — pega o ÚLTIMO (em "04 até 30/07" o que vale é o fim)
   const curtas = [...texto.matchAll(/(\d{1,2})\/(\d{1,2})(?!\/|\d)/g)];
@@ -81,11 +119,12 @@ export function parseDataBr(
   if (!alvo?.mes) return null;
 
   const ano = Number(today.slice(0, 4));
-  const dia = alvo.dia.padStart(2, "0");
-  const mes = alvo.mes.padStart(2, "0");
-  const cand = `${ano}-${mes}-${dia}`;
-  return {
-    date: cand >= today ? cand : `${ano + 1}-${mes}-${dia}`,
-    time: hora,
-  };
+  const dia = Number(alvo.dia);
+  const mes = Number(alvo.mes);
+  const iso = (y: number) =>
+    `${y}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+  if (valido(ano, mes, dia) && iso(ano) >= today)
+    return { date: iso(ano), time: hora };
+  // Sem ano certo (ex.: 29/02 fora de bissexto), não chuta: só o próximo ano válido.
+  return valido(ano + 1, mes, dia) ? { date: iso(ano + 1), time: hora } : null;
 }

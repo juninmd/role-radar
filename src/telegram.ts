@@ -5,6 +5,8 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 // Tentativas por chamada quando o Telegram responde 429 (flood control).
 const MAX_TRIES = 3;
+// Upload de 10 MB cabe folgado; sem prazo, o digest trava se o Telegram não responde.
+const TIMEOUT_MS = 30_000;
 
 /**
  * Chama a Bot API; em 429 espera o retry_after pedido e tenta de novo. Erro
@@ -17,7 +19,11 @@ async function tg(method: string, init: RequestInit): Promise<Response> {
     try {
       res = await fetch(
         `https://api.telegram.org/bot${env.telegramToken}/${method}`,
-        { method: "POST", ...init },
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+          ...init,
+        },
       );
     } catch (err) {
       console.error(`[telegram] ${method} falhou na rede: ${err}`);
@@ -206,7 +212,8 @@ async function uploadPhoto(
     const res = await tg("sendPhoto", { body: form });
     if (res.ok) console.log("[telegram] foto enviada por upload");
     return res.ok;
-  } catch {
+  } catch (err) {
+    console.warn(`[telegram] upload de foto falhou: ${err}`);
     return false;
   }
 }

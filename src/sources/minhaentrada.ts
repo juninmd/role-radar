@@ -1,6 +1,7 @@
 import { SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Minha Entrada: bilheteria nacional (vende o Theatro Pedro II, por exemplo).
 // A busca da home chama /buscar-eventos?buscaNome=&buscaLocal=<cidade> e devolve
@@ -30,7 +31,7 @@ export async function syncMinhaEntrada(today: string): Promise<number> {
         { headers: HEADERS, signal: AbortSignal.timeout(20000) },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
+      const html = await readCapped(res, MAX_SOURCE_BODY);
 
       for (const card of html
         .split('<div class="card-evento-relacionado">')

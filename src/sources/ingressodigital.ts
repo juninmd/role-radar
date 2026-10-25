@@ -1,6 +1,7 @@
 import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A Ingresso Digital traz teatro/musical/stand-up que não aparece nas outras
 // (Abba Experience, Grease, Starlight Concert). A busca é server-side e a
@@ -69,7 +70,7 @@ export async function syncIngressoDigital(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
+      const html = await readCapped(res, MAX_SOURCE_BODY);
 
       for (const card of html.split('class="card-evento').slice(1)) {
         const title = decode(

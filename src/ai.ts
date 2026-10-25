@@ -1,6 +1,12 @@
 import { env } from "./config/env.ts";
+import { readCapped } from "./sources/public-url.ts";
 
 /** Single-shot chat completion across providers. Returns plain text. */
+// Completion de texto é curta; o teto só corta resposta anômala.
+const MAX_REPLY = 5_000_000;
+// Erro do provedor vai para a mensagem e para o log: o início basta.
+const MAX_ERROR = 1_000;
+
 export async function chat(system: string, user: string): Promise<string> {
   switch (env.aiProvider) {
     case "anthropic":
@@ -57,8 +63,9 @@ async function openaiCompatible(
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
-  if (!res.ok) throw new Error(`AI ${res.status}: ${await res.text()}`);
-  const json = (await res.json()) as {
+  if (!res.ok)
+    throw new Error(`AI ${res.status}: ${await readCapped(res, MAX_ERROR)}`);
+  const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
     choices: { message: { content: string } }[];
   };
   return json.choices[0]?.message?.content?.trim() ?? "";
@@ -80,24 +87,35 @@ async function anthropic(system: string, user: string): Promise<string> {
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
-  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
-  const json = (await res.json()) as { content: { text: string }[] };
+  if (!res.ok)
+    throw new Error(
+      `Anthropic ${res.status}: ${await readCapped(res, MAX_ERROR)}`,
+    );
+  const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
+    content: { text: string }[];
+  };
   return json.content[0]?.text?.trim() ?? "";
 }
 
 async function google(system: string, user: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.geminiModel}:generateContent?key=${env.geminiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.geminiModel}:generateContent`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": env.geminiKey,
+    },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const json = (await res.json()) as {
+  if (!res.ok)
+    throw new Error(
+      `Gemini ${res.status}: ${await readCapped(res, MAX_ERROR)}`,
+    );
+  const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
     candidates: { content: { parts: { text: string }[] } }[];
   };
   return json.candidates[0]?.content?.parts?.[0]?.text?.trim() ?? "";

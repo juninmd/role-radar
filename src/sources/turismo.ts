@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Agenda oficial da Prefeitura de Franca (turismo). Página única, sem paginação.
 const BASE = "https://turismo.franca.sp.gov.br";
@@ -24,7 +25,7 @@ export async function syncTurismo(today: string): Promise<number> {
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_SOURCE_BODY);
     const cards =
       html.match(
         /<article class="card-lista card-evento">[\s\S]*?<\/article>/g,

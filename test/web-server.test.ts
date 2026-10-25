@@ -54,6 +54,17 @@ test("catálogo e health reaproveitam uma só montagem dentro do TTL", async () 
   expect(builds).toBe(1);
 });
 
+test("/agenda.ics devolve a agenda como iCalendar para download", async () => {
+  const handler = createHandler(dir, (day) => {
+    const ev = { id: "ev-1", title: "Show", date: day, time: "20:00" };
+    return { today: day, events: [ev] } as unknown as Catalog;
+  });
+  const res = await handler(new Request("http://x.test/agenda.ics"));
+  expect(res.status).toBe(200);
+  expect(res.headers.get("content-type")).toContain("text/calendar");
+  expect(await res.text()).toContain("BEGIN:VEVENT");
+});
+
 test("só leitura: POST é 405", () => {
   expect(get("/api/catalog", "POST").status).toBe(405);
 });

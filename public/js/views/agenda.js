@@ -121,6 +121,12 @@ export function renderAgenda(root, items) {
           { class: "muted small" },
           "Clique num dia pra ver só ele. Sex–dom em destaque.",
         ),
+        // Agenda inteira num arquivo: importa no Google, Apple ou Outlook.
+        h(
+          "a",
+          { class: "btn small", href: "/agenda.ics" },
+          "📅 Baixar agenda (.ics)",
+        ),
       ),
       keys.length
         ? keys.map((k) =>

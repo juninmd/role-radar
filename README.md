@@ -34,7 +34,7 @@ bun run typecheck
 
 - **Visões:** 📡 Radar (distância real a partir de você, ou "tempo × vibe": fatias por categoria, raio = dias até o rolê), 🗺️ Mapa (Leaflet + tiles OSM escurecidos), 📆 Agenda (heatmap de 30 dias + lista por dia), 🖼️ Galeria, 🎲 Me decide (quiz com quem/vibe/quando/orçamento/distância → ranking com % de match e roleta ponderada) e ⚔️ Duelo ("esse ou esse?" até sobrar um).
 - **Filtros:** busca, tipo (eventos, filmes em cartaz, lugares fixos), quando, período, vibe, cidade, preço, distância, ordenação e favoritos. Tudo vai no hash da URL — o link compartilhado abre igual. Favoritos ficam no `localStorage`.
-- **Rotas:** `/` (app), `/api/catalog` (JSON), `/health`.
+- **Rotas:** `/` (app), `/api/catalog` (JSON), `/agenda.ics` (agenda futura para importar em Google, Apple ou Outlook), `/health`.
 - **Localização:** cidade tem centro fixo (`src/web/places.ts`); o digest geocodifica até `GEOCODE_MAX` locais por rodada no Nominatim (1 req/s, cache em `geocache`). Local não encontrado fica no centro da cidade, marcado como aproximado.
 - **Categoria/preço:** palavra-chave e regex em `src/web/classify.ts` (determinístico, sem IA).
 

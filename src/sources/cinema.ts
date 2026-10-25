@@ -1,3 +1,5 @@
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
+
 const CITIES = [{ id: 192, label: "Franca", cinema: "Moviecom Franca" }];
 
 interface Movie {
@@ -55,7 +57,9 @@ export async function nowPlaying(): Promise<CinemaDay[]> {
         },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const movies = (await res.json()) as Movie[];
+      const movies = JSON.parse(
+        await readCapped(res, MAX_SOURCE_BODY),
+      ) as Movie[];
       const list = movies
         .filter((m) => m.title && m.isPlaying !== false)
         .map((m) => ({

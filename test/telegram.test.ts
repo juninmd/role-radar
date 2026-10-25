@@ -96,8 +96,6 @@ test("imagem acima do teto de upload não é lida inteira", async () => {
   expect(pulled).toBeLessThan(15);
 });
 
-// Telegram recusa mensagem acima de 4096 caracteres. Uma linha sozinha maior
-// que o teto não pode passar inteira, senão o aviso inteiro se perde.
 test("linha maior que o teto é quebrada, nenhuma mensagem passa de 4096", async () => {
   const sent: string[] = [];
   stubFetch(async (_url, init) => {
@@ -121,4 +119,14 @@ test("corte de linha longa não separa emoji (par surrogate) entre mensagens", a
   expect(Math.max(...sent.map((t) => t.length))).toBeLessThanOrEqual(4096);
   expect(sent.some((t) => soSurrogate.test(t))).toBe(false);
   expect(sent.join("").replace(/\n/g, "")).toBe("😀".repeat(3000));
+});
+
+test("chamada à Bot API tem prazo de resposta", async () => {
+  let signal: AbortSignal | undefined;
+  stubFetch(async (_url, init) => {
+    signal = init?.signal ?? undefined;
+    return json({ ok: true });
+  });
+  await sendTelegram("oi");
+  expect(signal).toBeInstanceOf(AbortSignal);
 });

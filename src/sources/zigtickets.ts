@@ -1,11 +1,14 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { readCapped } from "./public-url.ts";
 
 // Zig.tickets (antiga Superticket): forte presença em pubs, baladas e shows (Old Barn, Art House, etc.).
 // A home renderiza via Next.js com __NEXT_DATA__ contendo o catálogo nacional de eventos.
 const URL = "https://zig.tickets/";
 const SITE = "https://zig.tickets";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+// A home tem ~1,1 MB com o catálogo; o teto só corta resposta fora do normal.
+const MAX_HTML = 5_000_000;
 
 interface ZigLocation {
   name?: string;
@@ -44,7 +47,7 @@ export async function syncZigTickets(today: string): Promise<number> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_HTML);
 
     const m = html.match(
       /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/,
