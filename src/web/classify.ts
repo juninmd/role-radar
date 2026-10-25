@@ -63,9 +63,13 @@ const FREE = /gratis|gratuit|free|entrada franca|entrada livre|sem custo/;
 export function parsePrice(price: string | null): number | null {
   if (!price) return null;
   const text = norm(price);
-  if (FREE.test(text)) return 0;
+  const free = FREE.test(text);
+  // Sem "R$", um número solto é idade ou horário ("18+"): a palavra basta.
+  if (free && !text.includes("r$")) return 0;
   const values = [...text.matchAll(/(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g)]
     .map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`))
     .filter((n) => Number.isFinite(n) && n > 0);
-  return values.length ? Math.min(...values) : null;
+  if (values.length) return Math.min(...values);
+  // "gratuito para crianças, R$ 30 adulto" cai no 30; "Grátis R$ 0,00" cai aqui.
+  return free ? 0 : null;
 }
