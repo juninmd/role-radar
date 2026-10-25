@@ -149,7 +149,8 @@ async function runBatch(today: string, batch: Item[]): Promise<number | null> {
   let stored = 0;
   let recusados = 0;
   for (const ev of events) {
-    if (!ev.title || !/^\d{4}-\d{2}-\d{2}$/.test(ev.date ?? "")) continue;
+    // Item nulo ou fora do formato é descartado; sem o "?." o laço lança e o lote trava.
+    if (!ev?.title || !/^\d{4}-\d{2}-\d{2}$/.test(ev.date ?? "")) continue;
     // Festival em andamento vale: o que conta é o último dia. Fim antes do
     // início é lixo da IA: vira evento de um dia, não descarte.
     // Fim que não é data ("sábado") não pode entrar: em string, "sábado" > "2026…" é verdade.
