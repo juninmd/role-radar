@@ -33,12 +33,14 @@ const itemImage = (it: Record<string, unknown>): string | null => {
 };
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex");
-const clean = (s?: string) =>
-  (s ?? "")
+const clean = (s?: string) => {
+  const texto = (s ?? "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 500);
+    .trim();
+  // Corta por ponto de código: não deixa um surrogate isolado no fim.
+  return [...texto].slice(0, 500).join("");
+};
 
 /** Fetch every configured feed, store new items. Returns count of new items. */
 export async function ingest(): Promise<number> {
