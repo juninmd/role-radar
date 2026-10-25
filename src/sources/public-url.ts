@@ -12,7 +12,8 @@ const PRIVATE_V4 = [
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT / pods
 ];
 // NAT64 (64:ff9b::) e 6to4 (2002::) embutem um IPv4 qualquer, inclusive 127.x.
-const PRIVATE_V6 = /^(::1?$|f[cd]|fe[89ab]|::ffff:|64:ff9b:|2002:)/i;
+// "::" cobre loopback (::1), não especificado e IPv4-compatível (::/96): nenhum é público.
+const PRIVATE_V6 = /^(::|f[cd]|fe[89ab]|64:ff9b:|2002:)/i;
 const INTERNAL_NAME = /(^|\.)(localhost|local|internal|cluster\.local|svc)$/i;
 
 /** true só para http(s) em host público — nome de DNS ou IP fora das faixas privadas. */

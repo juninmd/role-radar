@@ -26,6 +26,8 @@ test("só aceita http(s) em host público", () => {
     "http://localhost./",
     "http://litellm.ai.svc.cluster.local./",
     "http://[64:ff9b::7f00:1]/",
+    "http://[::7f00:1]/", // IPv4-compatível (::/96) = 127.0.0.1
+    "http://[::]/", // não especificado = 0.0.0.0
     "http://[2002:7f00:1::]/",
     "http://2130706433/", // 127.0.0.1 em decimal
     "http://kubernetes/",
