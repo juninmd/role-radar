@@ -41,11 +41,14 @@ const decode = (s: string) =>
  * "14 de Ago às 19:00" → { date, time }. O site omite o ano: assume-se o
  * próximo em que a data ainda é futura.
  */
-function parseDate(
+export function parseDate(
   raw: string,
   today: string,
 ): { date: string; time: string | null } | null {
-  const m = raw.match(/(\d{1,2})\s*de\s*([A-Za-zç]{3})[^\d]*(\d{2}:\d{2})?/i);
+  // Hora em "19:00" ou "19h" / "19h30"; sem marcador, o número não é horário.
+  const m = raw.match(
+    /(\d{1,2})\s*de\s*([A-Za-zç]{3})[^\d]*(?:(\d{1,2})(?:h(\d{2})?|:(\d{2})))?/i,
+  );
   if (!m) return null;
   const mes = MESES[m[2].toLowerCase().slice(0, 3)];
   if (!mes) return null;
@@ -54,7 +57,7 @@ function parseDate(
   const cand = `${ano}-${mes}-${dia}`;
   return {
     date: cand >= today ? cand : `${ano + 1}-${mes}-${dia}`,
-    time: m[3] ?? null,
+    time: m[3] ? `${m[3].padStart(2, "0")}:${m[4] ?? m[5] ?? "00"}` : null,
   };
 }
 

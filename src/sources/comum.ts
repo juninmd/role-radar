@@ -71,6 +71,18 @@ export const limpa = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// Duração do espetáculo ("Duração 2h30") vem antes do horário e não é início.
+const DURACAO = /dura[çc][ãa]o\D{0,12}$/i;
+
+/** Primeiro "HHhMM" ou "HH:MM" que não seja duração, em HH:MM com zero à esquerda. */
+function horaDeInicio(texto: string): string | null {
+  for (const m of texto.matchAll(/(\d{1,2})[h:](\d{2})/g)) {
+    if (DURACAO.test(texto.slice(0, m.index))) continue;
+    return `${m[1].padStart(2, "0")}:${m[2]}`;
+  }
+  return null;
+}
+
 /**
  * Data em português na forma que as bilheterias usam, com ou sem ano:
  * "14 de Ago às 19:00", "21 de agosto", "04 até 30/07 | Qui. 21h00", "12/09/2026".
@@ -81,11 +93,7 @@ export function parseDataBr(
   today: string,
 ): { date: string; time: string | null } | null {
   const texto = raw.trim();
-  const hora =
-    texto
-      .match(/(\d{1,2})[h:](\d{2})/)
-      ?.slice(1, 3)
-      .join(":") ?? null;
+  const hora = horaDeInicio(texto);
 
   // dd/mm/aaaa
   const completa = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
