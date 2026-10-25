@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { env } from "../src/config/env.ts";
-import { db, insertItem, pendingItems } from "../src/db.ts";
+import { db, eventsOn, insertItem, pendingItems } from "../src/db.ts";
 import { extractEvents } from "../src/extract.ts";
 import { json, stubFetch } from "./fetch.ts";
 
@@ -24,6 +24,26 @@ const completion = (content: string) =>
 beforeEach(() => {
   env.aiProvider = "litellm";
   db.exec("DELETE FROM items; DELETE FROM events;");
+});
+
+// "sábado" > "2026-10-30" em string é verdade: sem checar o formato, entra no banco
+// e o COALESCE deixa o evento visível para sempre.
+test("end_date que não é data não entra no evento", async () => {
+  insertItem(item(1));
+  stubFetch(async () =>
+    completion(
+      JSON.stringify([
+        {
+          title: "Festival Longo",
+          date: "2026-10-30",
+          end_date: "sábado",
+          item: 1,
+        },
+      ]),
+    ),
+  );
+  await extractEvents(TODAY);
+  expect(eventsOn("2026-10-30")[0]?.end_date).toBeNull();
 });
 
 test("lote com IA fora do ar continua na fila para a próxima rodada", async () => {
