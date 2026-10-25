@@ -83,6 +83,7 @@ export function row(it) {
       {
         type: "button",
         class: "icon-btn",
+        "data-focus": `fav:${it.id}`,
         "aria-pressed": fav ? "true" : "false",
         "aria-label": fav
           ? `Tirar ${it.title} dos favoritos`
