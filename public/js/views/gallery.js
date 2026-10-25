@@ -123,10 +123,12 @@ export function renderGallery(root, items) {
                   const primeiro = shown;
                   shown += PAGE;
                   renderGallery(root, items);
-                  // O botão some na última página: o foco vai ao primeiro card novo.
-                  root.querySelectorAll(".card-hit")[primeiro]?.focus();
-                  // O botão é refeito no fim da lista: o foco segue para ele.
-                  root.querySelector('[data-focus="mais"]')?.focus();
+                  // Com botão na lista, o foco segue para ele; na última página
+                  // ele some, e o foco vai ao primeiro card novo.
+                  (
+                    root.querySelector('[data-focus="mais"]') ??
+                    root.querySelectorAll(".card-hit")[primeiro]
+                  )?.focus();
                 },
               },
               `Mostrar mais (${items.length - shown})`,
