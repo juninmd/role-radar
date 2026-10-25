@@ -234,11 +234,25 @@ function send(
   });
 }
 
+/** Corta linha maior que `max` sem partir par surrogate (emoji). */
+function cutLine(line: string, max: number): string[] {
+  const out: string[] = [];
+  let rest = line;
+  while (rest.length > max) {
+    const cut = /[\uD800-\uDBFF]/.test(rest[max - 1]) ? max - 1 : max;
+    out.push(rest.slice(0, cut));
+    rest = rest.slice(cut);
+  }
+  out.push(rest);
+  return out;
+}
+
 function split(text: string, max: number): string[] {
   if (text.length <= max) return [text];
   const out: string[] = [];
   let buf = "";
-  for (const line of text.split("\n")) {
+  // Pedaço de até max-1 mais o "\n" sempre cabe num chunk sozinho.
+  for (const line of text.split("\n").flatMap((l) => cutLine(l, max - 1))) {
     if (buf.length + line.length + 1 > max) {
       out.push(buf);
       buf = "";
