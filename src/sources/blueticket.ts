@@ -38,7 +38,7 @@ export async function syncBlueticket(today: string): Promise<number> {
     const all = Array.isArray(json) ? json : (json?.data ?? []);
 
     for (const ev of all) {
-      if (!ev.name || !ev.date || !inRegion(ev.cityName)) continue;
+      if (!ev?.name || !ev.date || !inRegion(ev.cityName)) continue;
       const date = ev.date.slice(0, 10);
       const hhmm = ev.date.slice(11, 16);
       if (date < today) continue;

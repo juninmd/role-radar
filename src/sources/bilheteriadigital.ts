@@ -46,7 +46,12 @@ export async function scrapeBilheteriaDigital(
       // A busca é por cidade, então o termo é a melhor pista disponível.
       city: termo,
       price: null,
-      link: href.startsWith("http") ? href : `${SITE}${href}`,
+      // Só caminho absoluto: "@host" colado mudaria o domínio do link.
+      link: href.startsWith("http")
+        ? href
+        : href.startsWith("/")
+          ? `${SITE}${href}`
+          : SITE,
       image: card.match(/src="(https?:\/\/[^"]+)"/)?.[1] ?? null,
     });
   }
