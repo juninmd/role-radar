@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { movieBits } from "../src/digest.ts";
+import { agendaTitle, movieBits, movieTag } from "../src/digest.ts";
 
 const TODAY = "2026-10-25";
 const movie = {
@@ -23,4 +23,22 @@ test("parêntese no URL não fecha o link antes da hora", () => {
 
 test("link que não é http(s) some em vez de quebrar o texto", () => {
   expect(movieBits({ ...movie, link: "ftp://x.test/a" }, TODAY)).toBe("");
+});
+
+// Gênero com "_" sem escape faz o Telegram recusar a ficha inteira (400) e cair
+// no texto puro; URL com ")" fecha o link antes da hora.
+test("tag do cartaz escapa o gênero para o Markdown do Telegram", () => {
+  expect(movieTag({ genre: "Ação_Ficção", rating: "14", duration: "2h" })).toBe(
+    "Ação\\_Ficção · 14 · 2h",
+  );
+});
+
+test("link da agenda com ')' na URL não quebra o Markdown", () => {
+  expect(
+    agendaTitle({ title: "Show", link: "https://x.test/a)b" }),
+  ).not.toContain("a)b");
+  expect(agendaTitle({ title: "Show", link: "https://x.test/ok" })).toBe(
+    "[Show](https://x.test/ok)",
+  );
+  expect(agendaTitle({ title: "Show", link: null })).toBe("*Show*");
 });

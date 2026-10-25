@@ -87,6 +87,23 @@ const mdUrl = (u: string | null): string | null =>
   ) ?? null;
 
 /** Linha de estreia, trailer e ingressos de um filme; links de API externa passam por mdUrl. */
+/** Tag do cartaz ("Ação_Ficção · 14 · 2h"): escapada, senão o Telegram recusa a mensagem. */
+export const movieTag = (m: {
+  genre?: string | null;
+  rating?: string | null;
+  duration?: string | null;
+}) =>
+  [m.genre, m.rating, m.duration]
+    .filter(Boolean)
+    .map((s) => mdSafe(String(s)))
+    .join(" · ");
+
+/** Título com link: URL que não passa em mdUrl vira só o título, sem link quebrado. */
+export const agendaTitle = (ev: { title: string; link?: string | null }) => {
+  const url = mdUrl(ev.link ?? null);
+  return url ? `[${mdSafe(ev.title)}](${url})` : `*${mdSafe(ev.title)}*`;
+};
+
 export function movieBits(
   m: { premiere: string | null; trailer: string | null; link: string },
   today: string,
@@ -270,7 +287,7 @@ export async function digest(): Promise<void> {
       .map((m) => m.poster)
       .filter((p): p is string => Boolean(p));
     const lines = day.movies.map((m) => {
-      const tag = [m.genre, m.rating, m.duration].filter(Boolean).join(" · ");
+      const tag = movieTag(m);
       return `• *${mdSafe(m.title)}*${tag ? ` — ${tag}` : ""}\n  ${movieBits(m, today)}`;
     });
     await oncePerDay(today, `cinema:${day.cinema}`, async () => {
@@ -318,9 +335,7 @@ export async function digest(): Promise<void> {
           .filter(Boolean)
           .map((s) => mdSafe(String(s)))
           .join(" · ");
-        const title = ev.link
-          ? `[${mdSafe(ev.title)}](${ev.link})`
-          : `*${mdSafe(ev.title)}*`;
+        const title = agendaTitle(ev);
         return `• ${title}${bits ? `\n  ${bits}` : ""}`;
       });
       return `📆 *${humanDay(date)}*\n${rows.join("\n")}`;
