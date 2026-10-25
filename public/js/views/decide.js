@@ -22,7 +22,7 @@ let answers = store.get("rr:decide", {
   spots: true,
 });
 
-function spin(ranked, stage, live) {
+function spin(ranked, stage, live, onDone) {
   const top = ranked.slice(0, 8);
   if (!top.length) return;
   const winner = pickWeighted(top);
@@ -70,6 +70,7 @@ function spin(ranked, stage, live) {
   const finish = () => {
     show(winner, true);
     live.textContent = `Sorteado: ${winner.it.title}`;
+    onDone();
   };
   if (reducedMotion()) return finish();
   let i = 0;
@@ -184,7 +185,14 @@ export function renderDecide(root, items) {
               type: "button",
               class: "btn primary big",
               disabled: !ranked.length,
-              onclick: () => spin(ranked, stage, live),
+              onclick: (e) => {
+                // Um sorteio por vez: um segundo clique sobrepõe as trocas de slot.
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                spin(ranked, stage, live, () => {
+                  btn.disabled = !ranked.length;
+                });
+              },
             },
             "🎰 Sortear",
           ),
