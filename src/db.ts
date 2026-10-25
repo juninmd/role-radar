@@ -63,7 +63,12 @@ runMigrations([
   "ALTER TABLE items ADD COLUMN body TEXT",
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN description TEXT",
+  "ALTER TABLE items ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
 ]);
+
+// Item cuja resposta da IA não parseia de novo e de novo sai da fila; uma
+// falha de rede não conta (não é culpa do item).
+export const MAX_ITEM_ATTEMPTS = 3;
 
 export interface Item {
   id: string;
@@ -385,10 +390,21 @@ export function pruneDigestRunsBefore(date: string): void {
 
 export function pendingItems(limit: number): Item[] {
   return db
-    .query<Item, [number]>(
-      "SELECT * FROM items WHERE digested = 0 ORDER BY fetched_at DESC LIMIT ?",
+    .query<Item, [number, number]>(
+      "SELECT * FROM items WHERE digested = 0 AND attempts < ? ORDER BY fetched_at DESC LIMIT ?",
     )
-    .all(limit);
+    .all(MAX_ITEM_ATTEMPTS, limit);
+}
+
+export function markAttempt(ids: string[]): void {
+  if (!ids.length) return;
+  const stmt = db.prepare<unknown, [string]>(
+    "UPDATE items SET attempts = attempts + 1 WHERE id = ?",
+  );
+  const tx = db.transaction((list: string[]) => {
+    for (const id of list) stmt.run(id);
+  });
+  tx(ids);
 }
 
 export function markDigested(ids: string[]): void {
