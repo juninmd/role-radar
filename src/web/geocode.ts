@@ -26,10 +26,36 @@ export const geoKey = (p: Place) =>
  * Tira o ruído que as bilheterias grudam no nome do local e que faz o
  * Nominatim errar: "(plateia livre)", " - 20h00", " - Ribeirão Preto".
  */
+const VARIANTES: Record<string, string> = {
+  a: "aáàâãä",
+  e: "eéèêë",
+  i: "iíìîï",
+  o: "oóòôõö",
+  u: "uúùûü",
+  c: "cç",
+  n: "nñ",
+};
+
+/** Nome de cidade como regex que ignora acento e trata espaço como qualquer espaço. */
+const cidadeFlexivel = (city: string) =>
+  [...city.toLowerCase()]
+    .map((ch) => {
+      const base = norm(ch);
+      if (VARIANTES[base]) return `[${VARIANTES[base]}]`;
+      if (/\s/.test(ch)) return "\\s+";
+      return ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    })
+    .join("");
+
 export const cleanVenue = (venue: string, city: string | null) => {
   let v = venue.replace(/\([^)]*\)/g, " ");
   v = v.replace(/\s+-\s+\d{1,2}h\d{0,2}\b.*$/i, "");
-  if (city) v = v.replace(new RegExp(String.raw`\s+-\s+${city}.*$`, "i"), "");
+  // Acento e espaço do nome da cidade variam na bilheteria: casa com qualquer um dos dois.
+  if (city)
+    v = v.replace(
+      new RegExp(String.raw`\s+-\s+${cidadeFlexivel(city)}.*$`, "i"),
+      "",
+    );
   return v.replace(/\s+/g, " ").trim();
 };
 
