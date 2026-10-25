@@ -67,7 +67,7 @@ export function renderMap(root, items) {
         h(
           "p",
           { class: "muted small" },
-          `${pts.length} no mapa · contorno tracejado = local aproximado`,
+          `${pts.length} ${pts.length === 1 ? "rolê" : "rolês"} no mapa · contorno tracejado = local aproximado`,
         ),
         h(
           "div",
