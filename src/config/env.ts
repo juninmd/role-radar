@@ -1,8 +1,9 @@
 // Bun carrega .env automaticamente — sem dotenv.
 // "abc" dá NaN, e NaN em slice() esvazia a rodada sem erro: cai no padrão.
+// Negativo também: slice(0, -5) corta o fim da lista em silêncio.
 const num = (v: string | undefined, d: number) => {
   const n = Number(v);
-  return v && Number.isFinite(n) ? n : d;
+  return v && Number.isFinite(n) && n >= 0 ? n : d;
 };
 
 export const env = {
