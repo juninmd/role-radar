@@ -83,6 +83,7 @@ export function renderRadar(root, items) {
               {
                 type: "button",
                 class: "legend-item",
+                "data-focus": `cat:${c}`,
                 "aria-pressed": state.filters.cats.includes(c)
                   ? "true"
                   : "false",

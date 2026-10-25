@@ -136,6 +136,7 @@ let lastFilters = "";
 function render() {
   if (!state.catalog) return;
   const focusId = document.activeElement?.id;
+  const focusKey = document.activeElement?.dataset?.focus;
   const caret = document.activeElement?.selectionStart;
   const visible = applyFilters(
     state.items,
@@ -152,7 +153,11 @@ function render() {
   RENDER[state.view]($("view"), visible);
   renderDock();
   // Painéis são redesenhados inteiros: devolve o foco (e o cursor da busca).
-  const el = focusId && $(focusId);
+  // Botão sem id volta pela chave data-focus, que é estável entre renders.
+  const el =
+    (focusId && $(focusId)) ||
+    (focusKey &&
+      document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`));
   if (el && el !== document.activeElement) {
     el.focus({ preventScroll: true });
     if (typeof caret === "number" && el.setSelectionRange)

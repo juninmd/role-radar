@@ -83,6 +83,7 @@ export function row(it) {
       {
         type: "button",
         class: "icon-btn",
+        "data-focus": `fav:${it.id}`,
         "aria-pressed": fav ? "true" : "false",
         // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
         "aria-label": `Favoritar ${it.title}`,

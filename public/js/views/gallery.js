@@ -76,6 +76,7 @@ export function card(it, { compact = false, onPick = null } = {}) {
           {
             type: "button",
             class: "icon-btn card-fav",
+            "data-focus": `fav:${it.id}`,
             "aria-pressed": fav ? "true" : "false",
             // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
             "aria-label": `Favoritar ${it.title}`,
@@ -115,9 +116,12 @@ export function renderGallery(root, items) {
               {
                 type: "button",
                 class: "btn",
+                "data-focus": "mais",
                 onclick: () => {
                   shown += PAGE;
                   renderGallery(root, items);
+                  // O botão é refeito no fim da lista: o foco segue para ele.
+                  root.querySelector('[data-focus="mais"]')?.focus();
                 },
               },
               `Mostrar mais (${items.length - shown})`,
