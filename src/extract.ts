@@ -1,6 +1,12 @@
 import { chat } from "./ai.ts";
 import { env } from "./config/env.ts";
-import { type Item, markDigested, pendingItems, upsertEvent } from "./db.ts";
+import {
+  type Item,
+  markAttempt,
+  markDigested,
+  pendingItems,
+  upsertEvent,
+} from "./db.ts";
 import { pool } from "./pool.ts";
 import { enrichItems } from "./sources/article.ts";
 
@@ -113,16 +119,25 @@ async function runBatch(today: string, batch: Item[]): Promise<number | null> {
     .join("\n\n");
 
   let events: Extracted[] = [];
+  let raw: string;
   try {
-    const raw = await chat(
+    raw = await chat(
       EXTRACT_PROMPT,
       `Hoje é ${today}.\n\nItens:\n\n${list}\n\nExtraia os eventos em JSON.`,
     );
-    if (process.env.DEBUG_EXTRACT) console.log(`[extract:raw]\n${raw}`);
+  } catch (err) {
+    // Provedor fora do ar: não é culpa do lote, volta na próxima rodada.
+    console.error(`[extract] IA falhou, lote fica pendente (${err})`);
+    return null;
+  }
+  if (process.env.DEBUG_EXTRACT) console.log(`[extract:raw]\n${raw}`);
+  try {
     events = parseJson(raw);
   } catch (err) {
-    // Falha isolada: este lote volta na próxima rodada, os outros seguem.
-    console.error(`[extract] IA/parse falhou, lote fica pendente (${err})`);
+    // Resposta que não parseia tende a se repetir para o mesmo lote: conta a
+    // tentativa, e depois de algumas o lote sai da fila.
+    markAttempt(batch.map((it) => it.id));
+    console.error(`[extract] resposta inválida, lote fica pendente (${err})`);
     return null;
   }
 
@@ -147,7 +162,8 @@ async function runBatch(today: string, batch: Item[]): Promise<number | null> {
       title: ev.title.trim(),
       date: ev.date,
       end_date: end,
-      time: ev.time ?? null,
+      // Só HH:MM: o horário vai para o Markdown do Telegram, que a IA não controla.
+      time: /^\d{2}:\d{2}$/.test(ev.time ?? "") ? ev.time : null,
       venue: ev.venue ?? null,
       city: ev.city ?? null,
       price: ev.price ?? null,

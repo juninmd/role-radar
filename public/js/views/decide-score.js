@@ -101,12 +101,16 @@ const surpriseNoise = (id) => {
 export function score(it, a, today) {
   const reasons = [];
   if (a.when !== "qualquer" && it.date) {
+    // Festival de vários dias vale para qualquer dia que cubra (como no radar).
+    const overlaps = (from, to) =>
+      it.date <= to && (it.endDate ?? it.date) >= from;
+    const wk = weekendDays(today);
     const ok =
       a.when === "hoje"
-        ? it.date === today
+        ? overlaps(today, today)
         : a.when === "amanha"
-          ? it.date === addDays(today, 1)
-          : weekendDays(today).includes(it.date);
+          ? overlaps(addDays(today, 1), addDays(today, 1))
+          : overlaps(wk[0], wk.at(-1));
     if (!ok) return null;
   }
   const reach = Number(a.reach);

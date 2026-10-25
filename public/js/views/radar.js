@@ -71,7 +71,7 @@ export function renderRadar(root, items) {
           ? h(
               "p",
               { class: "muted small center" },
-              `${hidden} item(ns) sem ${mode === "distancia" ? "localização" : "data"} ficam só nas listas.`,
+              `${hidden} ${hidden === 1 ? "item sem" : "itens sem"} ${mode === "distancia" ? "localização" : "data"} ${hidden === 1 ? "fica" : "ficam"} só nas listas.`,
             )
           : null,
         h(
@@ -83,6 +83,7 @@ export function renderRadar(root, items) {
               {
                 type: "button",
                 class: "legend-item",
+                "data-focus": `cat:${c}`,
                 "aria-pressed": state.filters.cats.includes(c)
                   ? "true"
                   : "false",

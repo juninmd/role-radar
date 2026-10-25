@@ -6,6 +6,8 @@ import { readCapped } from "./sources/public-url.ts";
 const MAX_REPLY = 5_000_000;
 // Erro do provedor vai para a mensagem e para o log: o início basta.
 const MAX_ERROR = 1_000;
+// Teto de saída por chamada, igual em todos os provedores: a conta sai do output.
+const MAX_OUTPUT_TOKENS = 2048;
 
 export async function chat(system: string, user: string): Promise<string> {
   switch (env.aiProvider) {
@@ -60,6 +62,7 @@ async function openaiCompatible(
         { role: "user", content: user },
       ],
       temperature: 0.4,
+      max_tokens: MAX_OUTPUT_TOKENS,
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
@@ -81,7 +84,7 @@ async function anthropic(system: string, user: string): Promise<string> {
     },
     body: JSON.stringify({
       model: env.anthropicModel,
-      max_tokens: 2048,
+      max_tokens: MAX_OUTPUT_TOKENS,
       system,
       messages: [{ role: "user", content: user }],
     }),
@@ -108,6 +111,7 @@ async function google(system: string, user: string): Promise<string> {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: user }] }],
+      generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS },
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });

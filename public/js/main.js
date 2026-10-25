@@ -86,9 +86,11 @@ function renderStats(visible) {
     stat(ev.filter((it) => it.priceMin === 0).length, "grátis"),
     stat(visible, "no filtro"),
   );
+  // Horário da coleta é de Franca: sem timeZone, quem está fora de UTC-3 lia outra hora.
   const at = new Date(state.catalog.generatedAt).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
   $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
   // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
@@ -136,6 +138,7 @@ let lastFilters = "";
 function render() {
   if (!state.catalog) return;
   const focusId = document.activeElement?.id;
+  const focusKey = document.activeElement?.dataset?.focus;
   const caret = document.activeElement?.selectionStart;
   const visible = applyFilters(
     state.items,
@@ -152,7 +155,11 @@ function render() {
   RENDER[state.view]($("view"), visible);
   renderDock();
   // Painéis são redesenhados inteiros: devolve o foco (e o cursor da busca).
-  const el = focusId && $(focusId);
+  // Botão sem id volta pela chave data-focus, que é estável entre renders.
+  const el =
+    (focusId && $(focusId)) ||
+    (focusKey &&
+      document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`));
   if (el && el !== document.activeElement) {
     el.focus({ preventScroll: true });
     if (typeof caret === "number" && el.setSelectionRange)

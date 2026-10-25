@@ -54,8 +54,10 @@ export interface Catalog {
 }
 
 /** Só http(s): texto de fonte externa nunca vira `javascript:` num href. */
-export const safeUrl = (u: string | null | undefined): string | null =>
-  u && /^https?:\/\//i.test(u) ? u : null;
+export const safeUrl = (u: string | null | undefined): string | null => {
+  const t = u?.trim();
+  return t && /^https?:\/\//i.test(t) ? t : null;
+};
 
 function pinFor(
   place: Place | null,
