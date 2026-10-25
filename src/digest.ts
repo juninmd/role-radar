@@ -186,10 +186,19 @@ async function oncePerDay(
   if (await send()) markBlockSent(today, block);
 }
 
+/** Conta e registra as fontes que falharam na rodada; devolve quantas falharam. */
+export function falhasDaRodada(
+  resultados: PromiseSettledResult<unknown>[],
+): number {
+  const falhas = resultados.filter((r) => r.status === "rejected");
+  for (const f of falhas) console.error(`[digest] fonte falhou: ${f.reason}`);
+  return falhas.length;
+}
+
 /** Extract events from pending items, post today's events + 7-day agenda + sightseeing spots. */
 export async function digest(): Promise<void> {
   const today = isoDay(new Date());
-  await Promise.allSettled([
+  const resultados = await Promise.allSettled([
     extractEvents(today),
     syncSympla(today),
     syncIngresso(today),
@@ -217,6 +226,8 @@ export async function digest(): Promise<void> {
     syncZigTickets(today),
     syncArticket(today),
   ]);
+  // Fonte que quebra não pode sumir em silêncio: cada falha vira log e tudo falhando sai com erro.
+  if (falhasDaRodada(resultados) === resultados.length) process.exitCode = 1;
   pruneEventsBefore(today);
   pruneDigestRunsBefore(today);
   // Foco exclusivo em Franca e microregião imediata.
