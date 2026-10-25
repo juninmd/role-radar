@@ -2,6 +2,7 @@ import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import { limpa, type Parsed, parseDataBr } from "./comum.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Busca server-side por termo livre. Hoje não devolve nada da região, mas o
 // parser fica pronto — a plataforma vende para teatro e infantil, que é o tipo
@@ -21,7 +22,7 @@ export async function scrapeBilheteriaDigital(
     signal: AbortSignal.timeout(20000),
   }).then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.text();
+    return readCapped(r, MAX_SOURCE_BODY);
   });
 
   const out: Parsed[] = [];

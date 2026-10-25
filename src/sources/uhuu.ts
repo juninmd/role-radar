@@ -2,6 +2,7 @@ import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import type { Parsed } from "./comum.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A busca da Uhuu é nacional e difusa (pedir "franca" devolve evento de Natal),
 // então o filtro real é a cidade que vem no card. Cada card carrega um bloco
@@ -24,7 +25,7 @@ export async function scrapeUhuu(
     signal: AbortSignal.timeout(20000),
   }).then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.text();
+    return readCapped(r, MAX_SOURCE_BODY);
   });
 
   const out: Parsed[] = [];

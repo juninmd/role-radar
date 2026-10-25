@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Sesi Franca Basquete — só os jogos EM CASA (Pedrocão) interessam ao radar.
 // Fora de temporada (NBB vai de outubro a junho) a tabela não traz jogos futuros.
@@ -21,7 +22,7 @@ export async function syncBasquete(today: string): Promise<number> {
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_SOURCE_BODY);
 
     // Os escudos só trazem title/alt em parte das linhas; monta src -> time.
     const names = new Map<string, string>();

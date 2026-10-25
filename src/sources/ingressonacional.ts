@@ -1,5 +1,6 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // O site é AngularJS e a listagem vem de eventos.php — mas o endpoint só
 // responde JSON com os cabeçalhos que o $http do Angular manda. Com
@@ -35,7 +36,9 @@ export async function syncIngressoNacional(today: string): Promise<number> {
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = (await res.json()) as { sucesso?: { eventos?: EventoIN[] } };
+    const json = JSON.parse(await readCapped(res, MAX_SOURCE_BODY)) as {
+      sucesso?: { eventos?: EventoIN[] };
+    };
     const all = json.sucesso?.eventos ?? [];
 
     for (const ev of all) {

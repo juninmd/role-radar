@@ -17,6 +17,9 @@ const PRIVATE_V4 = [
 const PRIVATE_V6 = /^(::|f[cd]|fe[89ab]|64:ff9b:|2002:)/i;
 const INTERNAL_NAME = /(^|\.)(localhost|local|internal|cluster\.local|svc)$/i;
 
+// Teto de leitura das respostas de fonte; a maior página medida tem ~1,1 MB.
+export const MAX_SOURCE_BODY = 5_000_000;
+
 export type HostResolver = (host: string) => Promise<string[]>;
 
 const lookupAll: HostResolver = async (host) =>

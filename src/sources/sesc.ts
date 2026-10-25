@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // group_id de cada unidade SESC (via /wp/v1/unidades-atividades).
 const UNITS = [
@@ -29,7 +30,9 @@ export async function syncSesc(today: string): Promise<number> {
         { headers: { "user-agent": UA }, signal: AbortSignal.timeout(15000) },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { atividade?: Atividade[] };
+      const data = JSON.parse(await readCapped(res, MAX_SOURCE_BODY)) as {
+        atividade?: Atividade[];
+      };
       for (const a of data.atividade ?? []) {
         const raw = a.dataProxSessao ?? a.dataPrimeiraSessao;
         const date = raw?.slice(0, 10);
