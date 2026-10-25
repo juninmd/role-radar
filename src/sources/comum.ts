@@ -35,15 +35,39 @@ const valido = (ano: number, mes: number, dia: number) => {
   );
 };
 
+// HTML trata nomes de entidade sem diferenciar caixa (&AMP; é &).
+const NOMES = new Map([
+  ["amp", "&"],
+  ["lt", "<"],
+  ["gt", ">"],
+  ["quot", '"'],
+  ["apos", "'"],
+  ["nbsp", " "],
+]);
+
+// Surrogate isolado e código fora de Unicode não viram caractere.
+function entidade(nome: string): string | null {
+  if (nome[0] !== "#") return NOMES.get(nome.toLowerCase()) ?? null;
+  const hex = nome[1] === "x" || nome[1] === "X";
+  const cod = Number.parseInt(nome.slice(hex ? 2 : 1), hex ? 16 : 10);
+  if (
+    !Number.isFinite(cod) ||
+    cod > 0x10ffff ||
+    (cod >= 0xd800 && cod <= 0xdfff)
+  )
+    return null;
+  return String.fromCodePoint(cod);
+}
+
 /** Tira tags e entidades, colapsa espaço. */
 export const limpa = (s: string) =>
   s
     .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(
+      /&(#[xX][0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g,
+      (m, nome: string) => entidade(nome) ?? m,
+    )
     .replace(/\s+/g, " ")
     .trim();
 
