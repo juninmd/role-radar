@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { Catalog } from "../src/web/catalog.ts";
 import { createHandler } from "../src/web/server.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "rr-public-"));
@@ -37,6 +38,20 @@ test("catálogo e health respondem JSON", async () => {
   expect(Array.isArray(cat.events)).toBe(true);
   expect(cat.origin.lat).toBeLessThan(0);
   expect((await get("/health").json()).ok).toBe(true);
+});
+
+// Montar o catálogo custa ~17 ms por request; dentro da janela de TTL ele é reaproveitado.
+test("catálogo e health reaproveitam uma só montagem dentro do TTL", async () => {
+  let builds = 0;
+  const handler = createHandler(dir, (day) => {
+    builds++;
+    return { today: day, events: [] } as unknown as Catalog;
+  });
+  const req = (path: string) => handler(new Request(`http://x.test${path}`));
+  expect((await req("/api/catalog").json()).today).toBeString();
+  await req("/api/catalog");
+  expect(await req("/health").json()).toEqual({ ok: true, events: 0 });
+  expect(builds).toBe(1);
 });
 
 test("só leitura: POST é 405", () => {
