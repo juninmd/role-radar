@@ -68,6 +68,8 @@ export async function syncSympla(today: string): Promise<number> {
         if (/\bonline\b/i.test(ev.location?.name ?? "")) continue;
         // start_date vem em UTC; evento local = UTC-3.
         const local = new Date(ev.start_date);
+        // Data inválida faria toISOString lançar e derrubar a página inteira.
+        if (Number.isNaN(local.getTime())) continue;
         local.setUTCHours(local.getUTCHours() - 3);
         const date = local.toISOString().slice(0, 10);
         const time = local.toISOString().slice(11, 16);

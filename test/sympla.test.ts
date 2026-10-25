@@ -58,3 +58,14 @@ test("festival que começou ontem e termina amanhã entra; o que já acabou não
   // Fim antes do início não descarta um evento futuro.
   expect(eventsOn("2026-09-29").map((e) => e.title)).toEqual(["fim-invertido"]);
 });
+
+test("data de início inválida numa linha não derruba os eventos válidos da página", async () => {
+  stubFetch(async () =>
+    listing([
+      ev("Quebrado", "2026-13-45T20:00:00Z", null),
+      ev("Valido", "2026-09-27T23:00:00Z", null),
+    ]),
+  );
+  await syncSympla(TODAY);
+  expect(eventsOn("2026-09-27").map((e) => e.title)).toContain("Valido");
+});
