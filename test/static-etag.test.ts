@@ -18,3 +18,19 @@ test("asset estático tem ETag e revisita com If-None-Match recebe 304 sem corpo
   expect(again.status).toBe(304);
   expect((await again.arrayBuffer()).byteLength).toBe(0);
 });
+
+// Cache que guarda gzip e identity separado precisa do Vary também no 304.
+test("304 carrega o mesmo Vary do 200 do mesmo asset", async () => {
+  const handler = createHandler();
+  const first = await handler(new Request("http://x/js/main.js"));
+  const etag = first.headers.get("etag");
+  await first.arrayBuffer();
+
+  const again = await handler(
+    new Request("http://x/js/main.js", {
+      headers: { "if-none-match": etag ?? "" },
+    }),
+  );
+  expect(again.status).toBe(304);
+  expect(again.headers.get("vary")).toBe(first.headers.get("vary"));
+});
