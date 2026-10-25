@@ -84,9 +84,8 @@ export function row(it) {
         type: "button",
         class: "icon-btn",
         "aria-pressed": fav ? "true" : "false",
-        "aria-label": fav
-          ? `Tirar ${it.title} dos favoritos`
-          : `Favoritar ${it.title}`,
+        // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
+        "aria-label": `Favoritar ${it.title}`,
         onclick: () => toggleFav(it.id),
       },
       fav ? "⭐" : "☆",

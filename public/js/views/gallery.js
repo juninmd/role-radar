@@ -77,9 +77,8 @@ export function card(it, { compact = false, onPick = null } = {}) {
             type: "button",
             class: "icon-btn card-fav",
             "aria-pressed": fav ? "true" : "false",
-            "aria-label": fav
-              ? `Tirar ${it.title} dos favoritos`
-              : `Favoritar ${it.title}`,
+            // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
+            "aria-label": `Favoritar ${it.title}`,
             onclick: () => toggleFav(it.id),
           },
           fav ? "⭐" : "☆",
