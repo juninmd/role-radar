@@ -22,7 +22,7 @@ const mapsDir = (it) =>
     : null);
 
 /** Link "adicionar ao Google Agenda" (sem OAuth: é só um template de URL). */
-function calendarUrl(it) {
+export function calendarUrl(it) {
   if (!it.date) return null;
   const d = it.date.replaceAll("-", "");
   let dates = `${d}/${d}`;
@@ -31,6 +31,11 @@ function calendarUrl(it) {
     const start = `${d}T${String(hh).padStart(2, "0")}${String(mm).padStart(2, "0")}00`;
     const end = `${d}T${String(Math.min(hh + 3, 23)).padStart(2, "0")}${String(mm).padStart(2, "0")}00`;
     dates = `${start}/${end}`;
+  } else if (it.endDate && it.endDate > it.date) {
+    // Fim de dia inteiro é exclusivo: o último dia entra com +1.
+    const fim = new Date(`${it.endDate}T00:00:00Z`);
+    fim.setUTCDate(fim.getUTCDate() + 1);
+    dates = `${d}/${fim.toISOString().slice(0, 10).replaceAll("-", "")}`;
   }
   const p = new URLSearchParams({
     action: "TEMPLATE",
