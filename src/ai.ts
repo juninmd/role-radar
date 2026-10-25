@@ -74,7 +74,8 @@ async function openaiCompatible(
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
     choices: { message: { content: string } }[];
   };
-  return json.choices[0]?.message?.content?.trim() ?? "";
+  // Sem "choices" (bloqueio, erro de cota com 200) vira vazio, não TypeError.
+  return json.choices?.[0]?.message?.content?.trim() ?? "";
 }
 
 async function anthropic(system: string, user: string): Promise<string> {
@@ -100,7 +101,7 @@ async function anthropic(system: string, user: string): Promise<string> {
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
     content: { text: string }[];
   };
-  return json.content[0]?.text?.trim() ?? "";
+  return json.content?.[0]?.text?.trim() ?? "";
 }
 
 async function google(system: string, user: string): Promise<string> {
@@ -125,5 +126,5 @@ async function google(system: string, user: string): Promise<string> {
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
     candidates: { content: { parts: { text: string }[] } }[];
   };
-  return json.candidates[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  return json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 }
