@@ -163,7 +163,10 @@ export function createHandler(
     };
     // Revalidação barata: arquivo que não mudou volta como 304, sem corpo.
     if (req.headers.get("if-none-match") === etag)
-      return new Response(null, { status: 304, headers });
+      return new Response(null, {
+        status: 304,
+        headers: { ...headers, vary: "accept-encoding" },
+      });
     return send(req, raw, gz, headers);
   };
 
