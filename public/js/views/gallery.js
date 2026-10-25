@@ -120,8 +120,11 @@ export function renderGallery(root, items) {
                 class: "btn",
                 "data-focus": "mais",
                 onclick: () => {
+                  const primeiro = shown;
                   shown += PAGE;
                   renderGallery(root, items);
+                  // O botão some na última página: o foco vai ao primeiro card novo.
+                  root.querySelectorAll(".card-hit")[primeiro]?.focus();
                   // O botão é refeito no fim da lista: o foco segue para ele.
                   root.querySelector('[data-focus="mais"]')?.focus();
                 },
