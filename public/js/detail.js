@@ -57,7 +57,8 @@ async function share(it) {
   }
 }
 
-export function openDetail(it) {
+/** `keepFocus`: ao favoritar, o painel é refeito; o foco volta ao botão, não ao ✕. */
+export function openDetail(it, { keepFocus = false } = {}) {
   const drawer = document.getElementById("drawer");
   const backdrop = document.getElementById("backdrop");
   if (!current) lastFocus = document.activeElement;
@@ -152,9 +153,10 @@ export function openDetail(it) {
             type: "button",
             class: "btn",
             "aria-pressed": fav ? "true" : "false",
+            "data-fav": "",
             onclick: () => {
               toggleFav(it.id);
-              openDetail(it);
+              openDetail(it, { keepFocus: true });
             },
           },
           fav ? "⭐ Favorito" : "☆ Favoritar",
@@ -170,7 +172,7 @@ export function openDetail(it) {
   drawer.hidden = false;
   backdrop.hidden = false;
   requestAnimationFrame(() => drawer.classList.add("open"));
-  close.focus();
+  (keepFocus ? drawer.querySelector("[data-fav]") : close).focus();
 }
 
 export function closeDetail() {
