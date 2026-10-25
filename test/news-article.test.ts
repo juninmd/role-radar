@@ -30,7 +30,7 @@ const html = `<html><head><meta property="og:description" content="Festival na p
 let prompts: string[] = [];
 
 /** Google News → URL real → matéria; a IA só acha o evento se ler o corpo. */
-function network(page = html) {
+function network(page: BodyInit = html) {
   prompts = [];
   return stubFetch(async (url, init) => {
     if (url.startsWith("https://news.google.com/articles/"))
@@ -216,9 +216,21 @@ test("evento de vários dias continua no radar até o último dia", async () => 
 
 // Página de terceiro sem limite de tamanho esgota a memória do CronJob; a
 // matéria que vem depois de 2 MB de lixo nem chega a ser lida.
+// Conta os chunks lidos: página em stream de 2,5 MB precisa parar antes do fim.
 test("corpo da matéria além de 2 MB não é lido", async () => {
+  const filler = new TextEncoder().encode("<p>x</p>".repeat(8192)); // 64 KB
+  const tail = new TextEncoder().encode(`<article><p>${BODY}</p></article>`);
+  let pulled = 0;
   network(
-    `<html><body>${"<p>x</p>".repeat(300_000)}<article><p>${BODY}</p></article></body></html>`,
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled++;
+        if (pulled <= 40) controller.enqueue(filler);
+        else if (pulled === 41) controller.enqueue(tail);
+        else controller.close();
+      },
+    }),
   );
   expect(await extractEvents("2026-09-24")).toBe(0);
+  expect(pulled).toBeLessThan(40);
 });
