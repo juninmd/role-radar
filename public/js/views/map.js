@@ -86,6 +86,14 @@ export function renderMap(root, items) {
           ),
         ),
       ),
+      // Sem pino o mapa só mostra a origem: a frase diz por que está vazio.
+      pts.length
+        ? null
+        : h(
+            "p",
+            { class: "glass pad muted center" },
+            "Nenhum rolê com localização nesses filtros. Os sem local ficam só nas listas.",
+          ),
       box,
       h(
         "ul",

@@ -174,6 +174,9 @@ const cidadeCanonica = (city: string | null) =>
     : null;
 
 // Dia que existe no calendário: 2026-02-31 é recusado antes de virar linha.
+// "" ou só espaços não é valor: COALESCE só cai no antigo com NULL, e "" o apagaria.
+const semVazio = (s?: string | null) => (s?.trim() ? s : null);
+
 const dataValida = (iso: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
   const [ano, mes, dia] = iso.split("-").map(Number);
@@ -208,14 +211,14 @@ export function upsertEvent(
     eventId(ev.title, ev.date),
     ev.title,
     ev.date,
-    ev.time,
-    ev.venue,
+    semVazio(ev.time),
+    semVazio(ev.venue),
     cidadeCanonica(ev.city),
-    ev.price,
-    ev.link,
-    ev.image,
-    ev.description ?? null,
-    ev.trailer ?? null,
+    semVazio(ev.price),
+    semVazio(ev.link),
+    semVazio(ev.image),
+    semVazio(ev.description),
+    semVazio(ev.trailer),
     // Fim antes do início, ou que não é data, é lixo da fonte: evento de um dia.
     ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
       ? ev.end_date

@@ -21,9 +21,15 @@ export function card(it, { compact = false, onPick = null } = {}) {
         // Acha o card de volta ao fechar o drawer, mesmo após o re-render.
         "data-id": it.id,
         onclick: () => (onPick ? onPick(it) : openDetail(it)),
-        "aria-label": onPick
-          ? `Escolher ${it.title}`
-          : `Detalhes de ${it.title}`,
+        // O rótulo substitui o conteúdo: sem data, cidade e preço, quem usa leitor de tela não os ouve.
+        "aria-label": `${onPick ? "Escolher" : "Detalhes de"} ${it.title}, ${[
+          it.date ? humanDay(it.date, today) : "sempre aberto",
+          it.time,
+          it.city,
+          fmtPrice(it),
+        ]
+          .filter(Boolean)
+          .join(", ")}`,
       },
       h(
         "div",
@@ -120,10 +126,15 @@ export function renderGallery(root, items) {
                 class: "btn",
                 "data-focus": "mais",
                 onclick: () => {
+                  const primeiro = shown;
                   shown += PAGE;
                   renderGallery(root, items);
-                  // O botão é refeito no fim da lista: o foco segue para ele.
-                  root.querySelector('[data-focus="mais"]')?.focus();
+                  // Com botão na lista, o foco segue para ele; na última página
+                  // ele some, e o foco vai ao primeiro card novo.
+                  (
+                    root.querySelector('[data-focus="mais"]') ??
+                    root.querySelectorAll(".card-hit")[primeiro]
+                  )?.focus();
                 },
               },
               `Mostrar mais (${items.length - shown})`,

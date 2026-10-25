@@ -66,7 +66,9 @@ export async function geocodePlaces(
   const todo = places.filter((p) => {
     const key = geoKey(p);
     const city = resolveCity(p.city);
-    if (!city || seen.has(key) || cachedCoord(key) !== undefined) return false;
+    // Nome que some na limpeza buscaria só a cidade, e o centro dela viraria pino exato.
+    if (!city || !cleanVenue(p.venue, city) || seen.has(key)) return false;
+    if (cachedCoord(key) !== undefined) return false;
     seen.add(key);
     return true;
   });
