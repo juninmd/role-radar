@@ -78,6 +78,8 @@ export function createHandler(
     catalog: Catalog;
     raw: Uint8Array<ArrayBuffer>;
     gz: Uint8Array<ArrayBuffer>;
+    // ICS é montado sob demanda e fica com o snapshot: sem isso, cada GET refazia o arquivo.
+    ics: string | null;
   } | null = null;
   const current = () => {
     const day = today();
@@ -86,7 +88,7 @@ export function createHandler(
     const catalog = build(day);
     const raw = new TextEncoder().encode(JSON.stringify(catalog));
     const gz = new Uint8Array(Bun.gzipSync(raw));
-    cache = { day, at: Date.now(), catalog, raw, gz };
+    cache = { day, at: Date.now(), catalog, raw, gz, ics: null };
     return cache;
   };
 
@@ -130,7 +132,9 @@ export function createHandler(
       });
     }
     if (pathname === "/agenda.ics") {
-      return new Response(buildIcs(current().catalog.events), {
+      const snap = current();
+      snap.ics ??= buildIcs(snap.catalog.events);
+      return new Response(snap.ics, {
         headers: {
           ...SECURITY_HEADERS,
           "content-type": "text/calendar;charset=utf-8",

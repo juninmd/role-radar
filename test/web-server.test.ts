@@ -65,6 +65,20 @@ test("/agenda.ics devolve a agenda como iCalendar para download", async () => {
   expect(await res.text()).toContain("BEGIN:VEVENT");
 });
 
+// A agenda é montada uma vez por snapshot: dentro do TTL, o arquivo é o mesmo
+// (inclusive o DTSTAMP), em vez de refeito a cada download.
+test("/agenda.ics dentro do TTL devolve o mesmo arquivo", async () => {
+  const handler = createHandler(dir, (day) => {
+    const ev = { id: "ev-1", title: "Show", date: day, time: "20:00" };
+    return { today: day, events: [ev] } as unknown as Catalog;
+  });
+  const ics = async () =>
+    (await handler(new Request("http://x.test/agenda.ics"))).text();
+  const primeira = await ics();
+  await Bun.sleep(1100);
+  expect(await ics()).toBe(primeira);
+});
+
 test("só leitura: POST é 405", () => {
   expect(get("/api/catalog", "POST").status).toBe(405);
 });
