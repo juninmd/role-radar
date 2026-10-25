@@ -40,14 +40,20 @@ export const CITY_COORDS: Record<string, LatLng> = {
 // Mais longo primeiro: "Ribeirão Preto" não pode casar como "Ribeirão Corrente".
 const BY_LENGTH = [...REGION_CITIES].sort((a, b) => b.length - a.length);
 
+// Palavra inteira com pontuação como separador: "Franca, SP" casa, "Francavilla" não.
+const comPalavras = (s: string) =>
+  ` ${norm(s)
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()} `;
+
 /**
  * Rótulo livre da fonte ("Cinemas de Ribeirão Preto", "Ribeirão e Franca")
  * → cidade da região. Sem casamento (ex.: "Cinemas") devolve null.
  */
 export function resolveCity(label: string | null): string | null {
   if (!label) return null;
-  const n = norm(label);
-  return BY_LENGTH.find((c) => n.includes(norm(c))) ?? null;
+  const palavras = comPalavras(label);
+  return BY_LENGTH.find((c) => palavras.includes(comPalavras(c))) ?? null;
 }
 
 /** Distância em km entre dois pontos (haversine). */

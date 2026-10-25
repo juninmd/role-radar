@@ -23,6 +23,9 @@ test("rótulo livre resolve pra cidade mais específica", () => {
   expect(resolveCity("Cinemas de Ribeirão Preto")).toBe("Ribeirão Preto");
   expect(resolveCity("RIBEIRAO CORRENTE")).toBe("Ribeirão Corrente");
   expect(resolveCity("Cinemas")).toBeNull();
+  // Cidade que só começa com o nome de uma da região não é essa cidade.
+  expect(resolveCity("Francavilla")).toBeNull();
+  expect(resolveCity("Franca, SP")).toBe("Franca");
   expect(resolveCity(null)).toBeNull();
 });
 
