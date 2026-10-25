@@ -30,3 +30,17 @@ test("cidade que só contém o nome de uma da região é podada", () => {
       .sort(),
   ).toEqual(["Dupla", "Franca"]);
 });
+
+// Fonte que escreve "Franca, SP" ou "Franca." não pode perder o evento na poda:
+// a cidade é da região, só vem com pontuação depois do nome.
+test("cidade com pontuação depois do nome não é podada", () => {
+  evento("Virgula", "Franca, SP");
+  evento("Ponto", "Franca.");
+  evento("Ribeirao", "Ribeirão Preto, SP");
+  pruneDisallowedCities(REGION_CITIES.map(norm));
+  expect(
+    eventsOn(DIA)
+      .map((e) => e.title)
+      .sort(),
+  ).toEqual(["Ponto", "Ribeirao", "Virgula"]);
+});
