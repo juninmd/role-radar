@@ -170,7 +170,7 @@ const CIDADE_CANONICA = new Map(REGION_CITIES.map((c) => [norm(c), c]));
  */
 const cidadeCanonica = (city: string | null) =>
   city
-    ? (CIDADE_CANONICA.get(norm(city).replace(/[\s/-]+sp$/, "")) ?? city)
+    ? (CIDADE_CANONICA.get(norm(city).replace(/[^a-z0-9]+sp$/, "")) ?? city)
     : null;
 
 // Dia que existe no calendário: 2026-02-31 é recusado antes de virar linha.
@@ -360,7 +360,8 @@ export function pruneDisallowedCities(allowedNormalized: string[]): void {
       if (c === "cinema" || c === "cinemas" || c.startsWith("streaming"))
         continue;
       // Palavra inteira: "francavilla" não é "franca".
-      const palavras = ` ${c} `;
+      // Pontuação separa palavras: "Franca, SP" tem de casar "franca".
+      const palavras = ` ${c.replace(/[^a-z0-9]+/g, " ").trim()} `;
       if (allowedNormalized.some((a) => palavras.includes(` ${a} `))) continue;
       del.run(r.id);
     }
