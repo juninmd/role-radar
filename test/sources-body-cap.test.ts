@@ -16,6 +16,7 @@ import { syncMinhaEntrada } from "../src/sources/minhaentrada.ts";
 import { syncMultiplanHall } from "../src/sources/multiplanhall.ts";
 import { syncOticket } from "../src/sources/oticket.ts";
 import { syncSesc } from "../src/sources/sesc.ts";
+import { syncTicket360 } from "../src/sources/ticket360.ts";
 import { syncTheatroPedro2 } from "../src/sources/theatropedro2.ts";
 import { syncTurismo } from "../src/sources/turismo.ts";
 import { syncUhuu } from "../src/sources/uhuu.ts";
@@ -43,6 +44,7 @@ const SOURCES: [string, () => Promise<unknown>][] = [
   ["multiplanhall", () => syncMultiplanHall(TODAY)],
   ["oticket", () => syncOticket(TODAY)],
   ["sesc", () => syncSesc(TODAY)],
+  ["ticket360", () => syncTicket360(TODAY)],
   ["theatropedro2", () => syncTheatroPedro2(TODAY)],
   ["turismo", () => syncTurismo(TODAY)],
   ["uhuu", () => syncUhuu(TODAY)],

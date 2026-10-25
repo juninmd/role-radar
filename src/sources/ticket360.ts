@@ -2,6 +2,7 @@ import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import { limpa, type Parsed, parseDataBr } from "./comum.ts";
+import { MAX_SOURCE_BODY, readBytesCapped } from "./public-url.ts";
 
 // ATENÇÃO: o site responde em ISO-8859-1. Ler como UTF-8 corrompe todo acento
 // ("Inflável" vira "Infl?vel") e quebra a comparação de cidade.
@@ -20,7 +21,10 @@ export async function scrapeTicket360(
     signal: AbortSignal.timeout(25000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = new TextDecoder("iso-8859-1").decode(await res.arrayBuffer());
+  // Teto de corpo, como as demais fontes: busca sem limite lotava a memória.
+  const html = new TextDecoder("iso-8859-1").decode(
+    await readBytesCapped(res, MAX_SOURCE_BODY),
+  );
 
   const out: Parsed[] = [];
   const semData: string[] = [];
