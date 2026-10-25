@@ -61,7 +61,7 @@ export async function nowPlaying(): Promise<CinemaDay[]> {
         await readCapped(res, MAX_SOURCE_BODY),
       ) as Movie[];
       const list = movies
-        .filter((m) => m.title && m.isPlaying !== false)
+        .filter((m) => m?.title && m.isPlaying !== false)
         .map((m) => ({
           title: (m.title as string).trim(),
           rating: m.contentRating ?? null,
