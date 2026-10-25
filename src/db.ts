@@ -45,20 +45,30 @@ db.exec(`
 `);
 
 // Migrações: colunas adicionadas depois que bancos já existiam.
-for (const sql of [
+/** Coluna que já existe é o caso esperado; outro erro não pode sumir. */
+export function runMigrations(statements: string[]): void {
+  for (const sql of statements) {
+    try {
+      db.exec(sql);
+    } catch (err) {
+      if (!/duplicate column name/.test(String(err))) throw err;
+    }
+  }
+}
+
+runMigrations([
   "ALTER TABLE items ADD COLUMN image TEXT",
   "ALTER TABLE events ADD COLUMN trailer TEXT",
   "ALTER TABLE events ADD COLUMN end_date TEXT",
   "ALTER TABLE items ADD COLUMN body TEXT",
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN description TEXT",
-]) {
-  try {
-    db.exec(sql);
-  } catch {
-    // coluna já existe
-  }
-}
+  "ALTER TABLE items ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+]);
+
+// Item cuja resposta da IA não parseia de novo e de novo sai da fila; uma
+// falha de rede não conta (não é culpa do item).
+export const MAX_ITEM_ATTEMPTS = 3;
 
 export interface Item {
   id: string;
@@ -163,6 +173,17 @@ const cidadeCanonica = (city: string | null) =>
     ? (CIDADE_CANONICA.get(norm(city).replace(/[\s/-]+sp$/, "")) ?? city)
     : null;
 
+// Dia que existe no calendário: 2026-02-31 é recusado antes de virar linha.
+// "" ou só espaços não é valor: COALESCE só cai no antigo com NULL, e "" o apagaria.
+const semVazio = (s?: string | null) => (s?.trim() ? s : null);
+
+const dataValida = (iso: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  return d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia;
+};
+
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<
@@ -180,20 +201,28 @@ export function upsertEvent(
     description?: string | null;
   },
 ): void {
+  if (!dataValida(ev.date)) {
+    console.warn(
+      `[db] "${ev.title}" com data inválida (${ev.date}), descartado`,
+    );
+    return;
+  }
   upsertEventStmt.run(
     eventId(ev.title, ev.date),
     ev.title,
     ev.date,
-    ev.time,
-    ev.venue,
+    semVazio(ev.time),
+    semVazio(ev.venue),
     cidadeCanonica(ev.city),
-    ev.price,
-    ev.link,
-    ev.image,
-    ev.description ?? null,
-    ev.trailer ?? null,
-    // Fim antes do início é lixo da fonte: trata como evento de um dia.
-    ev.end_date && ev.end_date > ev.date ? ev.end_date : null,
+    semVazio(ev.price),
+    semVazio(ev.link),
+    semVazio(ev.image),
+    semVazio(ev.description),
+    semVazio(ev.trailer),
+    // Fim antes do início, ou que não é data, é lixo da fonte: evento de um dia.
+    ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
+      ? ev.end_date
+      : null,
     new Date().toISOString(),
   );
 }
@@ -329,7 +358,9 @@ export function pruneDisallowedCities(allowedNormalized: string[]): void {
       // genérico — cai na checagem de cidade abaixo e é podado.
       if (c === "cinema" || c === "cinemas" || c.startsWith("streaming"))
         continue;
-      if (allowedNormalized.some((a) => c.includes(a))) continue;
+      // Palavra inteira: "francavilla" não é "franca".
+      const palavras = ` ${c} `;
+      if (allowedNormalized.some((a) => palavras.includes(` ${a} `))) continue;
       del.run(r.id);
     }
   });
@@ -366,10 +397,21 @@ export function pruneDigestRunsBefore(date: string): void {
 
 export function pendingItems(limit: number): Item[] {
   return db
-    .query<Item, [number]>(
-      "SELECT * FROM items WHERE digested = 0 ORDER BY fetched_at DESC LIMIT ?",
+    .query<Item, [number, number]>(
+      "SELECT * FROM items WHERE digested = 0 AND attempts < ? ORDER BY fetched_at DESC LIMIT ?",
     )
-    .all(limit);
+    .all(MAX_ITEM_ATTEMPTS, limit);
+}
+
+export function markAttempt(ids: string[]): void {
+  if (!ids.length) return;
+  const stmt = db.prepare<unknown, [string]>(
+    "UPDATE items SET attempts = attempts + 1 WHERE id = ?",
+  );
+  const tx = db.transaction((list: string[]) => {
+    for (const id of list) stmt.run(id);
+  });
+  tx(ids);
 }
 
 export function markDigested(ids: string[]): void {

@@ -1,10 +1,14 @@
 import { env } from "../config/env.ts";
 import { db, type Item } from "../db.ts";
 import { pool } from "../pool.ts";
-import { fetchPublic } from "./public-url.ts";
+import { fetchPublic, readCapped } from "./public-url.ts";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
 const MAX_BODY = 2000;
+// Interstitial e batchexecute do Google são pequenos; teto evita ler lixo inteiro.
+const MAX_GOOGLE = 256_000;
+// Página de portal cabe folgada; o resto é lixo que só custa memória e CPU.
+const MAX_PAGE = 2_000_000;
 // Parágrafo menor que isto é menu, legenda ou botão — não corpo de matéria.
 const MIN_PARAGRAPH = 60;
 
@@ -64,7 +68,7 @@ export async function resolveLink(link: string): Promise<string> {
   // O bloqueio chega como 429 ou como 302 para google.com/sorry.
   if (res0.status === 429 || res0.headers.get("location")?.includes("/sorry/"))
     throw new GoogleBlocked(`Google News bloqueou (HTTP ${res0.status})`);
-  const page = await res0.text();
+  const page = await readCapped(res0, MAX_GOOGLE);
   const sg = page.match(/data-n-a-sg="([^"]+)"/)?.[1];
   const ts = page.match(/data-n-a-ts="([^"]+)"/)?.[1];
   if (!sg || !ts) throw new Error("assinatura do Google News ausente");
@@ -80,7 +84,9 @@ export async function resolveLink(link: string): Promise<string> {
     },
   );
   const line =
-    (await res.text()).split("\n").find((l) => l.includes("garturlres")) ?? "";
+    (await readCapped(res, MAX_GOOGLE))
+      .split("\n")
+      .find((l) => l.includes("garturlres")) ?? "";
   const real = JSON.parse(JSON.parse(line)[0][2])[1];
   if (typeof real !== "string" || !/^https?:\/\//.test(real))
     throw new Error("Google News não devolveu URL");
@@ -190,7 +196,7 @@ export async function enrichItems(
       const url = await resolveLink(it.link);
       const res = await get(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await articleText(await res.text());
+      const body = await articleText(await readCapped(res, MAX_PAGE));
       if (!body) return 0;
       saveArticle.run(url, body, it.id);
       it.link = url;

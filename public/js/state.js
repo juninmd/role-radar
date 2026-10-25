@@ -24,8 +24,22 @@ export const DEFAULT_FILTERS = {
   onlyFav: false,
 };
 
+// Opções do slider de distância; o hash só aceita estas (0 = sem limite).
+export const KM_STEPS = [0, 2, 5, 10, 20, 50, 100, 150];
+// Opções dos chips de preço (filters.js); o hash só aceita estas.
+export const PRICE_STEPS = ["qualquer", "gratis", "50", "100"];
+// Opções dos chips de quando e do select de ordenação; o hash só aceita estas.
+const WHEN_STEPS = ["hoje", "amanha", "fds", "7d", "30d", "tudo"];
+const SORT_STEPS = ["data", "distancia", "preco"];
 const ARRAYS = ["kinds", "periods", "cities", "cats"];
 const listeners = new Set();
+
+// Valor salvo que não é lista (corrompido à mão ou por outra versão) não pode
+// impedir o app de abrir.
+const listaSalva = (key) => {
+  const v = store.get(key, []);
+  return Array.isArray(v) ? v : [];
+};
 
 export const state = {
   view: "radar",
@@ -33,7 +47,7 @@ export const state = {
   origin: null, // { name, lat, lng }
   catalog: null,
   items: [],
-  favs: new Set(store.get("rr:favs", [])),
+  favs: new Set(listaSalva("rr:favs")),
 };
 
 export function subscribe(fn) {
@@ -89,6 +103,14 @@ export function readHash() {
     if (ARRAYS.includes(k))
       state.filters[k] = raw ? raw.split(",").slice(0, 50) : [];
     else if (typeof def === "boolean") state.filters[k] = raw === "true";
+    else if (k === "maxKm")
+      state.filters[k] = KM_STEPS.includes(Number(raw)) ? Number(raw) : 0;
+    else if (k === "price")
+      state.filters[k] = PRICE_STEPS.includes(raw) ? raw : "qualquer";
+    else if (k === "when")
+      state.filters[k] = WHEN_STEPS.includes(raw) ? raw : def;
+    else if (k === "sort")
+      state.filters[k] = SORT_STEPS.includes(raw) ? raw : def;
     else if (typeof def === "number") state.filters[k] = Number(raw) || 0;
     else state.filters[k] = raw.slice(0, 120);
   }

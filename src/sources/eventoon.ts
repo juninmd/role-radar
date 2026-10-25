@@ -1,6 +1,7 @@
 import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Evento ON é a vitrine da Q2 Ingressos — a bilheteria que vende para casas
 // como a Morada du Capiau e o Teatro Municipal, ausentes de Sympla/Duoticket.
@@ -30,7 +31,7 @@ export async function syncEventoon(today: string): Promise<number> {
         signal: AbortSignal.timeout(20000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
+      const html = await readCapped(res, MAX_SOURCE_BODY);
 
       // Cada card começa na coluna da imagem e vai até o card seguinte.
       for (const card of html

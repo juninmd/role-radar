@@ -1,5 +1,6 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A OTicket é de Franca (Rua Batatais, 260) e vende para casas que não estão
 // em nenhuma outra bilheteria: Club Show Franca, Paggio Gastro Bar, Unifran.
@@ -29,11 +30,14 @@ export async function syncOticket(today: string): Promise<number> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = (await res.json()) as { result?: OTicketEvent[] };
+    const json = JSON.parse(await readCapped(res, MAX_SOURCE_BODY)) as {
+      result?: OTicketEvent[];
+    };
     const all = json.result ?? [];
 
     for (const ev of all) {
-      if (!ev.name || !ev.date || !inRegion(ev.city)) continue;
+      // Item nulo na lista não pode derrubar a rodada: os seguintes ainda contam.
+      if (!ev?.name || !ev.date || !inRegion(ev.city)) continue;
       // A API marca meia-noite UTC quando o horário não foi informado; nesse
       // caso não há hora útil pra mostrar.
       const date = ev.date.slice(0, 10);

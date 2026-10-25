@@ -18,10 +18,18 @@ export function card(it, { compact = false, onPick = null } = {}) {
       {
         type: "button",
         class: "card-hit",
+        // Acha o card de volta ao fechar o drawer, mesmo após o re-render.
+        "data-id": it.id,
         onclick: () => (onPick ? onPick(it) : openDetail(it)),
-        "aria-label": onPick
-          ? `Escolher ${it.title}`
-          : `Detalhes de ${it.title}`,
+        // O rótulo substitui o conteúdo: sem data, cidade e preço, quem usa leitor de tela não os ouve.
+        "aria-label": `${onPick ? "Escolher" : "Detalhes de"} ${it.title}, ${[
+          it.date ? humanDay(it.date, today) : "sempre aberto",
+          it.time,
+          it.city,
+          fmtPrice(it),
+        ]
+          .filter(Boolean)
+          .join(", ")}`,
       },
       h(
         "div",
@@ -76,10 +84,10 @@ export function card(it, { compact = false, onPick = null } = {}) {
           {
             type: "button",
             class: "icon-btn card-fav",
+            "data-focus": `fav:${it.id}`,
             "aria-pressed": fav ? "true" : "false",
-            "aria-label": fav
-              ? `Tirar ${it.title} dos favoritos`
-              : `Favoritar ${it.title}`,
+            // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
+            "aria-label": `Favoritar ${it.title}`,
             onclick: () => toggleFav(it.id),
           },
           fav ? "⭐" : "☆",
@@ -116,9 +124,17 @@ export function renderGallery(root, items) {
               {
                 type: "button",
                 class: "btn",
+                "data-focus": "mais",
                 onclick: () => {
+                  const primeiro = shown;
                   shown += PAGE;
                   renderGallery(root, items);
+                  // Com botão na lista, o foco segue para ele; na última página
+                  // ele some, e o foco vai ao primeiro card novo.
+                  (
+                    root.querySelector('[data-focus="mais"]') ??
+                    root.querySelectorAll(".card-hit")[primeiro]
+                  )?.focus();
                 },
               },
               `Mostrar mais (${items.length - shown})`,

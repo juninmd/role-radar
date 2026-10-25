@@ -1,5 +1,6 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A Mega Bilheteria vende para o Teatro Municipal e casas da região. A API
 // pública ignora todo filtro de cidade que se mande (city, cityName, city_path,
@@ -38,7 +39,7 @@ export async function syncMegabilheteria(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as Page;
+      const json = JSON.parse(await readCapped(res, MAX_SOURCE_BODY)) as Page;
       all.push(...(json.data ?? []));
       last = json.last_page ?? 1;
     }

@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { env } from "../src/config/env.ts";
-import { db, insertItem, pendingItems } from "../src/db.ts";
+import { db, eventsOn, insertItem, pendingItems } from "../src/db.ts";
 import { extractEvents } from "../src/extract.ts";
 import { json, stubFetch } from "./fetch.ts";
 
@@ -26,11 +26,61 @@ beforeEach(() => {
   db.exec("DELETE FROM items; DELETE FROM events;");
 });
 
+// "sábado" > "2026-10-30" em string é verdade: sem checar o formato, entra no banco
+// e o COALESCE deixa o evento visível para sempre.
+test("end_date que não é data não entra no evento", async () => {
+  insertItem(item(1));
+  stubFetch(async () =>
+    completion(
+      JSON.stringify([
+        {
+          title: "Festival Longo",
+          date: "2026-10-30",
+          end_date: "sábado",
+          item: 1,
+        },
+      ]),
+    ),
+  );
+  await extractEvents(TODAY);
+  expect(eventsOn("2026-10-30")[0]?.end_date).toBeNull();
+});
+
+// Barra escapada ("\\") seguida de "u" é JSON válido: não pode ser "consertada" e quebrar.
+test("barra escapada seguida de u não derruba o lote", async () => {
+  insertItem(item(1));
+  stubFetch(async () =>
+    completion(
+      String.raw`[{"title":"Festival C:\\users","date":"2026-10-30","item":1}]`,
+    ),
+  );
+  await extractEvents(TODAY);
+  expect(pendingItems(10)).toEqual([]);
+  expect(eventsOn("2026-10-30").map((e) => e.title)).toEqual([
+    "Festival C:\\users",
+  ]);
+});
+
 test("lote com IA fora do ar continua na fila para a próxima rodada", async () => {
   insertItem(item(1));
   stubFetch(async () => json({ error: "upstream down" }, 503));
   await extractEvents(TODAY);
   expect(pendingItems(10).map((i) => i.id)).toEqual(["i1"]);
+});
+
+// Um item nulo no meio da lista não pode lançar fora do try e travar o lote para sempre.
+test("item nulo na resposta da IA não trava o lote", async () => {
+  insertItem(item(1));
+  stubFetch(async () =>
+    completion(
+      JSON.stringify([
+        null,
+        { title: "Show Valido", date: "2026-10-30", item: 1 },
+      ]),
+    ),
+  );
+  await extractEvents(TODAY);
+  expect(pendingItems(10)).toEqual([]);
 });
 
 test("só o lote que falhou fica pendente; o resto sai da fila", async () => {

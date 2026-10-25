@@ -1,7 +1,12 @@
 import { env } from "./config/env.ts";
+import { fetchPublic, readBytesCapped } from "./sources/public-url.ts";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 // Tentativas por chamada quando o Telegram responde 429 (flood control).
 const MAX_TRIES = 3;
+// Upload de 10 MB cabe folgado; sem prazo, o digest trava se o Telegram não responde.
+const TIMEOUT_MS = 30_000;
 
 /**
  * Chama a Bot API; em 429 espera o retry_after pedido e tenta de novo. Erro
@@ -14,7 +19,11 @@ async function tg(method: string, init: RequestInit): Promise<Response> {
     try {
       res = await fetch(
         `https://api.telegram.org/bot${env.telegramToken}/${method}`,
-        { method: "POST", ...init },
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+          ...init,
+        },
       );
     } catch (err) {
       console.error(`[telegram] ${method} falhou na rede: ${err}`);
@@ -40,6 +49,9 @@ export interface TelegramButton {
   text: string;
   url: string;
 }
+
+// Corte por ponto de código: slice() na divisa de um emoji deixava surrogate solto.
+const legenda = (texto: string) => Array.from(texto).slice(0, 1000).join("");
 
 /**
  * Send a Markdown message to every configured chat. Returns whether every
@@ -96,9 +108,7 @@ export async function sendTelegramAlbum(
     const media = imgs.map((url, i) => ({
       type: "photo",
       media: url,
-      ...(i === 0
-        ? { caption: caption.slice(0, 1000), parse_mode: "Markdown" }
-        : {}),
+      ...(i === 0 ? { caption: legenda(caption), parse_mode: "Markdown" } : {}),
     }));
     const res = await tgJson("sendMediaGroup", { chat_id: chatId, media });
     if (!res.ok) {
@@ -161,7 +171,7 @@ function photoPorUrl(
   return tgJson("sendPhoto", {
     chat_id: chatId,
     photo,
-    caption: caption.slice(0, 1000),
+    caption: legenda(caption),
     ...(parseMode ? { parse_mode: parseMode } : {}),
     ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons } } : {}),
   });
@@ -179,18 +189,19 @@ async function uploadPhoto(
   buttons?: TelegramButton[][],
 ): Promise<boolean> {
   try {
-    const img = await fetch(url, {
+    const img = await fetchPublic(url, {
       headers: { "user-agent": "Mozilla/5.0" },
       signal: AbortSignal.timeout(15000),
+      redirect: "follow",
     });
     if (!img.ok) return false;
-    const bytes = await img.arrayBuffer();
-    // Teto do Telegram para foto por upload.
-    if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) return false;
+    // Teto do Telegram para foto por upload; lê um byte a mais só para detectar estouro.
+    const bytes = await readBytesCapped(img, MAX_UPLOAD_BYTES + 1);
+    if (!bytes.byteLength || bytes.byteLength > MAX_UPLOAD_BYTES) return false;
 
     const form = new FormData();
     form.append("chat_id", chatId);
-    form.append("caption", caption.slice(0, 1000));
+    form.append("caption", legenda(caption));
     form.append(
       "photo",
       new Blob([bytes], { type: "image/jpeg" }),
@@ -202,7 +213,8 @@ async function uploadPhoto(
     const res = await tg("sendPhoto", { body: form });
     if (res.ok) console.log("[telegram] foto enviada por upload");
     return res.ok;
-  } catch {
+  } catch (err) {
+    console.warn(`[telegram] upload de foto falhou: ${err}`);
     return false;
   }
 }
@@ -222,11 +234,25 @@ function send(
   });
 }
 
+/** Corta linha maior que `max` sem partir par surrogate (emoji). */
+function cutLine(line: string, max: number): string[] {
+  const out: string[] = [];
+  let rest = line;
+  while (rest.length > max) {
+    const cut = /[\uD800-\uDBFF]/.test(rest[max - 1]) ? max - 1 : max;
+    out.push(rest.slice(0, cut));
+    rest = rest.slice(cut);
+  }
+  out.push(rest);
+  return out;
+}
+
 function split(text: string, max: number): string[] {
   if (text.length <= max) return [text];
   const out: string[] = [];
   let buf = "";
-  for (const line of text.split("\n")) {
+  // Pedaço de até max-1 mais o "\n" sempre cabe num chunk sozinho.
+  for (const line of text.split("\n").flatMap((l) => cutLine(l, max - 1))) {
     if (buf.length + line.length + 1 > max) {
       out.push(buf);
       buf = "";

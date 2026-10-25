@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // O Franca Shopping hospeda temporadas longas (circo, parque de diversões,
 // exposições) que nenhuma bilheteria lista — some do radar justamente o que
@@ -31,7 +32,7 @@ export async function syncFrancaShopping(today: string): Promise<number> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_SOURCE_BODY);
 
     for (const card of html.split('class="dsa-card-eventos-lista').slice(1)) {
       const title = decode(card.match(/<h5[^>]*>([\s\S]*?)<\/h5>/)?.[1] ?? "");
@@ -61,7 +62,8 @@ export async function syncFrancaShopping(today: string): Promise<number> {
       }
       // Último dia — é o que salva a temporada que já começou antes do radar
       // olhar pra ela; datas distintas, então os dois ids são estáveis.
-      if (end > today && end !== start) {
+      // Fim antes do início é dado trocado da página: não gera "último dia".
+      if (end > today && end > start) {
         upsertEvent({ ...base, title: `${title} (último dia)`, date: end });
         stored++;
       }

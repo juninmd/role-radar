@@ -28,15 +28,15 @@ const RULES: [Category, RegExp][] = [
   ],
   [
     "teatro",
-    /teatro|\bpeca\b|espetaculo|musical|danca|ballet|bale\b|opera|cavalleria/,
+    /teatro|\bpeca\b|espetaculo|musical|danca|ballet|bale\b|\bopera\b|cavalleria/,
   ],
   [
     "festa",
-    /festa|balada|open bar|rave|baile|\bnight\b|\bafter\b|\bdjs?\b|halloween|carnaval|oktoberfest|\bfest\b|\bclub\b|anos (80|90|2000)|\bvibe\b|\bgin\b|dia de praia|inter unifran/,
+    /festa|balada|open bar|\brave\b|baile|\bnight\b|\bafter\b|\bdjs?\b|halloween|carnaval|oktoberfest|\bfest\b|\bclub\b|anos (80|90|2000)|\bvibe\b|\bgin\b|dia de praia|inter unifran/,
   ],
   [
     "show",
-    /show|musica|banda|sertanej|rock|samba|pagode|forro|festival|tributo|cover|orquestra|concerto|acustico|turne|rap\b|funk|mpb|jazz|blues|coral|\bmcs?\b|\bdvd\b|metal|arrocha|trap\b|carreira|ao vivo|coldplay|imagine dragons/,
+    /show|musica|banda|sertanej|rock|samba|pagode|forro|festival|tributo|\bcover\b|orquestra|concerto|acustico|turne|rap\b|funk|mpb|jazz|blues|coral|\bmcs?\b|\bdvd\b|metal|arrocha|trap\b|carreira|ao vivo|coldplay|imagine dragons/,
   ],
   [
     "gastronomia",
@@ -54,18 +54,24 @@ export function categorize(title: string, venue?: string | null): Category {
   return RULES.find(([, re]) => re.test(text))?.[0] ?? "outros";
 }
 
-const FREE = /gratis|gratuit|free|entrada franca|entrada livre|sem custo/;
+const FREE = /gratis|gratuit|\bfree\b|entrada franca|entrada livre|sem custo/;
+// "não gratuito" nega a palavra; sem isto o texto virava preço zero.
+const NEGADO = /\b(?:nao|nem)\s+(?:e\s+)?(?:gratis|gratuit\w*)/;
 
 /**
- * Menor valor em reais citado no texto de preço, 0 se grátis, null se não dá
- * pra saber ("consulte", ausente). "R$ 1.200,50" → 1200.5.
+ * Menor valor pago citado no texto de preço, 0 se grátis, null se não dá pra
+ * saber ("consulte", ausente). "R$ 1.200,50" → 1200.5. Só número com "R$" conta:
+ * "Lote 1" e "18 anos" não são preço.
  */
 export function parsePrice(price: string | null): number | null {
   if (!price) return null;
   const text = norm(price);
-  if (FREE.test(text)) return 0;
-  const values = [...text.matchAll(/(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g)]
-    .map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  return values.length ? Math.min(...values) : null;
+  const free = FREE.test(text) && !NEGADO.test(text);
+  const values = [
+    ...text.matchAll(/r\$\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g),
+  ].map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`));
+  const pagos = values.filter((n) => Number.isFinite(n) && n > 0);
+  if (pagos.length) return Math.min(...pagos);
+  // "R$ 0,00" é grátis; "gratuito para crianças, R$ 30 adulto" já caiu no 30 acima.
+  return values.length || free ? 0 : null;
 }

@@ -27,6 +27,18 @@ const RENDER = {
 const REFRESH_MS = 30 * 60 * 1000;
 const $ = (id) => document.getElementById(id);
 
+// Mostra o fade só enquanto ainda há aba além da borda direita.
+function markTabsScroll() {
+  const t = $("tabs");
+  t.classList.toggle(
+    "more-right",
+    t.scrollLeft + t.clientWidth < t.scrollWidth - 4,
+  );
+}
+$("tabs").addEventListener("scroll", markTabsScroll, { passive: true });
+// Girar o celular pode caber todas as abas: sem overflow, a pista some.
+window.addEventListener("resize", markTabsScroll);
+
 function renderTabs() {
   $("tabs").replaceChildren(
     ...VIEWS.map((v) =>
@@ -47,6 +59,8 @@ function renderTabs() {
       ),
     ),
   );
+  markTabsScroll();
+  $("view").setAttribute("aria-labelledby", `tab-${state.view}`);
 }
 
 // Setas trocam de aba (padrão WAI-ARIA de tablist).
@@ -72,11 +86,15 @@ function renderStats(visible) {
     stat(ev.filter((it) => it.priceMin === 0).length, "grátis"),
     stat(visible, "no filtro"),
   );
+  // Horário da coleta é de Franca: sem timeZone, quem está fora de UTC-3 lia outra hora.
   const at = new Date(state.catalog.generatedAt).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
   });
   $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
+  // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
+  $("count").textContent = `${visible} rolês no filtro`;
 }
 
 function renderDock() {
@@ -99,20 +117,23 @@ function renderDock() {
           ),
         ),
     ),
-    favs.length >= 2
-      ? h(
-          "button",
-          {
-            type: "button",
-            class: "btn primary small",
-            onclick: () => {
-              resetDuel();
-              setView("duelo");
+    // replaceChildren(null) vira o texto "null": o botão entra como lista, vazia se não couber.
+    ...(favs.length >= 2
+      ? [
+          h(
+            "button",
+            {
+              type: "button",
+              class: "btn primary small",
+              onclick: () => {
+                resetDuel();
+                setView("duelo");
+              },
             },
-          },
-          "⚔️ Duelar favoritos",
-        )
-      : null,
+            "⚔️ Duelar favoritos",
+          ),
+        ]
+      : []),
   );
 }
 
@@ -120,6 +141,7 @@ let lastFilters = "";
 function render() {
   if (!state.catalog) return;
   const focusId = document.activeElement?.id;
+  const focusKey = document.activeElement?.dataset?.focus;
   const caret = document.activeElement?.selectionStart;
   const visible = applyFilters(
     state.items,
@@ -136,7 +158,11 @@ function render() {
   RENDER[state.view]($("view"), visible);
   renderDock();
   // Painéis são redesenhados inteiros: devolve o foco (e o cursor da busca).
-  const el = focusId && $(focusId);
+  // Botão sem id volta pela chave data-focus, que é estável entre renders.
+  const el =
+    (focusId && $(focusId)) ||
+    (focusKey &&
+      document.querySelector(`[data-focus="${CSS.escape(focusKey)}"]`));
   if (el && el !== document.activeElement) {
     el.focus({ preventScroll: true });
     if (typeof caret === "number" && el.setSelectionRange)
@@ -168,6 +194,7 @@ async function load() {
           ),
         ),
       );
+    if (!state.catalog) $("updated").textContent = "não foi possível carregar";
     console.error(err);
   }
 }

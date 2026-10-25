@@ -91,6 +91,16 @@ test("evento de fora reenviado volta com o cabeçalho de fora", async () => {
   expect(eventsOn(today)[0]?.posted_today).toBe(1);
 });
 
+// Sem o cabeçalho confirmado, o evento de fora ficaria sem contexto de região:
+// precisa esperar a próxima rodada, com o cabeçalho.
+test("evento de fora não sai se o cabeçalho de fora falhou", async () => {
+  db.exec("DELETE FROM events;");
+  evento("Show Longe", today, "Ribeirão Preto");
+  rede((body) => body.includes("Fora de Franca"));
+  await digest();
+  expect(eventsOn(today)[0]?.posted_today).toBe(0);
+});
+
 test("evento futuro novo é anunciado imediatamente como novo rolê e marcado como posted_launch", async () => {
   db.exec("DELETE FROM events;");
   evento("Mega Show Futuro", "2026-12-31", "Franca");

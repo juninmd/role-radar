@@ -2,6 +2,7 @@ import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import { limpa, type Parsed, parseDataBr } from "./comum.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Loja Magento com uma página de agenda por cidade. Hoje Franca e Ribeirão
 // respondem 200 mas sem produto — a fonte fica pronta pra quando encherem.
@@ -27,7 +28,7 @@ export async function scrapeBilheteriaExpress(
     signal: AbortSignal.timeout(20000),
   }).then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.text();
+    return readCapped(r, MAX_SOURCE_BODY);
   });
 
   const out: Parsed[] = [];

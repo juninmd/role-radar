@@ -1,4 +1,4 @@
-import { DEFAULT_FILTERS, setFilters, state } from "./state.js";
+import { DEFAULT_FILTERS, KM_STEPS, setFilters, state } from "./state.js";
 import { CATS, h, KINDS } from "./util.js";
 
 const WHEN = [
@@ -25,7 +25,6 @@ const SORTS = [
   ["distancia", "Distância"],
   ["preco", "Preço"],
 ];
-const KM_STEPS = [0, 2, 5, 10, 20, 50, 100, 150];
 
 // id estável: o painel é redesenhado a cada clique e o foco precisa voltar.
 const chip = (key, label, pressed, onclick) =>
@@ -144,7 +143,11 @@ export function renderFilters(root, visibleCount) {
             "day",
             `📌 ${f.day.split("-").reverse().slice(0, 2).join("/")} ✕`,
             true,
-            () => setFilters({ day: "" }),
+            () => {
+              setFilters({ day: "" });
+              // O chip some ao remover o dia: o foco vai ao chip de período ativo.
+              document.getElementById(`chip-w-${f.when}`)?.focus();
+            },
           )
         : null,
     ),

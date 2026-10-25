@@ -1,8 +1,13 @@
 // Bun carrega .env automaticamente — sem dotenv.
-const num = (v: string | undefined, d: number) => (v ? Number(v) : d);
+// "abc" dá NaN, e NaN em slice() esvazia a rodada sem erro: cai no padrão.
+// Negativo também: slice(0, -5) corta o fim da lista em silêncio.
+const num = (v: string | undefined, d: number) => {
+  const n = Number(v);
+  return v && Number.isFinite(n) && n >= 0 ? n : d;
+};
 
 export const env = {
-  aiProvider: (process.env.AI_PROVIDER ?? "litellm") as
+  aiProvider: (process.env.AI_PROVIDER || "litellm") as
     | "litellm"
     | "ollama"
     | "openai"
@@ -29,6 +34,8 @@ export const env = {
     .filter(Boolean),
 
   cronIngestion: process.env.CRON_INGESTION ?? "*/30 * * * *",
+  // PORT vazia cai no padrão: Number("") é 0, e a porta 0 é escolhida pelo SO.
+  port: num(process.env.PORT, 3000),
   cronDigest: process.env.CRON_DIGEST ?? "0 11 * * *",
 
   dbPath: process.env.DB_PATH ?? "./data/store.db",

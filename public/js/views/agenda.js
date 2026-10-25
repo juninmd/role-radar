@@ -33,6 +33,8 @@ function heatStrip(items, today) {
         "button",
         {
           type: "button",
+          // Id estável: render() devolve o foco por id, e o clique refaz a faixa.
+          id: `dia-${d}`,
           class: `heat-cell${wd === 0 || wd === 6 || wd === 5 ? " wknd" : ""}`,
           style: { "--heat": (n / max).toFixed(2) },
           "aria-pressed": state.filters.day === d ? "true" : "false",
@@ -61,7 +63,12 @@ export function row(it) {
     ),
     h(
       "button",
-      { type: "button", class: "row-main", onclick: () => openDetail(it) },
+      {
+        type: "button",
+        class: "row-main",
+        "data-id": it.id,
+        onclick: () => openDetail(it),
+      },
       h("span", { class: "row-title" }, it.title),
       h(
         "span",
@@ -83,10 +90,10 @@ export function row(it) {
       {
         type: "button",
         class: "icon-btn",
+        "data-focus": `fav:${it.id}`,
         "aria-pressed": fav ? "true" : "false",
-        "aria-label": fav
-          ? `Tirar ${it.title} dos favoritos`
-          : `Favoritar ${it.title}`,
+        // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
+        "aria-label": `Favoritar ${it.title}`,
         onclick: () => toggleFav(it.id),
       },
       fav ? "⭐" : "☆",
@@ -120,6 +127,12 @@ export function renderAgenda(root, items) {
           "p",
           { class: "muted small" },
           "Clique num dia pra ver só ele. Sex–dom em destaque.",
+        ),
+        // Agenda inteira num arquivo: importa no Google, Apple ou Outlook.
+        h(
+          "a",
+          { class: "btn small", href: "/agenda.ics" },
+          "📅 Baixar agenda (.ics)",
         ),
       ),
       keys.length

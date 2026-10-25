@@ -54,9 +54,12 @@ export function renderDuel(root, items) {
     {
       type: "button",
       class: "btn",
+      "data-focus": "novo-duelo",
       onclick: () => {
         start(items);
         renderDuel(root, items);
+        // O botão é refeito pelo render: sem isto, o foco do teclado cai no body.
+        root.querySelector('[data-focus="novo-duelo"]')?.focus();
       },
     },
     "🔄 Novo duelo",
@@ -93,6 +96,8 @@ export function renderDuel(root, items) {
   }
   const challenger = duel.queue[0];
   const onKey = (e) => {
+    // Setas vindas do cabeçalho (Novo duelo, progresso) não escolhem lado.
+    if (e.target.closest(".duel-head")) return;
     if (e.key === "ArrowLeft") pick(root, items, duel.champ);
     if (e.key === "ArrowRight") pick(root, items, challenger);
   };

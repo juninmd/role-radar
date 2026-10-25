@@ -46,6 +46,14 @@ test("preço: menor valor em reais, 0 se grátis, null se não informado", () =>
   expect(parsePrice(null)).toBeNull();
 });
 
+// "Gratuito" para um público não torna grátis o preço pago por outro. Sem "R$"
+// o número pode ser idade ("18+"), então a palavra ainda vale como grátis.
+test("gratuito para um público com preço pago para outro não vira grátis", () => {
+  expect(parsePrice("Gratuito para crianças, R$ 30 adulto")).toBe(30);
+  expect(parsePrice("Gratuito 18+")).toBe(0);
+  expect(parsePrice("Grátis R$ 0,00")).toBe(0);
+});
+
 test("safeUrl barra javascript: e data: vindos de fonte externa", () => {
   expect(safeUrl("javascript:alert(1)")).toBeNull();
   expect(safeUrl("data:text/html,x")).toBeNull();

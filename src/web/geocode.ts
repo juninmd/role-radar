@@ -1,9 +1,12 @@
 import { env } from "../config/env.ts";
 import { norm } from "../config/region.ts";
+import { readCapped } from "../sources/public-url.ts";
 import { CITY_COORDS, distanceKm, type LatLng, resolveCity } from "./places.ts";
 import { cacheCoord, cachedCoord } from "./store.ts";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+// Resposta do Nominatim é um array de 1 item; o teto só corta resposta anômala.
+const MAX_HIT = 5_000_000;
 // Política do Nominatim: no máximo 1 req/s e User-Agent identificando o app.
 const UA = "role-radar/0.1 (+https://github.com/juninmd/role-radar)";
 const GAP_MS = 1100;
@@ -40,7 +43,10 @@ async function lookup(p: Place, center: LatLng): Promise<LatLng | null> {
   });
   // Erro de rede/HTTP propaga: só "consultou e não achou" vira cache negativo.
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const [hit] = (await res.json()) as { lat?: string; lon?: string }[];
+  const [hit] = JSON.parse(await readCapped(res, MAX_HIT)) as {
+    lat?: string;
+    lon?: string;
+  }[];
   if (!hit?.lat || !hit.lon) return null;
   const coord = { lat: Number(hit.lat), lng: Number(hit.lon) };
   if (!Number.isFinite(coord.lat) || !Number.isFinite(coord.lng)) return null;
@@ -60,7 +66,9 @@ export async function geocodePlaces(
   const todo = places.filter((p) => {
     const key = geoKey(p);
     const city = resolveCity(p.city);
-    if (!city || seen.has(key) || cachedCoord(key) !== undefined) return false;
+    // Nome que some na limpeza buscaria só a cidade, e o centro dela viraria pino exato.
+    if (!city || !cleanVenue(p.venue, city) || seen.has(key)) return false;
+    if (cachedCoord(key) !== undefined) return false;
     seen.add(key);
     return true;
   });
