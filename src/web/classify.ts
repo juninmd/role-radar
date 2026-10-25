@@ -55,6 +55,8 @@ export function categorize(title: string, venue?: string | null): Category {
 }
 
 const FREE = /gratis|gratuit|\bfree\b|entrada franca|entrada livre|sem custo/;
+// "não gratuito" nega a palavra; sem isto o texto virava preço zero.
+const NEGADO = /\b(?:nao|nem)\s+(?:e\s+)?(?:gratis|gratuit\w*)/;
 
 /**
  * Menor valor pago citado no texto de preço, 0 se grátis, null se não dá pra
@@ -64,11 +66,12 @@ const FREE = /gratis|gratuit|\bfree\b|entrada franca|entrada livre|sem custo/;
 export function parsePrice(price: string | null): number | null {
   if (!price) return null;
   const text = norm(price);
+  const free = FREE.test(text) && !NEGADO.test(text);
   const values = [
     ...text.matchAll(/r\$\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g),
   ].map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`));
   const pagos = values.filter((n) => Number.isFinite(n) && n > 0);
   if (pagos.length) return Math.min(...pagos);
   // "R$ 0,00" é grátis; "gratuito para crianças, R$ 30 adulto" já caiu no 30 acima.
-  return values.length || FREE.test(text) ? 0 : null;
+  return values.length || free ? 0 : null;
 }
