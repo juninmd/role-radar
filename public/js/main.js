@@ -80,7 +80,7 @@ function renderStats(visible) {
   const stat = (n, label) =>
     h("li", { class: "stat" }, h("b", {}, n), h("span", {}, label));
   $("stats").replaceChildren(
-    stat(ev.length, "rolês"),
+    stat(ev.length, ev.length === 1 ? "rolê" : "rolês"),
     stat(ev.filter((it) => it.date === today).length, "hoje"),
     stat(ev.filter((it) => wknd.includes(it.date)).length, "no fds"),
     stat(ev.filter((it) => it.priceMin === 0).length, "grátis"),
@@ -94,7 +94,8 @@ function renderStats(visible) {
   });
   $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
   // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
-  $("count").textContent = `${visible} rolês no filtro`;
+  $("count").textContent =
+    `${visible} ${visible === 1 ? "rolê" : "rolês"} no filtro`;
 }
 
 function renderDock() {

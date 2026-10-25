@@ -180,9 +180,11 @@ export function renderDecide(root, items) {
           h(
             "h3",
             {},
-            ranked.length === 1
-              ? "1 opção combina"
-              : `${ranked.length} opções combinam`,
+            ranked.length === 0
+              ? "Nenhuma opção combina"
+              : ranked.length === 1
+                ? "1 opção combina"
+                : `${ranked.length} opções combinam`,
           ),
           h(
             "button",
