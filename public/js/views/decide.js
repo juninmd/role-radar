@@ -12,14 +12,20 @@ import {
 import { pickWeighted, Q, score, spotsPool } from "./decide-score.js";
 import { card } from "./gallery.js";
 
-let answers = store.get("rr:decide", {
+const DECIDE_DEFAULTS = {
   company: "amigos",
   vibe: "agitar",
   when: "qualquer",
   budget: "qualquer",
   reach: "20",
   spots: true,
-});
+};
+// Valor corrompido no localStorage (ex.: "null") não pode esvaziar a aba.
+const salvo = store.get("rr:decide", null);
+let answers = {
+  ...DECIDE_DEFAULTS,
+  ...(salvo && typeof salvo === "object" ? salvo : {}),
+};
 
 function spin(ranked, stage, live, onDone) {
   const top = ranked.slice(0, 8);
