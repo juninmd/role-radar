@@ -62,7 +62,8 @@ export async function syncFrancaShopping(today: string): Promise<number> {
       }
       // Último dia — é o que salva a temporada que já começou antes do radar
       // olhar pra ela; datas distintas, então os dois ids são estáveis.
-      if (end > today && end !== start) {
+      // Fim antes do início é dado trocado da página: não gera "último dia".
+      if (end > today && end > start) {
         upsertEvent({ ...base, title: `${title} (último dia)`, date: end });
         stored++;
       }
