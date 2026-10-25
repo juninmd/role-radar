@@ -1,4 +1,4 @@
-import { weekendDays } from "../data.js";
+import { applyFilters, weekendDays } from "../data.js";
 import { state } from "../state.js";
 import { addDays, fmtKm } from "../util.js";
 
@@ -142,6 +142,14 @@ export function score(it, a, today) {
     match: Math.max(5, Math.min(99, Math.round(45 + pts * 9))),
     reasons,
   };
+}
+
+/**
+ * Lugares fixos do plano B: os filtros de cidade, busca e preço valem, mas o
+ * tipo é sempre "lugar", senão os kinds padrão (evento/filme) zeram tudo.
+ */
+export function spotsPool(lugares, f, today, favs) {
+  return applyFilters(lugares, { ...f, kinds: ["lugar"] }, today, favs);
 }
 
 export function pickWeighted(list) {
