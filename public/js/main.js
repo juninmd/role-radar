@@ -117,20 +117,23 @@ function renderDock() {
           ),
         ),
     ),
-    favs.length >= 2
-      ? h(
-          "button",
-          {
-            type: "button",
-            class: "btn primary small",
-            onclick: () => {
-              resetDuel();
-              setView("duelo");
+    // replaceChildren(null) vira o texto "null": o botão entra como lista, vazia se não couber.
+    ...(favs.length >= 2
+      ? [
+          h(
+            "button",
+            {
+              type: "button",
+              class: "btn primary small",
+              onclick: () => {
+                resetDuel();
+                setView("duelo");
+              },
             },
-          },
-          "⚔️ Duelar favoritos",
-        )
-      : null,
+            "⚔️ Duelar favoritos",
+          ),
+        ]
+      : []),
   );
 }
 
