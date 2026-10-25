@@ -153,9 +153,11 @@ export function applyFilters(items, f, today, favs) {
       matchesWhen(it, f, today) &&
       matchesPrice(it, f) &&
       (!q ||
-        norm(`${it.title} ${it.venue} ${it.city} ${it.description}`).includes(
-          q,
-        )),
+        norm(
+          [it.title, it.venue, it.city, it.description]
+            .filter(Boolean)
+            .join(" "),
+        ).includes(q)),
   );
   const byDate = (a, b) =>
     (a.date ?? "9999").localeCompare(b.date ?? "9999") ||
