@@ -2,6 +2,10 @@ import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
 import { limpa, type Parsed, parseDataBr } from "./comum.ts";
+import { readBytesCapped } from "./public-url.ts";
+
+// Teto para resposta anômala; o tamanho de uma busca com resultado não foi medido.
+const MAX_PAGE = 5_000_000;
 
 // ATENÇÃO: o site responde em ISO-8859-1. Ler como UTF-8 corrompe todo acento
 // ("Inflável" vira "Infl?vel") e quebra a comparação de cidade.
@@ -20,7 +24,9 @@ export async function scrapeTicket360(
     signal: AbortSignal.timeout(25000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = new TextDecoder("iso-8859-1").decode(await res.arrayBuffer());
+  const html = new TextDecoder("iso-8859-1").decode(
+    await readBytesCapped(res, MAX_PAGE),
+  );
 
   const out: Parsed[] = [];
   const semData: string[] = [];
