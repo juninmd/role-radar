@@ -7,7 +7,7 @@ on:
 
 jobs:
   docker:
-    uses: juninmd/base-actions/.github/workflows/reusable-docker-build.yml@b1a957daf1a734fdfe18b28f984e85b3c471f4d4 # main em 2026-10-25
+    uses: juninmd/base-actions/.github/workflows/reusable-docker-build.yml@main
     with:
       image-name: ${{ github.repository }}
     secrets:
