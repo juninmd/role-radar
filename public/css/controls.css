@@ -136,6 +136,13 @@ select.input option {
   padding: 12px 26px;
   font-size: 1.05rem;
 }
+/* Dedo precisa de alvo de 44px; no mouse o visual fica como está. */
+@media (pointer: coarse) {
+  .chip,
+  .btn.small {
+    min-height: 44px;
+  }
+}
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
