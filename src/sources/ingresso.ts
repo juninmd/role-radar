@@ -41,9 +41,9 @@ export async function syncIngresso(today: string): Promise<number> {
         await readCapped(res, MAX_SOURCE_BODY),
       ) as Movie[];
       for (const m of movies) {
-        const premiere = toIso(m.premiereDate?.localDate);
+        const premiere = toIso(m?.premiereDate?.localDate);
         // Só estreias na janela de 14 dias (senão flooda com meses de filmes).
-        if (!m.title || !premiere) continue;
+        if (!m?.title || !premiere) continue;
         if (premiere < today || premiere > horizon) continue;
         upsertEvent({
           title: `Estreia: ${m.title.trim()}`,

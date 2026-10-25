@@ -57,7 +57,7 @@ export async function syncGuicheWeb(today: string): Promise<number> {
       ) as GWResponse;
 
       for (const ev of data.item_eventos ?? []) {
-        if (!ev.nome || !ev.data) continue;
+        if (!ev?.nome || !ev.data) continue;
         const date = parseDate(ev.data);
         if (!date || date < today) continue;
 

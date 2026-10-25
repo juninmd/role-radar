@@ -57,7 +57,7 @@ export async function syncZigTickets(today: string): Promise<number> {
     const list = json.props?.pageProps?.events?.events ?? [];
 
     for (const ev of list) {
-      if (!ev.name || !ev.start_date || ev.is_online) continue;
+      if (!ev?.name || !ev.start_date || ev.is_online) continue;
       const city = ev.event_location?.city;
       if (!inRegion(city)) continue;
 
