@@ -47,6 +47,7 @@ function renderTabs() {
       ),
     ),
   );
+  $("view").setAttribute("aria-labelledby", `tab-${state.view}`);
 }
 
 // Setas trocam de aba (padrão WAI-ARIA de tablist).
@@ -77,6 +78,8 @@ function renderStats(visible) {
     minute: "2-digit",
   });
   $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
+  // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
+  $("count").textContent = `${visible} rolês no filtro`;
 }
 
 function renderDock() {
@@ -168,6 +171,7 @@ async function load() {
           ),
         ),
       );
+    if (!state.catalog) $("updated").textContent = "não foi possível carregar";
     console.error(err);
   }
 }
