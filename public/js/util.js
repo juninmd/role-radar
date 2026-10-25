@@ -105,9 +105,9 @@ export const relDays = (iso, today) => {
 
 export function fmtKm(km) {
   if (km === null || km === undefined) return null;
-  return km < 1
-    ? `${Math.round(km * 1000)} m`
-    : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+  // Unidade vem do valor já arredondado em metros: 0,9996 km não vira "1000 m".
+  const m = Math.round(km * 1000);
+  return m < 1000 ? `${m} m` : `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
 }
 
 export function fmtPrice(item) {
