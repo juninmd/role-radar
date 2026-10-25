@@ -45,20 +45,25 @@ db.exec(`
 `);
 
 // Migrações: colunas adicionadas depois que bancos já existiam.
-for (const sql of [
+/** Coluna que já existe é o caso esperado; outro erro não pode sumir. */
+export function runMigrations(statements: string[]): void {
+  for (const sql of statements) {
+    try {
+      db.exec(sql);
+    } catch (err) {
+      if (!/duplicate column name/.test(String(err))) throw err;
+    }
+  }
+}
+
+runMigrations([
   "ALTER TABLE items ADD COLUMN image TEXT",
   "ALTER TABLE events ADD COLUMN trailer TEXT",
   "ALTER TABLE events ADD COLUMN end_date TEXT",
   "ALTER TABLE items ADD COLUMN body TEXT",
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN description TEXT",
-]) {
-  try {
-    db.exec(sql);
-  } catch {
-    // coluna já existe
-  }
-}
+]);
 
 export interface Item {
   id: string;
