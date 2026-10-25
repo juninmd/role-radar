@@ -13,7 +13,7 @@ async function once() {
 }
 
 if (args.has("--serve")) {
-  serve(Number(process.env.PORT ?? 3000));
+  serve(env.port);
 } else if (args.has("--ingest")) {
   await ingest();
 } else if (args.has("--digest")) {
