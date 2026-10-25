@@ -37,3 +37,17 @@ test("datas válidas continuam sendo lidas", () => {
     time: null,
   });
 });
+
+// Duração ("2h30") não é o horário de início; hora de um dígito sai como HH:MM.
+test("duração do espetáculo não vira horário de início", () => {
+  expect(
+    parseDataBr("Duração 2h30 | 18 de Ago às 21h00", "2026-08-01"),
+  ).toEqual({ date: "2026-08-18", time: "21:00" });
+});
+
+test("hora de um dígito sai com zero à esquerda", () => {
+  expect(parseDataBr("14 de Ago às 9h00", "2026-08-01")).toEqual({
+    date: "2026-08-14",
+    time: "09:00",
+  });
+});
