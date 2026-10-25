@@ -92,6 +92,7 @@ export function createHandler(
     string,
     {
       mtime: number;
+      etag: string;
       type: string;
       raw: Uint8Array<ArrayBuffer>;
       gz: Uint8Array<ArrayBuffer>;
@@ -104,6 +105,8 @@ export function createHandler(
     const raw = new Uint8Array(readFileSync(path));
     const entry = {
       mtime,
+      // Fraco: a mesma tag serve para a versão com e sem gzip.
+      etag: `W/"${mtime.toString(36)}-${raw.byteLength.toString(36)}"`,
       type: Bun.file(path).type,
       raw,
       gz: new Uint8Array(Bun.gzipSync(raw)),
@@ -133,13 +136,18 @@ export function createHandler(
     }
     const file = files.get(pathname === "/" ? "/index.html" : pathname);
     if (!file) return new Response("não encontrado", { status: 404 });
-    const { type, raw, gz } = asset(file);
+    const { type, raw, gz, etag } = asset(file);
     // no-cache: módulos ES de versões diferentes misturados quebram o app após deploy.
-    return send(req, raw, gz, {
+    const headers = {
       ...SECURITY_HEADERS,
       "content-type": type,
       "cache-control": "no-cache",
-    });
+      etag,
+    };
+    // Revalidação barata: arquivo que não mudou volta como 304, sem corpo.
+    if (req.headers.get("if-none-match") === etag)
+      return new Response(null, { status: 304, headers });
+    return send(req, raw, gz, headers);
   };
 }
 
