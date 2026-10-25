@@ -49,7 +49,8 @@ test("syncArticket busca e importa eventos futuros da região", async () => {
   expect(evs[0].title).toBe("MOTÖRSPADES EM RIBEIRÃO PRETO - SP");
   expect(evs[0].city).toBe("Ribeirão Preto");
   expect(evs[0].venue).toBe("Toca do Jack Pub Underground");
-  expect(evs[0].time).toBe("23:00");
+  // 23:00Z é 20:00 em São Paulo; o teste antigo fixava a hora em UTC.
+  expect(evs[0].time).toBe("20:00");
   expect(evs[0].end_date).toBe("2026-10-25");
   expect(evs[0].link).toBe("https://articket.com.br/e/7260/motorspades");
 });

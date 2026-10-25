@@ -115,10 +115,10 @@ export function eventLines(ev: Event): string {
   if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
 
   if (ev.description) {
-    const descClean = mdSafe(ev.description.trim().slice(0, 280));
-    lines.push(
-      `\n> 💡 ${descClean}${ev.description.length > 280 ? "..." : ""}`,
-    );
+    // Corte por ponto de código: slice() partia emoji e deixava surrogate solto.
+    const chars = Array.from(ev.description.trim());
+    const descClean = mdSafe(chars.slice(0, 280).join(""));
+    lines.push(`\n> 💡 ${descClean}${chars.length > 280 ? "..." : ""}`);
   }
 
   // Se não houver botões interativos (ex.: link inválido ou inexistente), mantém link no texto
@@ -327,15 +327,20 @@ export async function digest(): Promise<void> {
         "🗺️ *Fora de Franca — região e Ribeirão Preto*\n\nO que rola nas cidades vizinhas se você topar pegar a estrada.",
       );
     // Evento de fora reenviado sem o cabeçalho pareceria rolê de Franca.
+    // Cabeçalho que não saiu deixa os eventos pendentes para a próxima rodada.
+    let cabecalhoOk = true;
     if (todaysFora.length || novosFora.length) {
-      if (await cabecalho()) markBlockSent(today, "fora:cabecalho");
+      cabecalhoOk = await cabecalho();
+      if (cabecalhoOk) markBlockSent(today, "fora:cabecalho");
     } else await oncePerDay(today, "fora:cabecalho", cabecalho);
-    await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
-    await postaLancamento(novosFora, "🚀 *NOVO ROLÊ NA REGIÃO!*");
-    if (novosFora.length)
-      console.log(
-        `[digest] ${novosFora.length} novo(s) evento(s) anunciado(s) na região`,
-      );
+    if (cabecalhoOk) {
+      await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
+      await postaLancamento(novosFora, "🚀 *NOVO ROLÊ NA REGIÃO!*");
+      if (novosFora.length)
+        console.log(
+          `[digest] ${novosFora.length} novo(s) evento(s) anunciado(s) na região`,
+        );
+    }
     await oncePerDay(today, "agenda:fora", () =>
       agenda(
         weekFora,

@@ -18,6 +18,8 @@ export function card(it, { compact = false, onPick = null } = {}) {
       {
         type: "button",
         class: "card-hit",
+        // Acha o card de volta ao fechar o drawer, mesmo após o re-render.
+        "data-id": it.id,
         onclick: () => (onPick ? onPick(it) : openDetail(it)),
         "aria-label": onPick
           ? `Escolher ${it.title}`
@@ -76,10 +78,10 @@ export function card(it, { compact = false, onPick = null } = {}) {
           {
             type: "button",
             class: "icon-btn card-fav",
+            "data-focus": `fav:${it.id}`,
             "aria-pressed": fav ? "true" : "false",
-            "aria-label": fav
-              ? `Tirar ${it.title} dos favoritos`
-              : `Favoritar ${it.title}`,
+            // Rótulo fixo: o estado já vai em aria-pressed (botão de alternância).
+            "aria-label": `Favoritar ${it.title}`,
             onclick: () => toggleFav(it.id),
           },
           fav ? "⭐" : "☆",
@@ -116,9 +118,12 @@ export function renderGallery(root, items) {
               {
                 type: "button",
                 class: "btn",
+                "data-focus": "mais",
                 onclick: () => {
                   shown += PAGE;
                   renderGallery(root, items);
+                  // O botão é refeito no fim da lista: o foco segue para ele.
+                  root.querySelector('[data-focus="mais"]')?.focus();
                 },
               },
               `Mostrar mais (${items.length - shown})`,
