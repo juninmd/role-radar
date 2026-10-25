@@ -1,3 +1,4 @@
+import { applyFilters } from "../data.js";
 import { openDetail } from "../detail.js";
 import { state } from "../state.js";
 import {
@@ -84,9 +85,18 @@ function spin(ranked, stage, live) {
 
 export function renderDecide(root, items) {
   const today = state.catalog.today;
+  // Lugares fixos seguem os mesmos filtros (cidade, busca, vibe) das outras listas.
   const pool =
     answers.spots && !state.filters.kinds.includes("lugar")
-      ? [...items, ...state.items.filter((it) => it.kind === "lugar")]
+      ? [
+          ...items,
+          ...applyFilters(
+            state.items.filter((it) => it.kind === "lugar"),
+            state.filters,
+            today,
+            state.favs,
+          ),
+        ]
       : items;
   const ranked = pool
     .map((it) => score(it, answers, today))
@@ -164,7 +174,9 @@ export function renderDecide(root, items) {
           h(
             "h3",
             {},
-            `${ranked.length} opç${ranked.length === 1 ? "ão" : "ões"} combinam`,
+            ranked.length === 1
+              ? "1 opção combina"
+              : `${ranked.length} opções combinam`,
           ),
           h(
             "button",

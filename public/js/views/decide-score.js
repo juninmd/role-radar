@@ -79,6 +79,14 @@ const COMPANY = {
   },
 };
 
+// Sorteio da vibe "surpresa" fica fixo por item na sessão: mudar outra resposta
+// não reembaralha o ranking nem a % de match.
+const surpriseDraw = new Map();
+const surpriseNoise = (id) => {
+  if (!surpriseDraw.has(id)) surpriseDraw.set(id, Math.random());
+  return surpriseDraw.get(id);
+};
+
 /** Nota e motivos de um item para as respostas. null = fora (filtro duro). */
 export function score(it, a, today) {
   const reasons = [];
@@ -101,7 +109,7 @@ export function score(it, a, today) {
   }
   const vibe =
     a.vibe === "surpresa"
-      ? 1.5 + Math.random()
+      ? 1.5 + surpriseNoise(it.id)
       : (VIBE[a.vibe]?.[it.category] ?? 0);
   const comp = COMPANY[a.company]?.[it.category] ?? 0;
   pts += vibe + comp;
