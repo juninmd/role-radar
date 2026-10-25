@@ -30,7 +30,7 @@ const html = `<html><head><meta property="og:description" content="Festival na p
 let prompts: string[] = [];
 
 /** Google News → URL real → matéria; a IA só acha o evento se ler o corpo. */
-function network() {
+function network(page = html) {
   prompts = [];
   return stubFetch(async (url, init) => {
     if (url.startsWith("https://news.google.com/articles/"))
@@ -41,7 +41,7 @@ function network() {
         `)]}'\n\n${JSON.stringify([["wrb.fr", "Fbv4je", inner]])}\n`,
       );
     }
-    if (url === ARTICLE) return new Response(html);
+    if (url === ARTICLE) return new Response(page);
     if (url.includes("/chat/completions")) {
       const body = String(init?.body);
       prompts.push(body);
@@ -212,4 +212,13 @@ test("evento de vários dias continua no radar até o último dia", async () => 
   ]);
   pruneEventsBefore("2026-09-28");
   expect(eventsBetween("2026-09-28", "2026-10-05")).toEqual([]);
+});
+
+// Página de terceiro sem limite de tamanho esgota a memória do CronJob; a
+// matéria que vem depois de 2 MB de lixo nem chega a ser lida.
+test("corpo da matéria além de 2 MB não é lido", async () => {
+  network(
+    `<html><body>${"<p>x</p>".repeat(300_000)}<article><p>${BODY}</p></article></body></html>`,
+  );
+  expect(await extractEvents("2026-09-24")).toBe(0);
 });

@@ -1,10 +1,12 @@
 import { env } from "../config/env.ts";
 import { db, type Item } from "../db.ts";
 import { pool } from "../pool.ts";
-import { fetchPublic } from "./public-url.ts";
+import { fetchPublic, readCapped } from "./public-url.ts";
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
 const MAX_BODY = 2000;
+// Página de portal cabe folgada; o resto é lixo que só custa memória e CPU.
+const MAX_PAGE = 2_000_000;
 // Parágrafo menor que isto é menu, legenda ou botão — não corpo de matéria.
 const MIN_PARAGRAPH = 60;
 
@@ -190,7 +192,7 @@ export async function enrichItems(
       const url = await resolveLink(it.link);
       const res = await get(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await articleText(await res.text());
+      const body = await articleText(await readCapped(res, MAX_PAGE));
       if (!body) return 0;
       saveArticle.run(url, body, it.id);
       it.link = url;
