@@ -49,7 +49,10 @@ export async function syncSesc(today: string): Promise<number> {
           venue: `Sesc ${unit.city}`,
           city: unit.city,
           price: a.gratuito ? "grátis" : null,
-          link: a.link ? `https://www.sescsp.org.br${a.link}` : null,
+          // Só caminho absoluto: "@host" colado mudaria o domínio do link.
+          link: a.link?.startsWith("/")
+            ? `https://www.sescsp.org.br${a.link}`
+            : null,
           image: a.imagem ?? null,
         });
         stored++;
