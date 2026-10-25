@@ -42,7 +42,7 @@ export async function syncIngressoNacional(today: string): Promise<number> {
     const all = json.sucesso?.eventos ?? [];
 
     for (const ev of all) {
-      if (!ev.Nome || !ev.DataOrdem || !inRegion(ev.Cidade)) continue;
+      if (!ev?.Nome || !ev.DataOrdem || !inRegion(ev.Cidade)) continue;
       if (ev.Cancelado || ev.Adiado) continue;
       const d = ev.DataOrdem;
       if (!/^\d{8}$/.test(d)) continue;

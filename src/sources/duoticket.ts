@@ -105,7 +105,11 @@ async function detail(url: string) {
     return {
       title: title || null,
       venue: venue || null,
-      time: hm ? `${hm[1].padStart(2, "0")}:${hm[2] ?? "00"}` : null,
+      // "25h" não é horário: hora acima de 23 vira sem horário.
+      time:
+        hm && Number(hm[1]) < 24 && Number(hm[2] ?? 0) < 60
+          ? `${hm[1].padStart(2, "0")}:${hm[2] ?? "00"}`
+          : null,
       description: cleanDesc ? cleanDesc.slice(0, 300) : null,
       price,
     };
