@@ -50,6 +50,9 @@ export interface TelegramButton {
   url: string;
 }
 
+// Corte por ponto de código: slice() na divisa de um emoji deixava surrogate solto.
+const legenda = (texto: string) => Array.from(texto).slice(0, 1000).join("");
+
 /**
  * Send a Markdown message to every configured chat. Returns whether every
  * chunk reached every chat; unconfigured prints to console and counts as sent.
@@ -105,9 +108,7 @@ export async function sendTelegramAlbum(
     const media = imgs.map((url, i) => ({
       type: "photo",
       media: url,
-      ...(i === 0
-        ? { caption: caption.slice(0, 1000), parse_mode: "Markdown" }
-        : {}),
+      ...(i === 0 ? { caption: legenda(caption), parse_mode: "Markdown" } : {}),
     }));
     const res = await tgJson("sendMediaGroup", { chat_id: chatId, media });
     if (!res.ok) {
@@ -170,7 +171,7 @@ function photoPorUrl(
   return tgJson("sendPhoto", {
     chat_id: chatId,
     photo,
-    caption: caption.slice(0, 1000),
+    caption: legenda(caption),
     ...(parseMode ? { parse_mode: parseMode } : {}),
     ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons } } : {}),
   });
@@ -200,7 +201,7 @@ async function uploadPhoto(
 
     const form = new FormData();
     form.append("chat_id", chatId);
-    form.append("caption", caption.slice(0, 1000));
+    form.append("caption", legenda(caption));
     form.append(
       "photo",
       new Blob([bytes], { type: "image/jpeg" }),
