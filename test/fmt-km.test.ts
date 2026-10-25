@@ -1,3 +1,4 @@
+// @ts-nocheck: o frontend é JS sem tipos e tsc não resolve esses imports.
 import { expect, test } from "bun:test";
 import { fmtKm } from "../public/js/util.js";
 
