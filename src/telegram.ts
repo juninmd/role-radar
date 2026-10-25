@@ -1,4 +1,7 @@
 import { env } from "./config/env.ts";
+import { fetchPublic, readBytesCapped } from "./sources/public-url.ts";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 // Tentativas por chamada quando o Telegram responde 429 (flood control).
 const MAX_TRIES = 3;
@@ -179,14 +182,15 @@ async function uploadPhoto(
   buttons?: TelegramButton[][],
 ): Promise<boolean> {
   try {
-    const img = await fetch(url, {
+    const img = await fetchPublic(url, {
       headers: { "user-agent": "Mozilla/5.0" },
       signal: AbortSignal.timeout(15000),
+      redirect: "follow",
     });
     if (!img.ok) return false;
-    const bytes = await img.arrayBuffer();
-    // Teto do Telegram para foto por upload.
-    if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) return false;
+    // Teto do Telegram para foto por upload; lê um byte a mais só para detectar estouro.
+    const bytes = await readBytesCapped(img, MAX_UPLOAD_BYTES + 1);
+    if (!bytes.byteLength || bytes.byteLength > MAX_UPLOAD_BYTES) return false;
 
     const form = new FormData();
     form.append("chat_id", chatId);

@@ -52,9 +52,12 @@ export async function fetchPublic(
   throw new Error("redirects demais");
 }
 
-/** Lê no máximo `max` bytes do corpo: página de terceiro não entra inteira na memória. */
-export async function readCapped(res: Response, max: number): Promise<string> {
-  if (!res.body) return "";
+/** Lê no máximo `max` bytes do corpo: resposta de terceiro não entra inteira na memória. */
+export async function readBytesCapped(
+  res: Response,
+  max: number,
+): Promise<Uint8Array<ArrayBuffer>> {
+  if (!res.body) return new Uint8Array();
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -65,5 +68,9 @@ export async function readCapped(res: Response, max: number): Promise<string> {
     size += value.byteLength;
   }
   await reader.cancel().catch(() => {});
-  return new TextDecoder().decode(Buffer.concat(chunks).subarray(0, max));
+  return new Uint8Array(Buffer.concat(chunks).subarray(0, max));
+}
+
+export async function readCapped(res: Response, max: number): Promise<string> {
+  return new TextDecoder().decode(await readBytesCapped(res, max));
 }
