@@ -1,6 +1,7 @@
 import { SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Articket: plataforma independente de ingressos com foco em rock, shows alternativos
 // e casas underground (ex: Toca do Jack Pub, Armazém Baixada, eventos em Ribeirão Preto).
@@ -37,7 +38,9 @@ export async function syncArticket(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as ArticketResponse;
+      const json = JSON.parse(
+        await readCapped(res, MAX_SOURCE_BODY),
+      ) as ArticketResponse;
 
       for (const ev of json.data ?? []) {
         if (!ev.id || seen.has(ev.id) || !ev.title || !ev.start_date) continue;

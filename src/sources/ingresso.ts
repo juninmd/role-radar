@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 const CITIES = [{ id: 192, label: "Cinema Moviecom Franca" }];
 
@@ -36,7 +37,9 @@ export async function syncIngresso(today: string): Promise<number> {
         },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const movies = (await res.json()) as Movie[];
+      const movies = JSON.parse(
+        await readCapped(res, MAX_SOURCE_BODY),
+      ) as Movie[];
       for (const m of movies) {
         const premiere = toIso(m.premiereDate?.localDate);
         // Só estreias na janela de 14 dias (senão flooda com meses de filmes).

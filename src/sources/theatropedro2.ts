@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Agenda própria do Theatro Pedro II (Ribeirão Preto). Complementa a Ingresso
 // Nacional: aqui vêm horário e capa, e sessões vendidas por outras bilheterias
@@ -28,7 +29,7 @@ export async function syncTheatroPedro2(today: string): Promise<number> {
       signal: AbortSignal.timeout(20000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_SOURCE_BODY);
 
     for (const m of html.matchAll(ENTRY)) {
       const [, dd, mm, yyyy, time, img, rawTitle, href] = m;

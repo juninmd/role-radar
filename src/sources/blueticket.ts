@@ -1,5 +1,6 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A Blueticket cobre Ribeirão Preto (que entra como complemento do radar).
 // O parâmetro `city` da API é ignorado — pedir ?city=Franca devolve exatamente
@@ -30,7 +31,7 @@ export async function syncBlueticket(today: string): Promise<number> {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     // A API às vezes responde 200 com corpo `null` — daí o encadeamento opcional.
-    const json = (await res.json()) as
+    const json = JSON.parse(await readCapped(res, MAX_SOURCE_BODY)) as
       | BlueEvent[]
       | { data?: BlueEvent[] }
       | null;

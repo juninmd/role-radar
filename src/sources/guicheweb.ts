@@ -1,6 +1,7 @@
 import { SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Guichê Web: forte atuação no interior de SP (Sertãozinho, Ribeirão Preto, Franca).
 // O webservice carregar_home aceita busca por cidade via POST multipart/form-data.
@@ -51,7 +52,9 @@ export async function syncGuicheWeb(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as GWResponse;
+      const data = JSON.parse(
+        await readCapped(res, MAX_SOURCE_BODY),
+      ) as GWResponse;
 
       for (const ev of data.item_eventos ?? []) {
         if (!ev.nome || !ev.data) continue;
