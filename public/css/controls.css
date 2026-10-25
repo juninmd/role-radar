@@ -182,6 +182,15 @@ select.input option {
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* Fade na borda quando sobra aba fora da tela: sem barra de rolagem, é a pista. */
+.tabs.more-right {
+  mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 48px),
+    transparent
+  );
+}
 .tab {
   flex: 1;
   white-space: nowrap;

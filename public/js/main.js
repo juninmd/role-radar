@@ -27,6 +27,16 @@ const RENDER = {
 const REFRESH_MS = 30 * 60 * 1000;
 const $ = (id) => document.getElementById(id);
 
+// Mostra o fade só enquanto ainda há aba além da borda direita.
+function markTabsScroll() {
+  const t = $("tabs");
+  t.classList.toggle(
+    "more-right",
+    t.scrollLeft + t.clientWidth < t.scrollWidth - 4,
+  );
+}
+$("tabs").addEventListener("scroll", markTabsScroll, { passive: true });
+
 function renderTabs() {
   $("tabs").replaceChildren(
     ...VIEWS.map((v) =>
@@ -47,6 +57,7 @@ function renderTabs() {
       ),
     ),
   );
+  markTabsScroll();
   $("view").setAttribute("aria-labelledby", `tab-${state.view}`);
 }
 
