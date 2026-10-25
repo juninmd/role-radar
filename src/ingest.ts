@@ -3,6 +3,10 @@ import Parser from "rss-parser";
 import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
+import { readCapped } from "./sources/public-url.ts";
+
+// Feeds medidos têm 65–165 KB; o teto só corta resposta fora do normal.
+const MAX_FEED = 5_000_000;
 
 const parser = new Parser({
   customFields: { item: [["media:content", "media"]] },
@@ -21,7 +25,7 @@ async function fetchFeed(url: string) {
     signal: AbortSignal.timeout(env.feedTimeoutMs),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parser.parseString(await res.text());
+  return parser.parseString(await readCapped(res, MAX_FEED));
 }
 
 const itemImage = (it: Record<string, unknown>): string | null => {
