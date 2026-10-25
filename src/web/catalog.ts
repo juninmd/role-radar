@@ -56,7 +56,8 @@ export interface Catalog {
 /** Só http(s): texto de fonte externa nunca vira `javascript:` num href. */
 export const safeUrl = (u: string | null | undefined): string | null => {
   const t = u?.trim();
-  return t && /^https?:\/\//i.test(t) ? t : null;
+  // Quebra de linha no meio do link entra no .ics como propriedade nova.
+  return t && /^https?:\/\//i.test(t) && !/[\r\n]/.test(t) ? t : null;
 };
 
 function pinFor(
