@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from "bun:test";
 import { env } from "../src/config/env.ts";
 import { db, eventsOn, upsertEvent } from "../src/db.ts";
-import { digest } from "../src/digest.ts";
+import { digest, falhasDaRodada } from "../src/digest.ts";
 import { json, stubFetch } from "./fetch.ts";
 
 const TZ = "America/Sao_Paulo";
@@ -161,4 +161,20 @@ test("evento futuro na região recebe selo de região e cabeçalho de fora", asy
     )
     .get("Réveillon BBQ Select");
   expect(row?.posted_launch).toBe(1);
+});
+
+// Falha de fonte some em silêncio se o allSettled descartar o motivo: conta e registra.
+test("falhasDaRodada conta as fontes que falharam", () => {
+  const erro = console.error;
+  console.error = () => {};
+  try {
+    expect(
+      falhasDaRodada([
+        { status: "fulfilled", value: 1 },
+        { status: "rejected", reason: new Error("fonte X") },
+      ]),
+    ).toBe(1);
+  } finally {
+    console.error = erro;
+  }
 });
