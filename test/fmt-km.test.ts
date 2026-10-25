@@ -8,3 +8,11 @@ test("distância que arredonda para 1000 m sai em km", () => {
   expect(fmtKm(0.0004)).toBe("0 m");
   expect(fmtKm(null)).toBeNull();
 });
+
+// Com uma casa decimal, 9,96 km virava "10.0 km"; a forma tem que ser escolhida
+// pelo valor já arredondado, como já se faz com metros.
+test("distância perto de 10 km não mostra 10.0 km", () => {
+  expect(fmtKm(9.96)).toBe("10 km");
+  expect(fmtKm(9.94)).toBe("9.9 km");
+  expect(fmtKm(12.4)).toBe("12 km");
+});
