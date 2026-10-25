@@ -93,11 +93,16 @@ function parseJson(raw: string): Extracted[] {
   const start = text.indexOf("[");
   const end = text.lastIndexOf("]");
   if (start < 0 || end < 0) throw new Error("sem array JSON na resposta");
-  // A IA às vezes emite \u inválido (ex.: "\uls") — neutraliza p/ não quebrar o parse.
-  const json = text
-    .slice(start, end + 1)
-    .replace(/\\u(?![0-9a-fA-F]{4})/g, "u");
-  return JSON.parse(json) as Extracted[];
+  const json = text.slice(start, end + 1);
+  try {
+    return JSON.parse(json) as Extracted[];
+  } catch {
+    // A IA às vezes emite \u inválido (ex.: "\uls"); a correção só entra se o
+    // original não parseia, porque "\\u" válido ela quebraria.
+    return JSON.parse(
+      json.replace(/\\u(?![0-9a-fA-F]{4})/g, "u"),
+    ) as Extracted[];
+  }
 }
 
 /**
