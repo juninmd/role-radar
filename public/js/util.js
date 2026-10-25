@@ -103,6 +103,14 @@ export const relDays = (iso, today) => {
   return d <= 0 ? "é hoje" : d === 1 ? "amanhã" : `em ${d} dias`;
 };
 
+// Mesmo fuso das datas: quem abre fora do Brasil não vê a hora do próprio relógio.
+export const horaDeAtualizacao = (iso) =>
+  new Date(iso).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
+
 export function fmtKm(km) {
   if (km === null || km === undefined) return null;
   return km < 1

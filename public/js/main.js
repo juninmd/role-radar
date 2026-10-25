@@ -8,7 +8,7 @@ import {
 import { initDetail, openDetail } from "./detail.js";
 import { renderFilters } from "./filters.js";
 import { emit, readHash, setView, state, subscribe, VIEWS } from "./state.js";
-import { h, toast } from "./util.js";
+import { h, horaDeAtualizacao, toast } from "./util.js";
 import { renderAgenda } from "./views/agenda.js";
 import { renderDecide } from "./views/decide.js";
 import { renderDuel, resetDuel } from "./views/duel.js";
@@ -86,10 +86,7 @@ function renderStats(visible) {
     stat(ev.filter((it) => it.priceMin === 0).length, "grátis"),
     stat(visible, "no filtro"),
   );
-  const at = new Date(state.catalog.generatedAt).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const at = horaDeAtualizacao(state.catalog.generatedAt);
   $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
   // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
   $("count").textContent = `${visible} rolês no filtro`;
