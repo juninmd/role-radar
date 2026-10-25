@@ -16,6 +16,15 @@ test("distância do link dentro das opções é mantida", () => {
   expect(state.filters.maxKm).toBe(20);
 });
 
+// Quando e ordenação fora das opções não casam com nenhum chip nem select: a lista
+// saía vazia sem nenhum controle marcado para explicar o motivo.
+test("quando e ordenação fora das opções voltam ao padrão", () => {
+  globalThis.location = { hash: "#when=lixo&sort=nada" };
+  readHash();
+  expect(state.filters.when).toBe("tudo");
+  expect(state.filters.sort).toBe("data");
+});
+
 // Preço fora das opções do chip virava NaN no filtro: todo item com preço sumia
 // e nenhum chip ficava marcado para explicar o motivo.
 test("preço do link fora das opções do chip volta para qualquer", () => {

@@ -28,6 +28,9 @@ export const DEFAULT_FILTERS = {
 export const KM_STEPS = [0, 2, 5, 10, 20, 50, 100, 150];
 // Opções dos chips de preço (filters.js); o hash só aceita estas.
 export const PRICE_STEPS = ["qualquer", "gratis", "50", "100"];
+// Opções dos chips de quando e do select de ordenação; o hash só aceita estas.
+const WHEN_STEPS = ["hoje", "amanha", "fds", "7d", "30d", "tudo"];
+const SORT_STEPS = ["data", "distancia", "preco"];
 const ARRAYS = ["kinds", "periods", "cities", "cats"];
 const listeners = new Set();
 
@@ -104,6 +107,10 @@ export function readHash() {
       state.filters[k] = KM_STEPS.includes(Number(raw)) ? Number(raw) : 0;
     else if (k === "price")
       state.filters[k] = PRICE_STEPS.includes(raw) ? raw : "qualquer";
+    else if (k === "when")
+      state.filters[k] = WHEN_STEPS.includes(raw) ? raw : def;
+    else if (k === "sort")
+      state.filters[k] = SORT_STEPS.includes(raw) ? raw : def;
     else if (typeof def === "number") state.filters[k] = Number(raw) || 0;
     else state.filters[k] = raw.slice(0, 120);
   }
