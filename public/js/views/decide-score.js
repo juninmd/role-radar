@@ -78,6 +78,16 @@ const COMPANY = {
     festa: -2,
   },
 };
+// Nome que aparece nos motivos (a chave interna não é texto para a pessoa).
+const VIBE_NOME = {
+  agitar: "agitar",
+  rir: "dar risada",
+  cultura: "cultura",
+  relaxar: "relaxar",
+  comer: "comer bem",
+  esporte: "esporte",
+  surpresa: "surpresa",
+};
 
 // Sorteio da vibe "surpresa" fica fixo por item na sessão: mudar outra resposta
 // não reembaralha o ranking nem a % de match.
@@ -113,7 +123,7 @@ export function score(it, a, today) {
       : (VIBE[a.vibe]?.[it.category] ?? 0);
   const comp = COMPANY[a.company]?.[it.category] ?? 0;
   pts += vibe + comp;
-  if (vibe >= 2.5) reasons.push(`bem a vibe "${a.vibe}"`);
+  if (vibe >= 2.5) reasons.push(`bem a vibe "${VIBE_NOME[a.vibe]}"`);
   if (comp >= 1.5)
     reasons.push(
       `bom pra ir ${a.company === "date" ? "num date" : a.company === "familia" ? "com a família" : `com ${a.company}`}`,
