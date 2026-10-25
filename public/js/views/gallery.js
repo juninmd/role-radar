@@ -21,9 +21,15 @@ export function card(it, { compact = false, onPick = null } = {}) {
         // Acha o card de volta ao fechar o drawer, mesmo após o re-render.
         "data-id": it.id,
         onclick: () => (onPick ? onPick(it) : openDetail(it)),
-        "aria-label": onPick
-          ? `Escolher ${it.title}`
-          : `Detalhes de ${it.title}`,
+        // O rótulo substitui o conteúdo: sem data, cidade e preço, quem usa leitor de tela não os ouve.
+        "aria-label": `${onPick ? "Escolher" : "Detalhes de"} ${it.title}, ${[
+          it.date ? humanDay(it.date, today) : "sempre aberto",
+          it.time,
+          it.city,
+          fmtPrice(it),
+        ]
+          .filter(Boolean)
+          .join(", ")}`,
       },
       h(
         "div",
