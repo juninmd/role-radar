@@ -61,7 +61,12 @@ export function row(it) {
     ),
     h(
       "button",
-      { type: "button", class: "row-main", onclick: () => openDetail(it) },
+      {
+        type: "button",
+        class: "row-main",
+        "data-id": it.id,
+        onclick: () => openDetail(it),
+      },
       h("span", { class: "row-title" }, it.title),
       h(
         "span",

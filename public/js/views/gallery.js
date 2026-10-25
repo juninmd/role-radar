@@ -18,6 +18,8 @@ export function card(it, { compact = false, onPick = null } = {}) {
       {
         type: "button",
         class: "card-hit",
+        // Acha o card de volta ao fechar o drawer, mesmo após o re-render.
+        "data-id": it.id,
         onclick: () => (onPick ? onPick(it) : openDetail(it)),
         "aria-label": onPick
           ? `Escolher ${it.title}`

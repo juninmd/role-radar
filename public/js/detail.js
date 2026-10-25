@@ -180,8 +180,13 @@ export function closeDetail() {
   drawer.classList.remove("open");
   drawer.hidden = true;
   document.getElementById("backdrop").hidden = true;
+  const id = current?.id;
   current = null;
-  lastFocus?.focus?.();
+  // Favoritar refaz a lista e tira o card de origem do DOM: foca o card novo.
+  const alvo = lastFocus?.isConnected
+    ? lastFocus
+    : id && document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+  alvo?.focus?.();
 }
 
 export function initDetail() {
