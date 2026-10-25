@@ -355,7 +355,9 @@ export function pruneDisallowedCities(allowedNormalized: string[]): void {
       // genérico — cai na checagem de cidade abaixo e é podado.
       if (c === "cinema" || c === "cinemas" || c.startsWith("streaming"))
         continue;
-      if (allowedNormalized.some((a) => c.includes(a))) continue;
+      // Palavra inteira: "francavilla" não é "franca".
+      const palavras = ` ${c} `;
+      if (allowedNormalized.some((a) => palavras.includes(` ${a} `))) continue;
       del.run(r.id);
     }
   });

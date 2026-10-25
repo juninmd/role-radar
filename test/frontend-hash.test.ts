@@ -15,3 +15,17 @@ test("distância do link dentro das opções é mantida", () => {
   readHash();
   expect(state.filters.maxKm).toBe(20);
 });
+
+// Preço fora das opções do chip virava NaN no filtro: todo item com preço sumia
+// e nenhum chip ficava marcado para explicar o motivo.
+test("preço do link fora das opções do chip volta para qualquer", () => {
+  globalThis.location = { hash: "#price=abc" };
+  readHash();
+  expect(state.filters.price).toBe("qualquer");
+});
+
+test("preço do link dentro das opções é mantido", () => {
+  globalThis.location = { hash: "#price=50" };
+  readHash();
+  expect(state.filters.price).toBe("50");
+});

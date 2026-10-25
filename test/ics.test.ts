@@ -56,6 +56,22 @@ test("evento sem horário ou com fim vira dia inteiro, com DTEND exclusivo", () 
   expect(ics).toContain("DTEND;VALUE=DATE:20261110\r\n");
 });
 
+// Hora que não existe (25:00) vinda de uma fonte não pode derrubar a agenda
+// inteira: o evento sai como dia inteiro e os demais continuam no arquivo.
+test("hora fora do dia não derruba o calendário inteiro", () => {
+  const ics = unfold(
+    buildIcs(
+      [
+        { ...base, time: "25:00" },
+        { ...base, id: "ev-2" },
+      ],
+      NOW,
+    ),
+  );
+  expect(ics).toContain("DTSTART;VALUE=DATE:20261107\r\n");
+  expect(events(ics)).toBe(2);
+});
+
 test("local e link entram; evento sem link não cria URL vazia", () => {
   const ics = unfold(buildIcs([{ ...base, link: null }], NOW));
   expect(ics).toContain("LOCATION:Teatro Municipal\\, Franca\r\n");

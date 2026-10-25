@@ -1,8 +1,12 @@
 // Bun carrega .env automaticamente — sem dotenv.
-const num = (v: string | undefined, d: number) => (v ? Number(v) : d);
+// "abc" dá NaN, e NaN em slice() esvazia a rodada sem erro: cai no padrão.
+const num = (v: string | undefined, d: number) => {
+  const n = Number(v);
+  return v && Number.isFinite(n) ? n : d;
+};
 
 export const env = {
-  aiProvider: (process.env.AI_PROVIDER ?? "litellm") as
+  aiProvider: (process.env.AI_PROVIDER || "litellm") as
     | "litellm"
     | "ollama"
     | "openai"
