@@ -176,8 +176,17 @@ export function openDetail(it, { keepFocus = false } = {}) {
   );
   drawer.hidden = false;
   backdrop.hidden = false;
+  setPageInert(true);
   requestAnimationFrame(() => drawer.classList.add("open"));
   (keepFocus ? drawer.querySelector("[data-fav]") : close).focus();
+}
+
+// Diálogo modal: o resto da página sai da árvore de foco e da leitura de tela.
+function setPageInert(on) {
+  for (const el of document.body.children) {
+    if (["drawer", "backdrop", "toast"].includes(el.id)) continue;
+    el.inert = on;
+  }
 }
 
 export function closeDetail() {
@@ -185,6 +194,7 @@ export function closeDetail() {
   drawer.classList.remove("open");
   drawer.hidden = true;
   document.getElementById("backdrop").hidden = true;
+  setPageInert(false);
   const id = current?.id;
   current = null;
   // Favoritar refaz a lista e tira o card de origem do DOM: foca o card novo.
