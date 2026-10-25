@@ -207,7 +207,9 @@ export function upsertEvent(
     ev.description ?? null,
     ev.trailer ?? null,
     // Fim antes do início é lixo da fonte: trata como evento de um dia.
-    ev.end_date && ev.end_date > ev.date ? ev.end_date : null,
+    ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
+      ? ev.end_date
+      : null,
     new Date().toISOString(),
   );
 }
