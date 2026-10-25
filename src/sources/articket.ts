@@ -50,7 +50,7 @@ export async function syncArticket(today: string): Promise<number> {
       ) as ArticketResponse;
 
       for (const ev of json.data ?? []) {
-        if (!ev.id || seen.has(ev.id) || !ev.title || !ev.start_date) continue;
+        if (!ev?.id || seen.has(ev.id) || !ev.title || !ev.start_date) continue;
         seen.add(ev.id);
 
         const start = saoPauloIso(ev.start_date);
