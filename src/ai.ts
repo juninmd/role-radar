@@ -31,7 +31,7 @@ export async function chat(system: string, user: string): Promise<string> {
         system,
         user,
       );
-    default:
+    case "ollama":
       return openaiCompatible(
         env.ollamaBaseUrl,
         "ollama",
@@ -39,6 +39,9 @@ export async function chat(system: string, user: string): Promise<string> {
         system,
         user,
       );
+    // Provedor com erro de digitação não pode cair no Ollama em silêncio.
+    default:
+      throw new Error(`AI_PROVIDER desconhecido: ${env.aiProvider}`);
   }
 }
 
