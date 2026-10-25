@@ -10,8 +10,8 @@ mkdirSync(join(dir, "js"));
 writeFileSync(join(dir, "index.html"), "<h1>ok</h1>");
 writeFileSync(join(dir, "js", "main.js"), "export {}");
 const handle = createHandler(dir);
-const get = (path: string, method = "GET") =>
-  handle(new Request(`http://x.test${path}`, { method }));
+const get = (path: string, method = "GET", headers: HeadersInit = {}) =>
+  handle(new Request(`http://x.test${path}`, { method, headers }));
 
 test("serve index e assets com CSP", async () => {
   const res = get("/");
@@ -56,4 +56,33 @@ test("catálogo e health reaproveitam uma só montagem dentro do TTL", async () 
 
 test("só leitura: POST é 405", () => {
   expect(get("/api/catalog", "POST").status).toBe(405);
+});
+
+// Catálogo e assets são texto repetitivo: ~74% menores em gzip, e o cliente
+// só recebe a versão comprimida se pedir.
+test("catálogo sai em gzip quando o cliente aceita, JSON puro caso contrário", async () => {
+  const gz = get("/api/catalog", "GET", { "accept-encoding": "gzip" });
+  expect(gz.headers.get("content-encoding")).toBe("gzip");
+  expect(gz.headers.get("vary")).toBe("accept-encoding");
+  const bytes = new Uint8Array(await gz.arrayBuffer());
+  const cat = JSON.parse(new TextDecoder().decode(Bun.gunzipSync(bytes)));
+  expect(Array.isArray(cat.events)).toBe(true);
+  expect(get("/api/catalog").headers.get("content-encoding")).toBeNull();
+});
+
+// q=0 é recusa explícita (RFC 9110): não pode ganhar gzip só por citar a palavra.
+test("gzip recusado com q=0 não é enviado", () => {
+  const res = get("/api/catalog", "GET", {
+    "accept-encoding": "gzip;q=0, identity",
+  });
+  expect(res.headers.get("content-encoding")).toBeNull();
+});
+
+test("asset estático também sai em gzip, com o content-type da extensão", async () => {
+  const res = get("/js/main.js", "GET", { "accept-encoding": "gzip, br" });
+  expect(res.headers.get("content-encoding")).toBe("gzip");
+  // Módulo ES com MIME errado não executa no navegador: o tipo tem de vir junto.
+  expect(res.headers.get("content-type")).toContain("javascript");
+  const raw = Bun.gunzipSync(new Uint8Array(await res.arrayBuffer()));
+  expect(new TextDecoder().decode(raw)).toBe("export {}");
 });

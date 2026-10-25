@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { buildCatalog, type Catalog } from "./catalog.ts";
 
@@ -24,6 +24,28 @@ const SECURITY_HEADERS = {
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
 };
+
+// Aceita gzip se algum item da lista for "gzip" sem q=0 (recusa explícita).
+const wantsGzip = (req: Request) =>
+  (req.headers.get("accept-encoding") ?? "").split(",").some((item) => {
+    const [coding, ...params] = item.trim().split(";");
+    return (
+      coding?.toLowerCase() === "gzip" &&
+      !params.some((p) => /^\s*q\s*=\s*0(\.0*)?\s*$/.test(p))
+    );
+  });
+
+/** Manda a variante gzip só quando o cliente pede; a comprimida já vem pronta. */
+function send(
+  req: Request,
+  raw: Uint8Array<ArrayBuffer>,
+  gz: Uint8Array<ArrayBuffer>,
+  headers: Record<string, string>,
+): Response {
+  const h = { ...headers, vary: "accept-encoding" };
+  if (!wantsGzip(req)) return new Response(raw, { headers: h });
+  return new Response(gz, { headers: { ...h, "content-encoding": "gzip" } });
+}
 
 /**
  * Mapa fixo "/js/app.js" → arquivo, montado uma vez no boot. A URL nunca
@@ -51,15 +73,43 @@ export function createHandler(
     day: string;
     at: number;
     catalog: Catalog;
-    body: string;
+    raw: Uint8Array<ArrayBuffer>;
+    gz: Uint8Array<ArrayBuffer>;
   } | null = null;
   const current = () => {
     const day = today();
     if (cache?.day === day && Date.now() - cache.at < CATALOG_TTL_MS)
       return cache;
     const catalog = build(day);
-    cache = { day, at: Date.now(), catalog, body: JSON.stringify(catalog) };
+    const raw = new TextEncoder().encode(JSON.stringify(catalog));
+    const gz = new Uint8Array(Bun.gzipSync(raw));
+    cache = { day, at: Date.now(), catalog, raw, gz };
     return cache;
+  };
+
+  // Asset relido quando o mtime muda: dev vê edição sem reiniciar o servidor.
+  const assets = new Map<
+    string,
+    {
+      mtime: number;
+      type: string;
+      raw: Uint8Array<ArrayBuffer>;
+      gz: Uint8Array<ArrayBuffer>;
+    }
+  >();
+  const asset = (path: string) => {
+    const mtime = statSync(path).mtimeMs;
+    const hit = assets.get(path);
+    if (hit?.mtime === mtime) return hit;
+    const raw = new Uint8Array(readFileSync(path));
+    const entry = {
+      mtime,
+      type: Bun.file(path).type,
+      raw,
+      gz: new Uint8Array(Bun.gzipSync(raw)),
+    };
+    assets.set(path, entry);
+    return entry;
   };
 
   return (req: Request): Response => {
@@ -74,19 +124,21 @@ export function createHandler(
       });
     }
     if (pathname === "/api/catalog") {
-      return new Response(current().body, {
-        headers: {
-          ...SECURITY_HEADERS,
-          "content-type": "application/json;charset=utf-8",
-          "cache-control": "public, max-age=300",
-        },
+      const { raw, gz } = current();
+      return send(req, raw, gz, {
+        ...SECURITY_HEADERS,
+        "content-type": "application/json;charset=utf-8",
+        "cache-control": "public, max-age=300",
       });
     }
     const file = files.get(pathname === "/" ? "/index.html" : pathname);
     if (!file) return new Response("não encontrado", { status: 404 });
-    return new Response(Bun.file(file), {
-      // no-cache: módulos ES de versões diferentes misturados quebram o app após deploy.
-      headers: { ...SECURITY_HEADERS, "cache-control": "no-cache" },
+    const { type, raw, gz } = asset(file);
+    // no-cache: módulos ES de versões diferentes misturados quebram o app após deploy.
+    return send(req, raw, gz, {
+      ...SECURITY_HEADERS,
+      "content-type": type,
+      "cache-control": "no-cache",
     });
   };
 }
