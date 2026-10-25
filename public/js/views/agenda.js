@@ -33,6 +33,8 @@ function heatStrip(items, today) {
         "button",
         {
           type: "button",
+          // Id estável: render() devolve o foco por id, e o clique refaz a faixa.
+          id: `dia-${d}`,
           class: `heat-cell${wd === 0 || wd === 6 || wd === 5 ? " wknd" : ""}`,
           style: { "--heat": (n / max).toFixed(2) },
           "aria-pressed": state.filters.day === d ? "true" : "false",
