@@ -26,6 +26,26 @@ beforeEach(() => {
   db.exec("DELETE FROM items; DELETE FROM events;");
 });
 
+// "sábado" > "2026-10-30" em string é verdade: sem checar o formato, entra no banco
+// e o COALESCE deixa o evento visível para sempre.
+test("end_date que não é data não entra no evento", async () => {
+  insertItem(item(1));
+  stubFetch(async () =>
+    completion(
+      JSON.stringify([
+        {
+          title: "Festival Longo",
+          date: "2026-10-30",
+          end_date: "sábado",
+          item: 1,
+        },
+      ]),
+    ),
+  );
+  await extractEvents(TODAY);
+  expect(eventsOn("2026-10-30")[0]?.end_date).toBeNull();
+});
+
 // Barra escapada ("\\") seguida de "u" é JSON válido: não pode ser "consertada" e quebrar.
 test("barra escapada seguida de u não derruba o lote", async () => {
   insertItem(item(1));
