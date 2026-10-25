@@ -43,7 +43,8 @@ function eventLines(e: CatalogEvent, dtstamp: string): string[] {
     `UID:${e.id}@role-radar`,
     `DTSTAMP:${dtstamp}`,
   ];
-  const timed = Boolean(e.time && /^\d{2}:\d{2}$/.test(e.time));
+  // 25:00 passa no formato mas não existe: sem isto, toISOString lança e a agenda cai.
+  const timed = Boolean(e.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(e.time));
   const start = new Date(`${e.date}T${timed ? e.time : "00:00"}:00Z`);
   if (timed) {
     lines.push(`DTSTART:${local(start)}`);
