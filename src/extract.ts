@@ -147,7 +147,8 @@ async function runBatch(today: string, batch: Item[]): Promise<number | null> {
       title: ev.title.trim(),
       date: ev.date,
       end_date: end,
-      time: ev.time ?? null,
+      // Só HH:MM: o horário vai para o Markdown do Telegram, que a IA não controla.
+      time: /^\d{2}:\d{2}$/.test(ev.time ?? "") ? ev.time : null,
       venue: ev.venue ?? null,
       city: ev.city ?? null,
       price: ev.price ?? null,
