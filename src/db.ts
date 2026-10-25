@@ -168,6 +168,14 @@ const cidadeCanonica = (city: string | null) =>
     ? (CIDADE_CANONICA.get(norm(city).replace(/[\s/-]+sp$/, "")) ?? city)
     : null;
 
+// Dia que existe no calendário: 2026-02-31 é recusado antes de virar linha.
+const dataValida = (iso: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  return d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia;
+};
+
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<
@@ -185,6 +193,12 @@ export function upsertEvent(
     description?: string | null;
   },
 ): void {
+  if (!dataValida(ev.date)) {
+    console.warn(
+      `[db] "${ev.title}" com data inválida (${ev.date}), descartado`,
+    );
+    return;
+  }
   upsertEventStmt.run(
     eventId(ev.title, ev.date),
     ev.title,
