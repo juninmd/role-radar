@@ -36,7 +36,8 @@ export async function syncOticket(today: string): Promise<number> {
     const all = json.result ?? [];
 
     for (const ev of all) {
-      if (!ev.name || !ev.date || !inRegion(ev.city)) continue;
+      // Item nulo na lista não pode derrubar a rodada: os seguintes ainda contam.
+      if (!ev?.name || !ev.date || !inRegion(ev.city)) continue;
       // A API marca meia-noite UTC quando o horário não foi informado; nesse
       // caso não há hora útil pra mostrar.
       const date = ev.date.slice(0, 10);
