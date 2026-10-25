@@ -34,7 +34,11 @@ export function ensureLeaflet() {
         el.onload = ok;
         el.onerror = fail;
       });
-    Promise.all([loaded(css), loaded(js)]).then(
+    // CDN que trava sem dar erro deixava "Carregando o mapa…" para sempre.
+    const limite = new Promise((_, fail) =>
+      setTimeout(() => fail(new Error("leaflet: tempo esgotado")), 10000),
+    );
+    Promise.race([Promise.all([loaded(css), loaded(js)]), limite]).then(
       () => resolve(window.L),
       (err) => {
         pending = null;
