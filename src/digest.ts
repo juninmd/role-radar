@@ -49,7 +49,7 @@ import {
   sendTelegramPhoto,
   type TelegramButton,
 } from "./telegram.ts";
-import { spotPlaces } from "./web/catalog.ts";
+import { safeUrl, spotPlaces } from "./web/catalog.ts";
 import { geocodePlaces } from "./web/geocode.ts";
 import { saveSnapshot } from "./web/store.ts";
 
@@ -78,6 +78,31 @@ export const humanDay = (iso: string) =>
  * precisa passar por aqui; URL vai sempre dentro de [rótulo](url).
  */
 export const mdSafe = (s: string) => s.replace(/([_*[\]`])/g, "\\$1");
+
+/** Dentro de `(url)` só `(`, `)` e espaço fecham o link antes da hora; URL que não é http(s) não entra. */
+const mdUrl = (u: string | null): string | null =>
+  safeUrl(u)?.replace(
+    /[()\s]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`,
+  ) ?? null;
+
+/** Linha de estreia, trailer e ingressos de um filme; links de API externa passam por mdUrl. */
+export function movieBits(
+  m: { premiere: string | null; trailer: string | null; link: string },
+  today: string,
+): string {
+  const trailer = mdUrl(m.trailer);
+  const link = mdUrl(m.link);
+  return [
+    m.premiere
+      ? `${m.premiere > today ? "🗓️ estreia" : "🗓️ estreou"} ${humanDay(m.premiere)}`
+      : null,
+    trailer ? `▶️ [trailer](${trailer})` : null,
+    link ? `🎟️ [ingressos](${link})` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export function eventButtons(ev: Event): TelegramButton[][] {
   const row: TelegramButton[] = [];
@@ -257,14 +282,7 @@ export async function digest(): Promise<void> {
       .filter((p): p is string => Boolean(p));
     const lines = day.movies.map((m) => {
       const tag = [m.genre, m.rating, m.duration].filter(Boolean).join(" · ");
-      const bits = [
-        m.premiere
-          ? `${m.premiere > today ? "🗓️ estreia" : "🗓️ estreou"} ${humanDay(m.premiere)}`
-          : null,
-        m.trailer ? `▶️ [trailer](${m.trailer})` : null,
-        `🎟️ [ingressos](${m.link})`,
-      ].filter(Boolean);
-      return `• *${mdSafe(m.title)}*${tag ? ` — ${tag}` : ""}\n  ${bits.join(" · ")}`;
+      return `• *${mdSafe(m.title)}*${tag ? ` — ${tag}` : ""}\n  ${movieBits(m, today)}`;
     });
     await oncePerDay(today, `cinema:${day.cinema}`, async () => {
       // Legenda de álbum é cortada em ~1000 chars: os pôsteres levam só o
