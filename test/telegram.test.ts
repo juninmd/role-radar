@@ -95,3 +95,15 @@ test("imagem acima do teto de upload não é lida inteira", async () => {
   await sendTelegramPhoto("oi", "https://img.test/grande.jpg");
   expect(pulled).toBeLessThan(15);
 });
+
+// Sem timeout, um Telegram que aceita a conexão e não responde trava o digest
+// inteiro: o registro do que já foi entregue nunca roda.
+test("chamada à Bot API tem prazo de resposta", async () => {
+  let signal: AbortSignal | undefined;
+  stubFetch(async (_url, init) => {
+    signal = init?.signal ?? undefined;
+    return json({ ok: true });
+  });
+  await sendTelegram("oi");
+  expect(signal).toBeInstanceOf(AbortSignal);
+});
