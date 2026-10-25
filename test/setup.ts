@@ -17,9 +17,15 @@ const { env } = await import("../src/config/env.ts");
 const envInicial = { ...env };
 const fetchOriginal = globalThis.fetch;
 
+// DNS de teste: todo nome vira IP público, sem consultar a rede.
+const { setHostResolver } = await import("../src/sources/public-url.ts");
+const publicDns = async () => ["93.184.216.34"];
+setHostResolver(publicDns);
+
 // Hook de preload vale para todos os arquivos: nenhum teste herda o stub de
-// fetch ou o env mexido por outro.
+// fetch, o DNS ou o env mexido por outro.
 afterEach(() => {
   globalThis.fetch = fetchOriginal;
   Object.assign(env, envInicial);
+  setHostResolver(publicDns);
 });

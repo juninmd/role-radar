@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { fetchPublic, isPublicUrl } from "../src/sources/public-url.ts";
+import {
+  fetchPublic,
+  isPublicUrl,
+  setHostResolver,
+} from "../src/sources/public-url.ts";
 import { stubFetch } from "./fetch.ts";
 
 // O pipeline roda com hostNetwork: link de matéria vem de fora e não pode
@@ -58,4 +62,15 @@ test("segue redirect público até a resposta final", async () => {
   );
   const res = await fetchPublic("https://portal.test/a", {});
   expect(await res.text()).toBe("ok");
+});
+
+// Domínio público apontado para a rede interna: a checagem de string passa, só
+// o IP resolvido denuncia. Sem isso o fetch sai para 10.x do cluster.
+test("nome público que resolve para rede interna é bloqueado antes de conectar", async () => {
+  setHostResolver(async () => ["93.184.216.34", "10.43.0.1"]);
+  const hits = stubFetch(async () => new Response("segredo"));
+  await expect(fetchPublic("https://portal.test/materia", {})).rejects.toThrow(
+    "URL não pública",
+  );
+  expect(hits).toEqual([]);
 });
