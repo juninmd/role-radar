@@ -1,6 +1,26 @@
+import { pool } from "../pool.ts";
 import { fetchPublic, readCapped } from "./public-url.ts";
 
 const MAX_HTML = 200_000;
+// Sites de terceiros: poucas conexões por vez, não uma por evento.
+const BATCH_CONCURRENCY = 4;
+
+/** Capa de cada evento: a imagem já salva, ou a og:image da página. */
+export async function fetchOgImages(
+  events: { id: string; image: string | null; link: string | null }[],
+  limit = BATCH_CONCURRENCY,
+): Promise<Map<string, string | null>> {
+  const pairs = await pool(
+    events,
+    limit,
+    async (ev) =>
+      [
+        ev.id,
+        ev.image ?? (ev.link ? await fetchOgImage(ev.link) : null),
+      ] as const,
+  );
+  return new Map(pairs);
+}
 
 /** Fetch a page and pull its og:image, or null. Never throws. */
 export async function fetchOgImage(url: string): Promise<string | null> {
