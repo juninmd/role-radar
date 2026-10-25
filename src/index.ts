@@ -3,6 +3,7 @@ import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { digest } from "./digest.ts";
 import { ingest } from "./ingest.ts";
+import { semSobreposicao } from "./job-guard.ts";
 import { serve } from "./web/server.ts";
 
 const args = new Set(process.argv.slice(2));
@@ -23,8 +24,14 @@ if (args.has("--serve")) {
   console.log(`  ingestão: ${env.cronIngestion}`);
   console.log(`  digest:   ${env.cronDigest}`);
   await ingest();
-  cron.schedule(env.cronIngestion, () => ingest().catch(console.error));
-  cron.schedule(env.cronDigest, () => digest().catch(console.error));
+  cron.schedule(
+    env.cronIngestion,
+    semSobreposicao(() => ingest()),
+  );
+  cron.schedule(
+    env.cronDigest,
+    semSobreposicao(() => digest()),
+  );
 } else {
   // padrão (--once): roda um ciclo e sai
   await once();
