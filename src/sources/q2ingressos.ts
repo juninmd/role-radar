@@ -36,7 +36,7 @@ export async function syncQ2Ingressos(today: string): Promise<number> {
     const list = JSON.parse(await readCapped(res, MAX_CATALOG)) as Q2Event[];
 
     for (const ev of list) {
-      if (!ev.Name || !ev.StartDate || !inRegion(ev.City)) continue;
+      if (!ev?.Name || !ev.StartDate || !inRegion(ev.City)) continue;
       const date = ev.StartDate.slice(0, 10);
       const end = ev.EndDate ? ev.EndDate.slice(0, 10) : null;
       const validEnd = end && end > date ? end : null;

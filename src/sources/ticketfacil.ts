@@ -33,7 +33,7 @@ export async function scrapeTicketFacil(today: string): Promise<Parsed[]> {
 
   const out: Parsed[] = [];
   for (const it of itens ?? []) {
-    const t = it.thumbnail;
+    const t = it?.thumbnail;
     if (!t?.eventName) continue;
     const quando = t.date ? parseDataBr(t.date, today) : null;
     if (!quando || quando.date < today) continue;
