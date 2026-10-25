@@ -31,13 +31,20 @@ export const PRICE_STEPS = ["qualquer", "gratis", "50", "100"];
 const ARRAYS = ["kinds", "periods", "cities", "cats"];
 const listeners = new Set();
 
+// Valor salvo que não é lista (corrompido à mão ou por outra versão) não pode
+// impedir o app de abrir.
+const listaSalva = (key) => {
+  const v = store.get(key, []);
+  return Array.isArray(v) ? v : [];
+};
+
 export const state = {
   view: "radar",
   filters: structuredClone(DEFAULT_FILTERS),
   origin: null, // { name, lat, lng }
   catalog: null,
   items: [],
-  favs: new Set(store.get("rr:favs", [])),
+  favs: new Set(listaSalva("rr:favs")),
 };
 
 export function subscribe(fn) {
