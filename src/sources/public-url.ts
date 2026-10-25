@@ -60,13 +60,32 @@ export function isPublicUrl(raw: string): boolean {
  * Nome que resolve para qualquer IP privado é bloqueado antes de conectar:
  * sem isso, um domínio público apontado para 10.x passa pela checagem de string.
  */
-async function resolvePublic(url: string): Promise<string> {
+async function resolvePublic(url: string): Promise<string[]> {
   const host = new URL(url).hostname.replace(/^\[|\]$/g, "");
-  if (isIP(host)) return host;
+  if (isIP(host)) return [host];
   const ips = await resolveHost(host);
   if (!ips.length || ips.some((ip) => !isPublicIp(ip)))
     throw new Error(`URL não pública: ${url}`);
-  return ips[0] as string;
+  return ips;
+}
+
+/** Tenta cada IP validado, em ordem: só falha de conexão passa para o próximo. */
+async function fetchPinned(
+  url: string,
+  ips: string[],
+  init: RequestInit,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (const ip of ips) {
+    const pin = pinRequest(url, ip, init);
+    try {
+      return await fetch(pin.target, pin.init);
+    } catch (err) {
+      if (init.signal?.aborted) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr;
 }
 
 /**
@@ -99,9 +118,11 @@ export async function fetchPublic(
   let current = url;
   for (let hop = 0; hop <= 5; hop++) {
     if (!isPublicUrl(current)) throw new Error(`URL não pública: ${current}`);
-    const ip = await resolvePublic(current);
-    const pin = pinRequest(current, ip, { ...init, redirect: "manual" });
-    const res = await fetch(pin.target, pin.init);
+    const ips = await resolvePublic(current);
+    const res = await fetchPinned(current, ips, {
+      ...init,
+      redirect: "manual",
+    });
     const next = res.headers.get("location");
     // redirect "manual" pedido pelo chamador: devolve o 3xx para ele decidir.
     if (init.redirect === "manual") return res;

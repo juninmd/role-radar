@@ -17,3 +17,19 @@ test("conexão vai ao IP validado, não a um novo lookup do nome", async () => {
   expect(raw).toBe("https://93.184.216.34/a");
   expect(host).toBe("evento.test");
 });
+
+// Host com dois registros A: se o primeiro não conecta, o segundo tem que ser
+// tentado, como o fetch faria sem a fixação. Resposta HTTP não gera nova tentativa.
+test("sem conexão no primeiro IP validado, tenta o próximo", async () => {
+  setHostResolver(async () => ["93.184.216.34", "93.184.216.35"]);
+  const tried: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const raw = String(input);
+    tried.push(raw);
+    if (raw.includes("216.34")) throw new TypeError("ECONNREFUSED");
+    return new Response("ok");
+  }) as typeof fetch;
+  const res = await fetchPublic("https://evento.test/a", {});
+  expect(await res.text()).toBe("ok");
+  expect(tried).toEqual(["https://93.184.216.34/a", "https://93.184.216.35/a"]);
+});
