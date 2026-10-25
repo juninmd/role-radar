@@ -34,7 +34,8 @@ export async function syncSesc(today: string): Promise<number> {
         atividade?: Atividade[];
       };
       for (const a of data.atividade ?? []) {
-        const raw = a.dataProxSessao ?? a.dataPrimeiraSessao;
+        // "" conta como ausente: a API manda vazio quando não há próxima sessão.
+        const raw = a.dataProxSessao || a.dataPrimeiraSessao;
         const date = raw?.slice(0, 10);
         const time = raw?.slice(11, 16) || null;
         if (!a.titulo || !date || date < today) continue;
