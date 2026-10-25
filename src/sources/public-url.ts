@@ -60,12 +60,35 @@ export function isPublicUrl(raw: string): boolean {
  * Nome que resolve para qualquer IP privado é bloqueado antes de conectar:
  * sem isso, um domínio público apontado para 10.x passa pela checagem de string.
  */
-async function assertResolvesPublic(url: string): Promise<void> {
+async function resolvePublic(url: string): Promise<string> {
   const host = new URL(url).hostname.replace(/^\[|\]$/g, "");
-  if (isIP(host)) return;
+  if (isIP(host)) return host;
   const ips = await resolveHost(host);
   if (!ips.length || ips.some((ip) => !isPublicIp(ip)))
     throw new Error(`URL não pública: ${url}`);
+  return ips[0] as string;
+}
+
+/**
+ * Conecta no IP validado, não no nome: o fetch resolveria de novo e um DNS que
+ * muda de resposta (rebinding) levaria a um IP privado. Host e SNI seguem o nome.
+ */
+function pinRequest(
+  url: string,
+  ip: string,
+  init: RequestInit,
+): { target: URL; init: RequestInit } {
+  const name = new URL(url);
+  // Já é IP literal (o chamador escolheu Host/SNI, ex.: Google via IPv6): nada a fixar.
+  if (isIP(name.hostname.replace(/^\[|\]$/g, "")))
+    return { target: name, init };
+  const target = new URL(url);
+  target.hostname = isIP(ip) === 6 ? `[${ip}]` : ip;
+  const headers = new Headers(init.headers);
+  headers.set("host", name.host);
+  // "tls" é do runtime Bun (SNI/cert pelo nome), fora do tipo RequestInit.
+  const tls = { serverName: name.hostname };
+  return { target, init: { ...init, headers, tls } as RequestInit };
 }
 
 /** fetch que revalida cada salto de redirect (nome e IP resolvido) (máx. 5). */
@@ -76,8 +99,9 @@ export async function fetchPublic(
   let current = url;
   for (let hop = 0; hop <= 5; hop++) {
     if (!isPublicUrl(current)) throw new Error(`URL não pública: ${current}`);
-    await assertResolvesPublic(current);
-    const res = await fetch(current, { ...init, redirect: "manual" });
+    const ip = await resolvePublic(current);
+    const pin = pinRequest(current, ip, { ...init, redirect: "manual" });
+    const res = await fetch(pin.target, pin.init);
     const next = res.headers.get("location");
     // redirect "manual" pedido pelo chamador: devolve o 3xx para ele decidir.
     if (init.redirect === "manual") return res;

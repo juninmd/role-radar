@@ -1,7 +1,7 @@
 import { afterEach, expect, spyOn, test } from "bun:test";
 import { env } from "../src/config/env.ts";
 import { GoogleBlocked, resolveLink } from "../src/sources/article.ts";
-import { stubFetch } from "./fetch.ts";
+import { stubFetch, stubFetchRaw } from "./fetch.ts";
 
 // O Google dá 429 ao IPv4 do cluster; com GOOGLE_IPV6=1 a conexão vai
 // direto no AAAA, com Host/SNI do hostname, e cai no normal sem rota IPv6.
@@ -28,7 +28,7 @@ test("GOOGLE_IPV6=1 conecta no IPv6 com Host e SNI do Google", async () => {
     { address: V6, family: 6, ttl: 0 },
   ]);
   const seen: { url: string; host?: string; sni?: string }[] = [];
-  stubFetch(async (url, init) => {
+  stubFetchRaw(async (url, init) => {
     const i = init as RequestInit & { tls?: { serverName?: string } };
     seen.push({
       url,
