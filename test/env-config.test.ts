@@ -13,6 +13,18 @@ test("limite numérico inválido cai no padrão", async () => {
   }
 });
 
+// Limite negativo vira slice(0, -n): derruba os últimos itens sem aviso.
+test("limite numérico negativo cai no padrão", async () => {
+  process.env.MAX_ITEMS_PER_FEED = "-5";
+  try {
+    const caminho: string = "../src/config/env.ts?max-neg";
+    const { env } = await import(caminho);
+    expect(env.maxItemsPerFeed).toBe(20);
+  } finally {
+    delete process.env.MAX_ITEMS_PER_FEED;
+  }
+});
+
 // Erro de digitação em AI_PROVIDER tem de falhar, não cair no Ollama sem aviso.
 test("provedor desconhecido falha em vez de cair no Ollama", async () => {
   const { chat } = await import("../src/ai.ts");
