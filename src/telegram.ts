@@ -206,7 +206,8 @@ async function uploadPhoto(
     const res = await tg("sendPhoto", { body: form });
     if (res.ok) console.log("[telegram] foto enviada por upload");
     return res.ok;
-  } catch {
+  } catch (err) {
+    console.warn(`[telegram] upload de foto falhou: ${err}`);
     return false;
   }
 }
