@@ -106,7 +106,8 @@ async function detail(url: string) {
       description: cleanDesc ? cleanDesc.slice(0, 300) : null,
       price,
     };
-  } catch {
+  } catch (err) {
+    console.warn(`[duoticket] detalhe falhou: ${err}`);
     return {};
   }
 }
