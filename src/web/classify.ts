@@ -28,15 +28,15 @@ const RULES: [Category, RegExp][] = [
   ],
   [
     "teatro",
-    /teatro|\bpeca\b|espetaculo|musical|danca|ballet|bale\b|opera|cavalleria/,
+    /teatro|\bpeca\b|espetaculo|musical|danca|ballet|bale\b|\bopera\b|cavalleria/,
   ],
   [
     "festa",
-    /festa|balada|open bar|rave|baile|\bnight\b|\bafter\b|\bdjs?\b|halloween|carnaval|oktoberfest|\bfest\b|\bclub\b|anos (80|90|2000)|\bvibe\b|\bgin\b|dia de praia|inter unifran/,
+    /festa|balada|open bar|\brave\b|baile|\bnight\b|\bafter\b|\bdjs?\b|halloween|carnaval|oktoberfest|\bfest\b|\bclub\b|anos (80|90|2000)|\bvibe\b|\bgin\b|dia de praia|inter unifran/,
   ],
   [
     "show",
-    /show|musica|banda|sertanej|rock|samba|pagode|forro|festival|tributo|cover|orquestra|concerto|acustico|turne|rap\b|funk|mpb|jazz|blues|coral|\bmcs?\b|\bdvd\b|metal|arrocha|trap\b|carreira|ao vivo|coldplay|imagine dragons/,
+    /show|musica|banda|sertanej|rock|samba|pagode|forro|festival|tributo|\bcover\b|orquestra|concerto|acustico|turne|rap\b|funk|mpb|jazz|blues|coral|\bmcs?\b|\bdvd\b|metal|arrocha|trap\b|carreira|ao vivo|coldplay|imagine dragons/,
   ],
   [
     "gastronomia",
