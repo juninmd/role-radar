@@ -30,7 +30,7 @@ const html = `<html><head><meta property="og:description" content="Festival na p
 let prompts: string[] = [];
 
 /** Google News → URL real → matéria; a IA só acha o evento se ler o corpo. */
-function network() {
+function network(page: BodyInit = html) {
   prompts = [];
   return stubFetch(async (url, init) => {
     if (url.startsWith("https://news.google.com/articles/"))
@@ -41,7 +41,7 @@ function network() {
         `)]}'\n\n${JSON.stringify([["wrb.fr", "Fbv4je", inner]])}\n`,
       );
     }
-    if (url === ARTICLE) return new Response(html);
+    if (url === ARTICLE) return new Response(page);
     if (url.includes("/chat/completions")) {
       const body = String(init?.body);
       prompts.push(body);
@@ -251,4 +251,25 @@ test("interstitial do Google é lido só até o teto, não inteiro", async () =>
     .all();
   await enrichItems(items);
   expect(pulled).toBeLessThan(CHUNKS);
+});
+
+// Página de terceiro sem limite de tamanho esgota a memória do CronJob; a
+// matéria que vem depois de 2 MB de lixo nem chega a ser lida.
+// Conta os chunks lidos: página em stream de 2,5 MB precisa parar antes do fim.
+test("corpo da matéria além de 2 MB não é lido", async () => {
+  const filler = new TextEncoder().encode("<p>x</p>".repeat(8192)); // 64 KB
+  const tail = new TextEncoder().encode(`<article><p>${BODY}</p></article>`);
+  let pulled = 0;
+  network(
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled++;
+        if (pulled <= 40) controller.enqueue(filler);
+        else if (pulled === 41) controller.enqueue(tail);
+        else controller.close();
+      },
+    }),
+  );
+  expect(await extractEvents("2026-09-24")).toBe(0);
+  expect(pulled).toBeLessThan(40);
 });
