@@ -54,22 +54,21 @@ export function categorize(title: string, venue?: string | null): Category {
   return RULES.find(([, re]) => re.test(text))?.[0] ?? "outros";
 }
 
-const FREE = /gratis|gratuit|free|entrada franca|entrada livre|sem custo/;
+const FREE = /gratis|gratuit|\bfree\b|entrada franca|entrada livre|sem custo/;
 
 /**
- * Menor valor em reais citado no texto de preço, 0 se grátis, null se não dá
- * pra saber ("consulte", ausente). "R$ 1.200,50" → 1200.5.
+ * Menor valor pago citado no texto de preço, 0 se grátis, null se não dá pra
+ * saber ("consulte", ausente). "R$ 1.200,50" → 1200.5. Só número com "R$" conta:
+ * "Lote 1" e "18 anos" não são preço.
  */
 export function parsePrice(price: string | null): number | null {
   if (!price) return null;
   const text = norm(price);
-  const free = FREE.test(text);
-  // Sem "R$", um número solto é idade ou horário ("18+"): a palavra basta.
-  if (free && !text.includes("r$")) return 0;
-  const values = [...text.matchAll(/(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g)]
-    .map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`))
-    .filter((n) => Number.isFinite(n) && n > 0);
-  if (values.length) return Math.min(...values);
-  // "gratuito para crianças, R$ 30 adulto" cai no 30; "Grátis R$ 0,00" cai aqui.
-  return free ? 0 : null;
+  const values = [
+    ...text.matchAll(/r\$\s*(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?/g),
+  ].map((m) => Number(`${m[1].replace(/\./g, "")}.${m[2] ?? "0"}`));
+  const pagos = values.filter((n) => Number.isFinite(n) && n > 0);
+  if (pagos.length) return Math.min(...pagos);
+  // "R$ 0,00" é grátis; "gratuito para crianças, R$ 30 adulto" já caiu no 30 acima.
+  return values.length || FREE.test(text) ? 0 : null;
 }
