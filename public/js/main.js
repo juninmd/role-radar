@@ -36,6 +36,8 @@ function markTabsScroll() {
   );
 }
 $("tabs").addEventListener("scroll", markTabsScroll, { passive: true });
+// Girar o celular pode caber todas as abas: sem overflow, a pista some.
+window.addEventListener("resize", markTabsScroll);
 
 function renderTabs() {
   $("tabs").replaceChildren(
