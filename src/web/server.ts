@@ -23,6 +23,8 @@ const SECURITY_HEADERS = {
   "content-security-policy": CSP,
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
+  // A tela nunca usa câmera, microfone nem localização.
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
 
 // Aceita gzip se algum item da lista for "gzip" sem q=0 (recusa explícita).
@@ -112,7 +114,7 @@ export function createHandler(
     return entry;
   };
 
-  return (req: Request): Response => {
+  const route = (req: Request): Response => {
     const { pathname } = new URL(req.url);
     if (req.method !== "GET" && req.method !== "HEAD")
       return new Response("método não permitido", { status: 405 });
@@ -140,6 +142,14 @@ export function createHandler(
       "content-type": type,
       "cache-control": "no-cache",
     });
+  };
+
+  // Toda resposta sai com os cabeçalhos de segurança, inclusive health e 404.
+  return (req: Request): Response => {
+    const res = route(req);
+    for (const [nome, valor] of Object.entries(SECURITY_HEADERS))
+      if (!res.headers.has(nome)) res.headers.set(nome, valor);
+    return res;
   };
 }
 
