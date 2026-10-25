@@ -54,3 +54,23 @@ test("syncArticket busca e importa eventos futuros da região", async () => {
   expect(evs[0].end_date).toBe("2026-10-25");
   expect(evs[0].link).toBe("https://articket.com.br/e/7260/motorspades");
 });
+
+// Item nulo na lista lançava TypeError e a cidade inteira perdia os eventos seguintes.
+test("item nulo na lista do Articket não derruba os eventos seguintes", async () => {
+  stubFetch(async () =>
+    json({
+      status: "success",
+      data: [
+        null,
+        {
+          id: 7261,
+          title: "Show Articket Nulo",
+          start_date: "2026-11-20T23:00:00.000000Z",
+          location: "Local",
+          url: "https://articket.com.br/e/7261/nulo",
+        },
+      ],
+    }),
+  );
+  expect(await syncArticket(TODAY)).toBe(1);
+});

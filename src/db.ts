@@ -211,7 +211,8 @@ export function upsertEvent(
     eventId(ev.title, ev.date),
     ev.title,
     ev.date,
-    semVazio(ev.time),
+    // Hora fora de 00:00–23:59 é lixo da fonte ("25h", "19:99"): sem horário.
+    ev.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(ev.time) ? ev.time : null,
     semVazio(ev.venue),
     cidadeCanonica(ev.city),
     semVazio(ev.price),
