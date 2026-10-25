@@ -143,7 +143,11 @@ export function renderFilters(root, visibleCount) {
             "day",
             `📌 ${f.day.split("-").reverse().slice(0, 2).join("/")} ✕`,
             true,
-            () => setFilters({ day: "" }),
+            () => {
+              setFilters({ day: "" });
+              // O chip some ao remover o dia: o foco vai ao chip de período ativo.
+              document.getElementById(`chip-w-${f.when}`)?.focus();
+            },
           )
         : null,
     ),
