@@ -45,7 +45,7 @@ export async function syncMegabilheteria(today: string): Promise<number> {
     }
 
     for (const ev of all) {
-      if (!ev.name || !ev.date || !inRegion(ev.city)) continue;
+      if (!ev?.name || !ev.date || !inRegion(ev.city)) continue;
       const date = ev.date.slice(0, 10);
       const time = ev.date.slice(11, 16) || null;
       if (date < today) continue;
@@ -59,7 +59,8 @@ export async function syncMegabilheteria(today: string): Promise<number> {
         description: ev.kind ? `Gênero: ${ev.kind.trim()}` : null,
         // Padrão que o próprio front do site usa: /evento?id={code}.
         link: ev.code ? `${SITE}/evento?id=${ev.code}` : SITE,
-        image: ev.image ? `${SITE}${ev.image}` : null,
+        // Só caminho absoluto: "@host" colado mudaria o domínio da imagem.
+        image: ev.image?.startsWith("/") ? `${SITE}${ev.image}` : null,
       });
       stored++;
     }
