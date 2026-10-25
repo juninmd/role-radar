@@ -12,6 +12,10 @@ jobs:
       packages: write
     uses: juninmd/base-actions/.github/workflows/reusable-docker-build.yml@main
     with:
-      image-name: ${{ github.repository }}
+      # pacote ghcr.io/juninmd/role-radar já existe sem vínculo com este
+      # repositório (repo: null), então o GITHUB_TOKEN não consegue publicar
+      # nele (permission_denied: read_package). Um nome novo cria um pacote
+      # automaticamente vinculado a este repo.
+      image-name: ${{ github.repository }}-app
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
