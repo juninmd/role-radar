@@ -1,11 +1,14 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { readCapped } from "./public-url.ts";
 
 // Duoticket é a bilheteria com maior presença em Franca (festas, sertanejo,
 // pagode, corridas). A home lista "Próximos Eventos" de todas as cidades.
 const BASE = "https://duoticket.com.br";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+// Home tem ~165 KB; o teto só corta resposta fora do normal.
+const MAX_PAGE = 5_000_000;
 // Teto de requisições de detalhe por execução (local/horário só existem lá).
 // Com o pool o custo é ~10 rodadas, então cabe mais fundo na lista da home.
 const MAX_DETAILS = 40;
@@ -25,7 +28,7 @@ const get = async (url: string) => {
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.text();
+  return readCapped(res, MAX_PAGE);
 };
 
 /**
@@ -106,7 +109,8 @@ async function detail(url: string) {
       description: cleanDesc ? cleanDesc.slice(0, 300) : null,
       price,
     };
-  } catch {
+  } catch (err) {
+    console.warn(`[duoticket] detalhe falhou: ${err}`);
     return {};
   }
 }

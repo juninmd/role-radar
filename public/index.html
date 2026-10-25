@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=Inter:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/controls.css">
   <link rel="stylesheet" href="/css/shell.css">
@@ -22,6 +21,7 @@
 <body>
   <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
   <a class="skip" href="#view">Pular para o conteúdo</a>
+  <noscript><p class="pad center">Este radar precisa de JavaScript para mostrar os rolês.</p></noscript>
 
   <header class="topbar glass">
     <div class="brand">
@@ -44,7 +44,8 @@
 
     <main class="main">
       <div class="tabs glass" role="tablist" aria-label="Visões" id="tabs"></div>
-      <section id="view" class="view" tabindex="-1" aria-live="polite"></section>
+      <p id="count" class="sr-only" role="status"></p>
+      <section id="view" class="view" role="tabpanel" tabindex="-1"></section>
     </main>
   </div>
 
@@ -53,7 +54,6 @@
   <aside class="drawer glass" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden></aside>
   <div class="toast glass" id="toast" role="status" hidden></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous" defer></script>
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>

@@ -176,6 +176,8 @@
 }
 .badge.hot {
   background: var(--hot);
+  /* Texto claro sobre o coral dava ~2,6:1; o escuro passa AA. */
+  color: #04140b;
 }
 .badge.free {
   background: var(--free);

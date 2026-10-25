@@ -1,16 +1,14 @@
 name: Build and Push Docker Image
+
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: juninmd/base-actions/docker-build-push@main
-        with:
-          image-name: ${{ github.repository }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+  docker:
+    uses: juninmd/base-actions/.github/workflows/reusable-docker-build.yml@b1a957daf1a734fdfe18b28f984e85b3c471f4d4 # main em 2026-10-25
+    with:
+      image-name: ${{ github.repository }}
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

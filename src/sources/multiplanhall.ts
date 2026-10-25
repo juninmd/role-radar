@@ -1,4 +1,5 @@
 import { upsertEvent } from "../db.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A página do Multiplan Hall (dentro do RibeirãoShopping) é um "hub" fixo que
 // nunca expira — lista os próximos shows confirmados numa lista simples, sem
@@ -21,7 +22,7 @@ export async function syncMultiplanHall(today: string): Promise<number> {
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const html = await res.text();
+    const html = await readCapped(res, MAX_SOURCE_BODY);
 
     for (const [, artista, show, dia, mes, ano] of html.matchAll(LINHA)) {
       const date = `${ano}-${mes}-${dia}`;

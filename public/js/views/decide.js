@@ -9,7 +9,7 @@ import {
   reducedMotion,
   store,
 } from "../util.js";
-import { pickWeighted, Q, score } from "./decide-score.js";
+import { pickWeighted, Q, score, spotsPool } from "./decide-score.js";
 import { card } from "./gallery.js";
 
 let answers = store.get("rr:decide", {
@@ -21,7 +21,7 @@ let answers = store.get("rr:decide", {
   spots: true,
 });
 
-function spin(ranked, stage, live) {
+function spin(ranked, stage, live, onDone) {
   const top = ranked.slice(0, 8);
   if (!top.length) return;
   const winner = pickWeighted(top);
@@ -69,6 +69,7 @@ function spin(ranked, stage, live) {
   const finish = () => {
     show(winner, true);
     live.textContent = `Sorteado: ${winner.it.title}`;
+    onDone();
   };
   if (reducedMotion()) return finish();
   let i = 0;
@@ -84,9 +85,18 @@ function spin(ranked, stage, live) {
 
 export function renderDecide(root, items) {
   const today = state.catalog.today;
+  // Lugares fixos seguem os mesmos filtros (cidade, busca, vibe) das outras listas.
   const pool =
     answers.spots && !state.filters.kinds.includes("lugar")
-      ? [...items, ...state.items.filter((it) => it.kind === "lugar")]
+      ? [
+          ...items,
+          ...spotsPool(
+            state.items.filter((it) => it.kind === "lugar"),
+            state.filters,
+            today,
+            state.favs,
+          ),
+        ]
       : items;
   const ranked = pool
     .map((it) => score(it, answers, today))
@@ -164,7 +174,9 @@ export function renderDecide(root, items) {
           h(
             "h3",
             {},
-            `${ranked.length} opç${ranked.length === 1 ? "ão" : "ões"} combinam`,
+            ranked.length === 1
+              ? "1 opção combina"
+              : `${ranked.length} opções combinam`,
           ),
           h(
             "button",
@@ -172,7 +184,14 @@ export function renderDecide(root, items) {
               type: "button",
               class: "btn primary big",
               disabled: !ranked.length,
-              onclick: () => spin(ranked, stage, live),
+              onclick: (e) => {
+                // Um sorteio por vez: um segundo clique sobrepõe as trocas de slot.
+                const btn = e.currentTarget;
+                btn.disabled = true;
+                spin(ranked, stage, live, () => {
+                  btn.disabled = !ranked.length;
+                });
+              },
             },
             "🎰 Sortear",
           ),

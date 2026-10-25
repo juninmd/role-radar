@@ -1,6 +1,7 @@
 import { inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // A Ingresso Digital traz teatro/musical/stand-up que não aparece nas outras
 // (Abba Experience, Grease, Starlight Concert). A busca é server-side e a
@@ -40,11 +41,14 @@ const decode = (s: string) =>
  * "14 de Ago às 19:00" → { date, time }. O site omite o ano: assume-se o
  * próximo em que a data ainda é futura.
  */
-function parseDate(
+export function parseDate(
   raw: string,
   today: string,
 ): { date: string; time: string | null } | null {
-  const m = raw.match(/(\d{1,2})\s*de\s*([A-Za-zç]{3})[^\d]*(\d{2}:\d{2})?/i);
+  // Hora em "19:00" ou "19h" / "19h30"; sem marcador, o número não é horário.
+  const m = raw.match(
+    /(\d{1,2})\s*de\s*([A-Za-zç]{3})[^\d]*(?:(\d{1,2})(?:h(\d{2})?|:(\d{2})))?/i,
+  );
   if (!m) return null;
   const mes = MESES[m[2].toLowerCase().slice(0, 3)];
   if (!mes) return null;
@@ -53,7 +57,7 @@ function parseDate(
   const cand = `${ano}-${mes}-${dia}`;
   return {
     date: cand >= today ? cand : `${ano + 1}-${mes}-${dia}`,
-    time: m[3] ?? null,
+    time: m[3] ? `${m[3].padStart(2, "0")}:${m[4] ?? m[5] ?? "00"}` : null,
   };
 }
 
@@ -69,7 +73,7 @@ export async function syncIngressoDigital(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
+      const html = await readCapped(res, MAX_SOURCE_BODY);
 
       for (const card of html.split('class="card-evento').slice(1)) {
         const title = decode(

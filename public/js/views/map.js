@@ -1,5 +1,6 @@
 import { openDetail } from "../detail.js";
-import { state } from "../state.js";
+import { ensureLeaflet } from "../leaflet-loader.js";
+import { emit, state } from "../state.js";
 import { CATS, fmtKm, h, humanDay } from "../util.js";
 
 // Tooltip/popup recebem nó DOM, nunca string: string vira innerHTML no Leaflet.
@@ -8,6 +9,9 @@ import { CATS, fmtKm, h, humanDay } from "../util.js";
 let map = null;
 let layer = null;
 let originLayer = null;
+// Enquadramento só muda quando o conjunto de pinos muda; senão cada favorito
+// desfazia o zoom e o pan que o usuário tinha feito.
+let fittedKey = null;
 const box = h("div", {
   class: "map",
   role: "region",
@@ -105,16 +109,25 @@ export function renderMap(root, items) {
 
   if (!window.L) {
     box.replaceChildren(
-      h(
-        "p",
-        { class: "muted center pad" },
-        "Não consegui carregar o mapa (CDN do Leaflet fora do ar). As outras visões seguem funcionando.",
-      ),
+      h("p", { class: "muted center pad" }, "Carregando o mapa…"),
+    );
+    ensureLeaflet().then(
+      () => emit(),
+      () =>
+        box.replaceChildren(
+          h(
+            "p",
+            { class: "muted center pad" },
+            "Não consegui carregar o mapa (CDN do Leaflet fora do ar). As outras visões seguem funcionando.",
+          ),
+        ),
     );
     return;
   }
   const L = window.L;
   if (!map) {
+    // Tira o aviso de carregamento (ou de erro) antes de o Leaflet montar ali.
+    box.replaceChildren();
     map = L.map(box, { zoomControl: true, attributionControl: true }).setView(
       [state.origin.lat, state.origin.lng],
       11,
@@ -168,12 +181,14 @@ export function renderMap(root, items) {
       .addTo(layer);
   }
   // O container acabou de voltar pro DOM: Leaflet precisa remedir.
+  const key = pts.map((it) => it.id).join("|");
   requestAnimationFrame(() => {
     map.invalidateSize();
-    if (pts.length)
+    if (pts.length && key !== fittedKey)
       map.fitBounds(
         L.latLngBounds(pts.map((it) => [it.pin.lat, it.pin.lng])).pad(0.15),
         { maxZoom: 14 },
       );
+    fittedKey = key;
   });
 }

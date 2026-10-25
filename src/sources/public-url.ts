@@ -1,3 +1,4 @@
+import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
 // O CronJob roda com hostNetwork (saída IPv6): link vindo de fora não pode
@@ -12,8 +13,32 @@ const PRIVATE_V4 = [
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // CGNAT / pods
 ];
 // NAT64 (64:ff9b::) e 6to4 (2002::) embutem um IPv4 qualquer, inclusive 127.x.
-const PRIVATE_V6 = /^(::1?$|f[cd]|fe[89ab]|::ffff:|64:ff9b:|2002:)/i;
+// "::" cobre loopback (::1), não especificado e IPv4-compatível (::/96): nenhum é público.
+const PRIVATE_V6 = /^(::|f[cd]|fe[89ab]|64:ff9b:|2002:)/i;
 const INTERNAL_NAME = /(^|\.)(localhost|local|internal|cluster\.local|svc)$/i;
+
+// Teto de leitura das respostas de fonte; a maior página medida tem ~1,1 MB.
+export const MAX_SOURCE_BODY = 5_000_000;
+
+export type HostResolver = (host: string) => Promise<string[]>;
+
+const lookupAll: HostResolver = async (host) =>
+  (await lookup(host, { all: true, verbatim: true })).map((a) => a.address);
+
+let resolveHost: HostResolver = lookupAll;
+
+/** Só teste: o preload troca o DNS por um stub, para nenhum teste sair na rede. */
+export function setHostResolver(fn: HostResolver): void {
+  resolveHost = fn;
+}
+
+/** true se o IP literal não cai em faixa privada; nome de DNS passa aqui sem checagem. */
+export function isPublicIp(host: string): boolean {
+  const v = isIP(host);
+  if (v === 4) return !PRIVATE_V4.some((r) => r.test(host));
+  if (v === 6) return !PRIVATE_V6.test(host);
+  return true;
+}
 
 /** true só para http(s) em host público — nome de DNS ou IP fora das faixas privadas. */
 export function isPublicUrl(raw: string): boolean {
@@ -28,13 +53,64 @@ export function isPublicUrl(raw: string): boolean {
   const host = u.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
   if (!host.includes(".") && !isIP(host)) return false;
   if (INTERNAL_NAME.test(host)) return false;
-  const v = isIP(host);
-  if (v === 4) return !PRIVATE_V4.some((r) => r.test(host));
-  if (v === 6) return !PRIVATE_V6.test(host);
-  return true;
+  return isPublicIp(host);
 }
 
-/** fetch que revalida cada salto de redirect com isPublicUrl (máx. 5). */
+/**
+ * Nome que resolve para qualquer IP privado é bloqueado antes de conectar:
+ * sem isso, um domínio público apontado para 10.x passa pela checagem de string.
+ */
+async function resolvePublic(url: string): Promise<string[]> {
+  const host = new URL(url).hostname.replace(/^\[|\]$/g, "");
+  if (isIP(host)) return [host];
+  const ips = await resolveHost(host);
+  if (!ips.length || ips.some((ip) => !isPublicIp(ip)))
+    throw new Error(`URL não pública: ${url}`);
+  return ips;
+}
+
+/** Tenta cada IP validado, em ordem: só falha de conexão passa para o próximo. */
+async function fetchPinned(
+  url: string,
+  ips: string[],
+  init: RequestInit,
+): Promise<Response> {
+  let lastErr: unknown;
+  for (const ip of ips) {
+    const pin = pinRequest(url, ip, init);
+    try {
+      return await fetch(pin.target, pin.init);
+    } catch (err) {
+      if (init.signal?.aborted) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Conecta no IP validado, não no nome: o fetch resolveria de novo e um DNS que
+ * muda de resposta (rebinding) levaria a um IP privado. Host e SNI seguem o nome.
+ */
+function pinRequest(
+  url: string,
+  ip: string,
+  init: RequestInit,
+): { target: URL; init: RequestInit } {
+  const name = new URL(url);
+  // Já é IP literal (o chamador escolheu Host/SNI, ex.: Google via IPv6): nada a fixar.
+  if (isIP(name.hostname.replace(/^\[|\]$/g, "")))
+    return { target: name, init };
+  const target = new URL(url);
+  target.hostname = isIP(ip) === 6 ? `[${ip}]` : ip;
+  const headers = new Headers(init.headers);
+  headers.set("host", name.host);
+  // "tls" é do runtime Bun (SNI/cert pelo nome), fora do tipo RequestInit.
+  const tls = { serverName: name.hostname };
+  return { target, init: { ...init, headers, tls } as RequestInit };
+}
+
+/** fetch que revalida cada salto de redirect (nome e IP resolvido) (máx. 5). */
 export async function fetchPublic(
   url: string,
   init: RequestInit,
@@ -42,7 +118,11 @@ export async function fetchPublic(
   let current = url;
   for (let hop = 0; hop <= 5; hop++) {
     if (!isPublicUrl(current)) throw new Error(`URL não pública: ${current}`);
-    const res = await fetch(current, { ...init, redirect: "manual" });
+    const ips = await resolvePublic(current);
+    const res = await fetchPinned(current, ips, {
+      ...init,
+      redirect: "manual",
+    });
     const next = res.headers.get("location");
     // redirect "manual" pedido pelo chamador: devolve o 3xx para ele decidir.
     if (init.redirect === "manual") return res;
@@ -50,4 +130,27 @@ export async function fetchPublic(
     current = new URL(next, current).toString();
   }
   throw new Error("redirects demais");
+}
+
+/** Lê no máximo `max` bytes do corpo: resposta de terceiro não entra inteira na memória. */
+export async function readBytesCapped(
+  res: Response,
+  max: number,
+): Promise<Uint8Array<ArrayBuffer>> {
+  if (!res.body) return new Uint8Array();
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (size < max) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    size += value.byteLength;
+  }
+  await reader.cancel().catch(() => {});
+  return new Uint8Array(Buffer.concat(chunks).subarray(0, max));
+}
+
+export async function readCapped(res: Response, max: number): Promise<string> {
+  return new TextDecoder().decode(await readBytesCapped(res, max));
 }

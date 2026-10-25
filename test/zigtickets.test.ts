@@ -108,3 +108,24 @@ test("syncZigTickets extrai eventos da região de __NEXT_DATA__ descartando onli
     "https://zigtickets-assets.s3.amazonaws.com/franca.png",
   );
 });
+
+test("home gigante da Zig Tickets não é lida até o fim", async () => {
+  // Corpo de 8 MB em chunks de 64 KB, contando quantos foram lidos.
+  const CHUNKS = 128;
+  const head = new TextEncoder().encode("<html>");
+  const pad = new Uint8Array(64 * 1024).fill(0x20);
+  let pulled = 0;
+  stubFetch(async () => {
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (sent++ >= CHUNKS) return ctrl.close();
+        pulled++;
+        ctrl.enqueue(sent === 1 ? Buffer.concat([head, pad]) : pad);
+      },
+    });
+    return new Response(body);
+  });
+  await syncZigTickets(TODAY);
+  expect(pulled).toBeLessThan(CHUNKS);
+});

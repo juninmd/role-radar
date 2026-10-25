@@ -1,10 +1,13 @@
 import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { readCapped } from "./public-url.ts";
 import { pool } from "../pool.ts";
 
 // Derivado de SEARCH_CITIES: a lista de cidades vive num lugar só, então
 // incluir uma cidade nova na região passa a valer aqui automaticamente.
 const CITY_SLUGS = SEARCH_CITIES.map(citySlug);
+// Página de busca tem ~270 KB; o teto só corta resposta fora do normal.
+const MAX_HTML = 5_000_000;
 // Medido em 2026-07-26: as páginas 2-4 de franca-sp devolvem 24 eventos cada,
 // todos de FORA da região (o Sympla completa a lista com eventos de outras
 // cidades). Só Franca e Ribeirão têm volume pra justificar a página 2; nas
@@ -52,7 +55,7 @@ export async function syncSympla(today: string): Promise<number> {
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = (await res.text()).replaceAll('\\"', '"');
+      const html = (await readCapped(res, MAX_HTML)).replaceAll('\\"', '"');
       const chunks = html.match(/\{"end_date":.*?"event_type":"[A-Z]+"\}/g);
       for (const chunk of chunks ?? []) {
         let ev: SymplaEvent;
@@ -68,6 +71,8 @@ export async function syncSympla(today: string): Promise<number> {
         if (/\bonline\b/i.test(ev.location?.name ?? "")) continue;
         // start_date vem em UTC; evento local = UTC-3.
         const local = new Date(ev.start_date);
+        // Data que não existe não pode lançar em toISOString e derrubar a página.
+        if (Number.isNaN(local.getTime())) continue;
         local.setUTCHours(local.getUTCHours() - 3);
         const date = local.toISOString().slice(0, 10);
         const time = local.toISOString().slice(11, 16);

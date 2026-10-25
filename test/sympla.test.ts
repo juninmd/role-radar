@@ -58,3 +58,39 @@ test("festival que começou ontem e termina amanhã entra; o que já acabou não
   // Fim antes do início não descarta um evento futuro.
   expect(eventsOn("2026-09-29").map((e) => e.title)).toEqual(["fim-invertido"]);
 });
+
+// Uma data impossível num card não pode derrubar os cards seguintes da página.
+test("start_date inválido descarta só o próprio evento", async () => {
+  stubFetch(async (url) =>
+    url.includes("franca-sp") && !url.includes("page")
+      ? listing([
+          ev("quebrado", "2026-13-45T20:00:00+00:00", null),
+          ev("valido", "2026-10-30T20:00:00+00:00", null),
+        ])
+      : new Response("", { status: 404 }),
+  );
+  await syncSympla(TODAY);
+  expect(eventsOn("2026-10-30").map((e) => e.title)).toContain("valido");
+});
+
+test("página gigante da Sympla não é lida até o fim, em nenhuma cidade", async () => {
+  // Cada resposta é um corpo de 8 MB em chunks de 64 KB; conta leituras por resposta.
+  const CHUNKS = 128;
+  const pulls: number[] = [];
+  const pad = new Uint8Array(64 * 1024).fill(0x20);
+  stubFetch(async () => {
+    let sent = 0;
+    const n = pulls.push(0) - 1;
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (sent++ >= CHUNKS) return ctrl.close();
+        pulls[n]++;
+        ctrl.enqueue(pad);
+      },
+    });
+    return new Response(body);
+  });
+  await syncSympla(TODAY);
+  expect(pulls.length).toBeGreaterThan(0);
+  for (const p of pulls) expect(p).toBeLessThan(CHUNKS);
+});
