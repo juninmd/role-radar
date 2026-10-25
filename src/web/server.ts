@@ -1,6 +1,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { buildCatalog, type Catalog } from "./catalog.ts";
+import { buildIcs } from "./ics.ts";
 
 const TZ = "America/Sao_Paulo";
 const PUBLIC_DIR = join(import.meta.dir, "..", "..", "public");
@@ -71,6 +72,16 @@ export function createHandler(
       return Response.json({
         ok: true,
         events: current().catalog.events.length,
+      });
+    }
+    if (pathname === "/agenda.ics") {
+      return new Response(buildIcs(current().catalog.events), {
+        headers: {
+          ...SECURITY_HEADERS,
+          "content-type": "text/calendar;charset=utf-8",
+          "content-disposition": 'attachment; filename="role-radar.ics"',
+          "cache-control": "public, max-age=300",
+        },
       });
     }
     if (pathname === "/api/catalog") {
