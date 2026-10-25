@@ -115,10 +115,10 @@ export function eventLines(ev: Event): string {
   if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
 
   if (ev.description) {
-    const descClean = mdSafe(ev.description.trim().slice(0, 280));
-    lines.push(
-      `\n> 💡 ${descClean}${ev.description.length > 280 ? "..." : ""}`,
-    );
+    // Corte por ponto de código: slice() partia emoji e deixava surrogate solto.
+    const chars = Array.from(ev.description.trim());
+    const descClean = mdSafe(chars.slice(0, 280).join(""));
+    lines.push(`\n> 💡 ${descClean}${chars.length > 280 ? "..." : ""}`);
   }
 
   // Se não houver botões interativos (ex.: link inválido ou inexistente), mantém link no texto
