@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { eventsOn } from "../src/db.ts";
-import { syncQ2Ingressos } from "../src/sources/q2ingressos.ts";
 import { syncMegabilheteria } from "../src/sources/megabilheteria.ts";
+import { syncQ2Ingressos } from "../src/sources/q2ingressos.ts";
 import { scrapeTicketFacil } from "../src/sources/ticketfacil.ts";
 import { json, stubFetch } from "./fetch.ts";
 

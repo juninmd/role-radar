@@ -16,8 +16,8 @@ import { syncMinhaEntrada } from "../src/sources/minhaentrada.ts";
 import { syncMultiplanHall } from "../src/sources/multiplanhall.ts";
 import { syncOticket } from "../src/sources/oticket.ts";
 import { syncSesc } from "../src/sources/sesc.ts";
-import { syncTicket360 } from "../src/sources/ticket360.ts";
 import { syncTheatroPedro2 } from "../src/sources/theatropedro2.ts";
+import { syncTicket360 } from "../src/sources/ticket360.ts";
 import { syncTurismo } from "../src/sources/turismo.ts";
 import { syncUhuu } from "../src/sources/uhuu.ts";
 import { stubFetch } from "./fetch.ts";
@@ -50,27 +50,25 @@ const SOURCES: [string, () => Promise<unknown>][] = [
   ["uhuu", () => syncUhuu(TODAY)],
 ];
 
-test.each(SOURCES)(
-  "%s não lê resposta gigante até o fim",
-  async (_name, run) => {
-    const pad = new Uint8Array(64 * 1024).fill(0x20); // espaço é whitespace em JSON e HTML
-    const pulls: number[] = [];
-    stubFetch(async () => {
-      if (pulls.length >= MAX_REQUESTS)
-        return new Response("", { status: 404 });
-      let sent = 0;
-      const n = pulls.push(0) - 1;
-      const body = new ReadableStream<Uint8Array>({
-        pull(ctrl) {
-          if (sent++ >= CHUNKS) return ctrl.close();
-          pulls[n]++;
-          ctrl.enqueue(pad);
-        },
-      });
-      return new Response(body);
+test.each(
+  SOURCES,
+)("%s não lê resposta gigante até o fim", async (_name, run) => {
+  const pad = new Uint8Array(64 * 1024).fill(0x20); // espaço é whitespace em JSON e HTML
+  const pulls: number[] = [];
+  stubFetch(async () => {
+    if (pulls.length >= MAX_REQUESTS) return new Response("", { status: 404 });
+    let sent = 0;
+    const n = pulls.push(0) - 1;
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (sent++ >= CHUNKS) return ctrl.close();
+        pulls[n]++;
+        ctrl.enqueue(pad);
+      },
     });
-    await run().catch(() => {});
-    expect(pulls.length).toBeGreaterThan(0);
-    for (const p of pulls) expect(p).toBeLessThan(CHUNKS);
-  },
-);
+    return new Response(body);
+  });
+  await run().catch(() => {});
+  expect(pulls.length).toBeGreaterThan(0);
+  for (const p of pulls) expect(p).toBeLessThan(CHUNKS);
+});
