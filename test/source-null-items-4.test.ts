@@ -38,7 +38,12 @@ test("zigtickets: item nulo não derruba os eventos seguintes", async () => {
         events: {
           events: [
             null,
-            { name: "Show Zig Nulo", start_date: "2026-11-29T20:00:00", is_online: false, event_location: { city: "Franca" } },
+            {
+              name: "Show Zig Nulo",
+              start_date: "2026-11-29T20:00:00",
+              is_online: false,
+              event_location: { city: "Franca" },
+            },
           ],
         },
       },

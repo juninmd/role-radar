@@ -1,7 +1,7 @@
 import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
-import { readCapped } from "./public-url.ts";
 import { pool } from "../pool.ts";
+import { readCapped } from "./public-url.ts";
 
 // Derivado de SEARCH_CITIES: a lista de cidades vive num lugar só, então
 // incluir uma cidade nova na região passa a valer aqui automaticamente.

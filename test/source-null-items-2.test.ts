@@ -9,7 +9,11 @@ test("blueticket: item nulo não derruba os eventos seguintes", async () => {
   stubFetch(async () =>
     json([
       null,
-      { name: "Show Blue Nulo", date: "2026-11-23T20:00:00", cityName: "Franca" },
+      {
+        name: "Show Blue Nulo",
+        date: "2026-11-23T20:00:00",
+        cityName: "Franca",
+      },
     ]),
   );
   expect(await syncBlueticket("2026-10-25")).toBe(1);
