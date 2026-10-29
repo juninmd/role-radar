@@ -215,5 +215,11 @@ Regras do digest:
       name: "24h SP Franca",
       url: "https://franca.24hsp.com.br/feed/",
     },
+    {
+      // Notícia regional de Ituverava (RSS ativo, ~50 itens); evento real
+      // aparece no meio — passa pelo extractEvents() como os outros jornais.
+      name: "Tribuna de Ituverava",
+      url: "https://www.tribunadeituverava.com.br/rss.xml",
+    },
   ],
 };

@@ -33,6 +33,9 @@ prioridade (`cityRank` em `src/config/region.ts`).
 | Prefeitura (turismo) | HTML da agenda oficial | |
 | Franca Basquete | tabela de jogos | só mando de quadra; fora de temporada devolve 0 |
 | Franca Shopping | HTML de eventos | temporadas longas: circo, parque, exposição |
+| SESI-SP Cultura | `/eventos?codigoUnidade=<uuid>` + detalhe | Teatros do SESI de Franca, Ribeirão, Barretos e Sertãozinho; o detalhe lista a turnê toda, vale só o painel da unidade |
+| Clube do Ingresso | home + `/evento/<slug>` | card sem cidade: abre só quem cita cidade da região e confirma pelo endereço |
+| CorridasBR | `/sp/calendario.asp` (latin-1) | corridas de rua do estado; data sem ano; largada no detalhe |
 
 ### Armadilhas de cada API integrada
 
@@ -89,8 +92,12 @@ Ticket360 (`/eventos/pesquisar?s=`), Ticket Fácil (`/search.html?q=`),
 Bilheteria Digital (`/busca/franca/as/1`), Uhuu (`/busca?termo=`),
 Bilheteria Express (`/agendas/`), BaladApp
 (`/?search=`), Ingresso Nacional (`/api/paginas/eventos.php`), Venda Ingresso,
-Clube do Ingresso, Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
+Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
 TicketMais, Alô Ingressos, Eventbrite.
+
+> **2026-10-29:** Clube do Ingresso saiu desta lista — tem evento de Franca
+> (Teatro Municipal) e de Ribeirão. Ticket360 passou a responder 404 na busca.
+> Ver `docs/pesquisa-2026-10-29.md`.
 
 ## Sem resposta
 
