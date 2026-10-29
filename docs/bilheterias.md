@@ -33,6 +33,9 @@ prioridade (`cityRank` em `src/config/region.ts`).
 | Prefeitura (turismo) | HTML da agenda oficial | |
 | Franca Basquete | tabela de jogos | só mando de quadra; fora de temporada devolve 0 |
 | Franca Shopping | HTML de eventos | temporadas longas: circo, parque, exposição |
+| SESI-SP Cultura | `/eventos?codigoUnidade=<uuid>` + detalhe | Teatros do SESI de Franca, Ribeirão, Barretos e Sertãozinho; o detalhe lista a turnê toda, vale só o painel da unidade |
+| Clube do Ingresso | home + `/evento/<slug>` | card sem cidade: abre só quem cita cidade da região e confirma pelo endereço |
+| CorridasBR | `/sp/calendario.asp` (latin-1) | corridas de rua do estado; data sem ano; largada no detalhe |
 
 ### Armadilhas de cada API integrada
 

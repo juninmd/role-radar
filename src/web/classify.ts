@@ -24,7 +24,7 @@ const RULES: [Category, RegExp][] = [
   ],
   [
     "esporte",
-    /basquete|corrida|\brun\b|futebol|campeonato|volei|jogo|nbb|sesi franca|pedal|trilha|maratona/,
+    /basquete|corrida|\bcorre\b|\brun\b|futebol|campeonato|volei|jogo|nbb|sesi franca (basquete|x\b)|pedal|trilha|maratona/,
   ],
   [
     "teatro",

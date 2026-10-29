@@ -24,6 +24,8 @@ import { syncBilheteriaDigital } from "./sources/bilheteriadigital.ts";
 import { syncBilheteriaExpress } from "./sources/bilheteriaexpress.ts";
 import { syncBlueticket } from "./sources/blueticket.ts";
 import { nowPlaying } from "./sources/cinema.ts";
+import { syncClubeDoIngresso } from "./sources/clubedoingresso.ts";
+import { syncCorridasBr } from "./sources/corridasbr.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
@@ -38,6 +40,7 @@ import { fetchDetails } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
 import { syncQ2Ingressos } from "./sources/q2ingressos.ts";
 import { syncSesc } from "./sources/sesc.ts";
+import { syncSesiSp } from "./sources/sesisp.ts";
 import { getDailySpot } from "./sources/spots.ts";
 import { syncSympla } from "./sources/sympla.ts";
 import { syncTheatroPedro2 } from "./sources/theatropedro2.ts";
@@ -131,7 +134,7 @@ const EMOJI: Record<Category, string> = {
   teatro: "🎭",
   comedia: "😂",
   infantil: "🧸",
-  esporte: "🏀",
+  esporte: "🏅",
   festa: "🪩",
   gastronomia: "🍻",
   cultura: "🖼️",
@@ -303,6 +306,9 @@ export async function digest(): Promise<void> {
     syncGuicheWeb(today),
     syncZigTickets(today),
     syncArticket(today),
+    syncSesiSp(today),
+    syncClubeDoIngresso(today),
+    syncCorridasBr(today),
   ]);
   // Fonte que quebra não pode sumir em silêncio: cada falha vira log e tudo falhando sai com erro.
   if (falhasDaRodada(resultados) === resultados.length) process.exitCode = 1;
