@@ -3,6 +3,7 @@ import { topic } from "./config/topic.ts";
 import {
   blockSent,
   type Event,
+  enrichEvent,
   eventsBetween,
   eventsOn,
   markBlockSent,
@@ -11,6 +12,8 @@ import {
   pruneDigestRunsBefore,
   pruneDisallowedCities,
   pruneEventsBefore,
+  pruneItemsBefore,
+  pruneNonLeisure,
   pruneOnlineEvents,
   unannouncedFutureEvents,
 } from "./db.ts";
@@ -31,7 +34,7 @@ import { syncIngressoNacional } from "./sources/ingressonacional.ts";
 import { syncMegabilheteria } from "./sources/megabilheteria.ts";
 import { syncMinhaEntrada } from "./sources/minhaentrada.ts";
 import { syncMultiplanHall } from "./sources/multiplanhall.ts";
-import { fetchOgImages } from "./sources/ogimage.ts";
+import { fetchDetails } from "./sources/ogimage.ts";
 import { syncOticket } from "./sources/oticket.ts";
 import { syncQ2Ingressos } from "./sources/q2ingressos.ts";
 import { syncSesc } from "./sources/sesc.ts";
@@ -50,6 +53,7 @@ import {
   type TelegramButton,
 } from "./telegram.ts";
 import { safeUrl, spotPlaces } from "./web/catalog.ts";
+import { type Category, categorize, parsePrice } from "./web/classify.ts";
 import { geocodePlaces } from "./web/geocode.ts";
 import { saveSnapshot } from "./web/store.ts";
 
@@ -121,6 +125,68 @@ export function movieBits(
     .join(" · ");
 }
 
+const EMOJI: Record<Category, string> = {
+  cinema: "🎬",
+  show: "🎤",
+  teatro: "🎭",
+  comedia: "😂",
+  infantil: "🧸",
+  esporte: "🏀",
+  festa: "🪩",
+  gastronomia: "🍻",
+  cultura: "🖼️",
+  outros: "🎟️",
+};
+
+const STATUS_LINHA: Record<string, string> = {
+  esgotado: "🚫 *ESGOTADO*",
+  cancelado: "❌ *CANCELADO*",
+  adiado: "⏸️ *ADIADO* — confira a nova data",
+};
+
+/** "hoje", "amanhã", "sáb., 01/11 (em 3 dias)" — o dia sozinho obrigava a fazer conta. */
+export function quando(iso: string, today?: string): string {
+  if (!today) return humanDay(iso);
+  if (iso === today) return `hoje (${humanDay(iso)})`;
+  if (iso === addDays(today, 1)) return `amanhã (${humanDay(iso)})`;
+  const dias = Math.round(
+    (Date.parse(`${iso}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) /
+      86_400_000,
+  );
+  return dias > 1 && dias <= 30
+    ? `${humanDay(iso)} (em ${dias} dias)`
+    : humanDay(iso);
+}
+
+/** Hora local "20261030T210000" (o fuso vai no ctz); sem hora, só o dia. */
+const gcalStamp = (date: string, time: string | null, plusH = 0) => {
+  if (!time) return date.replace(/-/g, "");
+  const d = new Date(`${date}T${time}:00Z`);
+  d.setUTCHours(d.getUTCHours() + plusH);
+  return `${d.toISOString().slice(0, 19).replace(/[-:]/g, "")}`;
+};
+
+/**
+ * Link "adicionar ao Google Agenda" (action=TEMPLATE): abre o evento já
+ * preenchido. Sem horário vira evento de dia inteiro; com horário, 3h de duração.
+ */
+export function calendarUrl(ev: Event): string {
+  const ini = gcalStamp(ev.date, ev.time);
+  const fim = ev.time
+    ? gcalStamp(ev.date, ev.time, 3)
+    : addDays(ev.end_date ?? ev.date, 1).replace(/-/g, "");
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: ev.title,
+    dates: `${ini}/${fim}`,
+    ctz: TZ,
+  });
+  const local = [ev.venue, ev.city].filter(Boolean).join(", ");
+  if (local) q.set("location", local);
+  if (ev.link) q.set("details", ev.link);
+  return `https://calendar.google.com/calendar/render?${q}`;
+}
+
 export function eventButtons(ev: Event): TelegramButton[][] {
   const row: TelegramButton[] = [];
   if (ev.link && /^https?:\/\//i.test(ev.link)) {
@@ -135,14 +201,22 @@ export function eventButtons(ev: Event): TelegramButton[][] {
   }
   const rows: TelegramButton[][] = [];
   if (row.length) rows.push(row);
+  const extra: TelegramButton[] = [];
   if (ev.trailer && /^https?:\/\//i.test(ev.trailer)) {
-    rows.push([{ text: "▶️ Ver Trailer", url: ev.trailer }]);
+    extra.push({ text: "▶️ Ver Trailer", url: ev.trailer });
   }
+  if (ev.status !== "cancelado")
+    extra.push({ text: "📅 Salvar na agenda", url: calendarUrl(ev) });
+  // Linha vazia no inline_keyboard faz o Telegram recusar a mensagem.
+  if (extra.length) rows.push(extra);
   return rows;
 }
 
-export function eventLines(ev: Event): string {
-  const lines = [`🎟️ *${mdSafe(ev.title)}*`];
+export function eventLines(ev: Event, today?: string): string {
+  const emoji = EMOJI[categorize(ev.title, ev.venue)];
+  const lines = [`${emoji} *${mdSafe(ev.title)}*`];
+  const status = ev.status ? STATUS_LINHA[ev.status] : null;
+  if (status) lines.push(status);
   const cidade = ev.city ? `, ${mdSafe(ev.city)}` : "";
   const where = ev.venue
     ? `${mdSafe(ev.venue)}${cidade}`
@@ -152,15 +226,19 @@ export function eventLines(ev: Event): string {
   if (where) lines.push(`📍 ${where}`);
   const dias = ev.end_date
     ? `${humanDay(ev.date)} a ${humanDay(ev.end_date)}`
-    : humanDay(ev.date);
+    : quando(ev.date, today);
   lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}` : ""}`);
-  if (ev.price) lines.push(`💰 ${mdSafe(ev.price)}`);
+  if (ev.price)
+    lines.push(
+      `${parsePrice(ev.price) === 0 ? "🆓" : "💰"} ${mdSafe(ev.price)}`,
+    );
 
   if (ev.description) {
     // Corte por ponto de código: slice() partia emoji e deixava surrogate solto.
     const chars = Array.from(ev.description.trim());
     const descClean = mdSafe(chars.slice(0, 280).join(""));
-    lines.push(`\n> 💡 ${descClean}${chars.length > 280 ? "..." : ""}`);
+    // Markdown legado não tem citação: "> " saía literal no card.
+    lines.push(`\n💡 ${descClean}${chars.length > 280 ? "..." : ""}`);
   }
 
   // Se não houver botões interativos (ex.: link inválido ou inexistente), mantém link no texto
@@ -230,9 +308,11 @@ export async function digest(): Promise<void> {
   if (falhasDaRodada(resultados) === resultados.length) process.exitCode = 1;
   pruneEventsBefore(today);
   pruneDigestRunsBefore(today);
+  pruneItemsBefore(new Date(Date.now() - 60 * 86_400_000).toISOString());
   // Foco exclusivo em Franca e microregião imediata.
   pruneDisallowedCities(REGION_CITIES.map(norm));
   pruneOnlineEvents();
+  pruneNonLeisure();
 
   // O digest sai em dois blocos: tudo de Franca primeiro, depois as outras
   // cidades. Misturar fazia rolê de Ribeirão parecer coisa daqui.
@@ -245,15 +325,28 @@ export async function digest(): Promise<void> {
   const novosFranca = novos.filter((ev) => cityRank(ev.city) === 0);
   const novosFora = novos.filter((ev) => cityRank(ev.city) !== 0);
 
-  // og:image em lote limitado; o envio é que precisa ser serial (Telegram).
-  const capa = await fetchOgImages([...todays, ...novos]);
+  // Página de cada evento em lote limitado (capa, preço, horário, esgotado);
+  // o envio é que precisa ser serial (Telegram).
+  const detalhes = await fetchDetails([...todays, ...novos]);
+  const capa = new Map<string, string | null>();
+  for (const ev of [...todays, ...novos]) {
+    const d = detalhes.get(ev.id);
+    if (!d) continue;
+    capa.set(ev.id, d.image);
+    if (!d.price && !d.time && !d.description && !d.status) continue;
+    enrichEvent(ev.id, d);
+    ev.price ??= d.price;
+    ev.time ??= d.time;
+    ev.description ??= d.description;
+    ev.status = d.status;
+  }
 
   // Só o que o Telegram confirmou vira "postado", e na hora: o resto tenta de
   // novo numa próxima rodada do dia.
   let posted = 0;
   const postaDia = async (lista: Event[], selo: string) => {
     for (const ev of lista) {
-      const body = `${selo}\n\n${eventLines(ev)}`;
+      const body = `${selo}\n\n${eventLines(ev, today)}`;
       const image = capa.get(ev.id);
       const buttons = eventButtons(ev);
       const ok = image
@@ -267,7 +360,7 @@ export async function digest(): Promise<void> {
 
   const postaLancamento = async (lista: Event[], selo: string) => {
     for (const ev of lista) {
-      const body = `${selo}\n\n${eventLines(ev)}`;
+      const body = `${selo}\n\n${eventLines(ev, today)}`;
       const image = capa.get(ev.id);
       const buttons = eventButtons(ev);
       const ok = image

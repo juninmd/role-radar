@@ -9,6 +9,10 @@ mkdirSync(dirname(env.dbPath), { recursive: true });
 
 export const db = new Database(env.dbPath, { create: true });
 db.exec("PRAGMA journal_mode = WAL;");
+// Dashboard (serve) e CronJob abrem o mesmo arquivo: escrita concorrente espera
+// em vez de estourar SQLITE_BUSY. Em WAL, NORMAL não perde commit em crash do app.
+db.exec("PRAGMA busy_timeout = 5000;");
+db.exec("PRAGMA synchronous = NORMAL;");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS items (
@@ -64,6 +68,7 @@ runMigrations([
   "ALTER TABLE events ADD COLUMN posted_launch INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN description TEXT",
   "ALTER TABLE items ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE events ADD COLUMN status TEXT",
 ]);
 
 // Item cuja resposta da IA não parseia de novo e de novo sai da fila; uma
@@ -139,6 +144,8 @@ export interface Event {
   trailer: string | null;
   /** Último dia de evento de vários dias (festival, feira); null = um dia só. */
   end_date: string | null;
+  /** "esgotado", "cancelado", "adiado" — lido da página do evento; null = normal. */
+  status?: string | null;
   posted_today: number;
   posted_launch: number;
   created_at: string;
@@ -284,6 +291,38 @@ function rekeyEvents(): void {
 
 rekeyEvents();
 
+/**
+ * Completa o evento com o que a página de detalhe trouxe. Preço, horário e
+ * descrição só preenchem o que está vazio (o catálogo da fonte manda); o
+ * status sempre vale, porque é o que muda: o show esgota, o evento é adiado.
+ */
+export function enrichEvent(
+  id: string,
+  extra: {
+    price?: string | null;
+    time?: string | null;
+    description?: string | null;
+    status?: string | null;
+  },
+): void {
+  db.prepare(
+    `UPDATE events SET
+       price = COALESCE(price, ?2),
+       time = COALESCE(time, ?3),
+       description = COALESCE(description, ?4),
+       status = ?5
+     WHERE id = ?1`,
+  ).run(
+    id,
+    semVazio(extra.price),
+    extra.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(extra.time)
+      ? extra.time
+      : null,
+    semVazio(extra.description),
+    semVazio(extra.status),
+  );
+}
+
 export function eventsOn(date: string): Event[] {
   return db
     .query<Event, [string]>(
@@ -375,6 +414,29 @@ export function pruneOnlineEvents(): void {
   db.prepare("DELETE FROM events WHERE venue LIKE '%online%'").run();
 }
 
+// Agenda acadêmica/profissional que as bilheterias (sobretudo o Sympla)
+// misturam com show: medido em 2026-10-29, 17 de 281 eventos (PAMV, "Visita
+// Técnica", "Semana Jurídica", "Escola Bíblica"). Palestra e oficina ficam —
+// são programação cultural de Sesc e afins.
+const NAO_E_ROLE =
+  /\b(visita tecnica|escola biblica|semana (juridica|academica)|jornada de [a-z]+ia\b|pamv|congresso|simposio|capacitacao|pos.?graduacao|curso de|mentoria|webinar)\b/;
+
+/** Remove o que é curso, congresso ou evento acadêmico, não rolê. */
+export function pruneNonLeisure(): void {
+  const rows = db
+    .query<{ id: string; title: string }, []>("SELECT id, title FROM events")
+    .all();
+  const del = db.prepare<unknown, [string]>("DELETE FROM events WHERE id = ?");
+  db.transaction(() => {
+    for (const r of rows) {
+      const t = norm(r.title);
+      // "Festa da Pós-Graduação" é festa: o nome do rolê vence o do curso.
+      if (NAO_E_ROLE.test(t) && !/\b(festa|show|baile|balada)\b/.test(t))
+        del.run(r.id);
+    }
+  })();
+}
+
 /**
  * Bloco do digest (cinema, dica, agenda) já entregue no dia: um retry do
  * CronJob ou disparo manual não repete no grupo o que já saiu.
@@ -395,6 +457,17 @@ export function markBlockSent(date: string, block: string): void {
 
 export function pruneDigestRunsBefore(date: string): void {
   db.prepare("DELETE FROM digest_runs WHERE date < ?").run(date);
+}
+
+/**
+ * Item já processado sai depois de um tempo: a tabela só crescia. O id
+ * continua barrando reentrada enquanto o feed ainda o lista; passado o prazo,
+ * a notícia não está mais em nenhum RSS.
+ */
+export function pruneItemsBefore(iso: string): void {
+  db.prepare("DELETE FROM items WHERE digested = 1 AND fetched_at < ?").run(
+    iso,
+  );
 }
 
 export function pendingItems(limit: number): Item[] {

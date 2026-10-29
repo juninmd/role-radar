@@ -1,6 +1,7 @@
 import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { diaFinal } from "./comum.ts";
 import { readCapped } from "./public-url.ts";
 
 // Derivado de SEARCH_CITIES: a lista de cidades vive num lugar só, então
@@ -35,13 +36,13 @@ interface SymplaEvent {
   organizer?: { name?: string };
 }
 
-/** Dia local (UTC-3) de um timestamp UTC do Sympla. */
-const localDay = (utc: string): string | null => {
+/** Data/hora local (UTC-3) de um timestamp UTC do Sympla. */
+const localIso = (utc: string): string | null => {
   const d = new Date(utc);
   // Data inválida faria toISOString lançar e derrubar a página inteira.
   if (Number.isNaN(d.getTime())) return null;
   d.setUTCHours(d.getUTCHours() - 3);
-  return d.toISOString().slice(0, 10);
+  return d.toISOString();
 };
 
 /** Scrape Sympla city listings (RSC payload) into structured events. */
@@ -76,9 +77,12 @@ export async function syncSympla(today: string): Promise<number> {
         local.setUTCHours(local.getUTCHours() - 3);
         const date = local.toISOString().slice(0, 10);
         const time = local.toISOString().slice(11, 16);
-        const day = ev.end_date ? localDay(ev.end_date) : null;
-        // Fim antes do início é lixo da fonte: evento de um dia.
-        const endDate = day && day > date ? day : null;
+        // Fim antes do início é lixo da fonte, e a madrugada seguinte é a
+        // mesma noite: nos dois casos, evento de um dia.
+        const endDate = diaFinal(
+          local.toISOString(),
+          ev.end_date ? localIso(ev.end_date) : null,
+        );
         // Festival que começou ontem e vai até domingo ainda é rolê.
         if ((endDate ?? date) < today) continue;
         const descParts = [

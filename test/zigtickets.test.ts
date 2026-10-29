@@ -97,7 +97,8 @@ test("syncZigTickets extrai eventos da região de __NEXT_DATA__ descartando onli
   expect(rpEvs[0].city).toBe("Ribeirão Preto");
   expect(rpEvs[0].venue).toBe("Art House");
   expect(rpEvs[0].time).toBe("22:00");
-  expect(rpEvs[0].end_date).toBe("2026-10-17");
+  // 22h até 05h do dia seguinte é a mesma noite: evento de um dia.
+  expect(rpEvs[0].end_date).toBeNull();
   expect(rpEvs[0].link).toBe("https://zig.tickets/eventos/baile-do-art");
 
   const francaEvs = eventsOn("2026-10-20");

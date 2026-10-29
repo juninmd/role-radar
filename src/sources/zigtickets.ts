@@ -1,5 +1,6 @@
 import { inRegion } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
+import { diaFinal } from "./comum.ts";
 import { readCapped } from "./public-url.ts";
 
 // Zig.tickets (antiga Superticket): forte presença em pubs, baladas e shows (Old Barn, Art House, etc.).
@@ -62,8 +63,7 @@ export async function syncZigTickets(today: string): Promise<number> {
       if (!inRegion(city)) continue;
 
       const date = ev.start_date.slice(0, 10);
-      const end = ev.end_date ? ev.end_date.slice(0, 10) : null;
-      const validEnd = end && end > date ? end : null;
+      const validEnd = diaFinal(ev.start_date, ev.end_date);
       if ((validEnd ?? date) < today) continue;
 
       const time = ev.start_date.slice(11, 16);

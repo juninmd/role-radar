@@ -1,6 +1,7 @@
 import { SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
+import { diaFinal } from "./comum.ts";
 import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Articket: plataforma independente de ingressos com foco em rock, shows alternativos
@@ -55,8 +56,10 @@ export async function syncArticket(today: string): Promise<number> {
 
         const start = saoPauloIso(ev.start_date);
         const date = start.slice(0, 10);
-        const end = ev.end_date ? saoPauloIso(ev.end_date).slice(0, 10) : null;
-        const validEnd = end && end > date ? end : null;
+        const validEnd = diaFinal(
+          start,
+          ev.end_date ? saoPauloIso(ev.end_date) : null,
+        );
         if ((validEnd ?? date) < today) continue;
 
         const time = start.slice(11, 16);
