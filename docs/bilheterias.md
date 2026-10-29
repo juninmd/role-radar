@@ -89,8 +89,12 @@ Ticket360 (`/eventos/pesquisar?s=`), Ticket Fácil (`/search.html?q=`),
 Bilheteria Digital (`/busca/franca/as/1`), Uhuu (`/busca?termo=`),
 Bilheteria Express (`/agendas/`), BaladApp
 (`/?search=`), Ingresso Nacional (`/api/paginas/eventos.php`), Venda Ingresso,
-Clube do Ingresso, Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
+Meu Bilhete, Total Acesso, Ingresse, Quero Ingresso,
 TicketMais, Alô Ingressos, Eventbrite.
+
+> **2026-10-29:** Clube do Ingresso saiu desta lista — tem evento de Franca
+> (Teatro Municipal) e de Ribeirão. Ticket360 passou a responder 404 na busca.
+> Ver `docs/pesquisa-2026-10-29.md`.
 
 ## Sem resposta
 
