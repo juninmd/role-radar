@@ -82,6 +82,7 @@ test("evento completo não abre a página", async () => {
       link: "https://ev.test/a",
       price: "R$ 10",
       time: "20:00",
+      address: "Rua A, 1",
     },
   ]);
   expect(calls).toHaveLength(0);

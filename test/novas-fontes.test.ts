@@ -14,25 +14,33 @@ const TODAY = "2026-10-29";
 test("SESI: card da listagem e só o painel da unidade pedida", () => {
   const list = `<div class="card h-100  "><div class="card-img shadow-sm" style="background-image: url(https://blob.test/e1);"></div>
     <div class="card-body"><h5 class="card-title">Espiral de corpo e m&#xFA;sica</h5><p class="card-text">Bando Mukuvu</p></div>
-    <div class="card-footer"><a href="/evento/955f83d6-a3d2-4014-a62f-acac38b319e3/espiral" class="btn">Saiba mais</a>`;
+    <div class="card-footer"><a href="/evento/955f83d6-a3d2-4014-a62f-acac38b319e3/espiral" class="btn">Saiba mais</a>
+    <img class="evento-classificacao rounded" src="https://x.test/i" alt="Livre" width="28">`;
   expect(parseSesiList(list)).toEqual([
     {
       path: "/evento/955f83d6-a3d2-4014-a62f-acac38b319e3/espiral",
       title: "Espiral de corpo e música",
       image: "https://blob.test/e1",
       company: "Bando Mukuvu",
+      age: "Livre",
     },
   ]);
   const painel = (cidade: string, dia: string, hora: string) =>
     `<div class="panel pb-1"><a role="button" href="#c"> SESI ${cidade} </a>
-     <p><strong>Teatro do SESI ${cidade}</strong><br/>Av. X - ${cidade} - SP</p>
+     <p><strong>Teatro do SESI ${cidade}</strong><br />  Av. Santa Cruz, 2870 - Jardim Centenário - ${cidade} - SP<br /></p>
      <div class="accordion-day-item"><h4 class="mb-0">${dia}<br /></h4>
      <i class="fa fa-clock mr-1" aria-hidden="true"></i>${hora} <span>às 21:00</span></div></div>`;
   const det =
     painel("Bauru", "29 OUTUBRO", "18:00") +
     painel("Franca", "31 OUTUBRO", "20:00");
   expect(parseSesiSessions(det, "Franca", TODAY)).toEqual([
-    { date: "2026-10-31", time: "20:00", venue: "Teatro do SESI Franca" },
+    {
+      date: "2026-10-31",
+      time: "20:00",
+      end_time: "21:00",
+      venue: "Teatro do SESI Franca",
+      address: "Av. Santa Cruz, 2870 - Jardim Centenário - Franca",
+    },
   ]);
   expect(parseSesiSessions(det, "Barretos", TODAY)).toEqual([]);
 });
@@ -56,6 +64,7 @@ test("Clube do Ingresso: card, filtro de região e detalhe com faixa de preço",
   const det = `<div class="nome" data-nome="O Rei Ainda Vive">x</div>
     <div class="PageEvent__select"> <div class="PageEvent__desc">Quarta, 04 de Novembro de 2026 - Abertura: 20:00</div></div>
     <div class="PageEvent__local"> <div class="PageEvent__subTitle">Teatro Municipal de Franca</div> <div class="PageEvent__desc">Avenida Sete de Setembro, 455 - Residencial Baldassari - Franca, SP</div></div>
+    <div class="PageEvent__class"> <div class="PageEvent__subTitle">Classificação</div> <div class="PageEvent__desc">Livre</div></div>
     <script type="application/ld+json">{"offers":{"price":"60.00"}} {"offers":{"price":"120.00"}}</script>`;
   expect(parseClubeDetail(det, TODAY)).toMatchObject({
     data: { date: "2026-11-04", time: "20:00" },
@@ -63,6 +72,8 @@ test("Clube do Ingresso: card, filtro de região e detalhe com faixa de preço",
     city: "Franca",
     price: "R$ 60 a R$ 120",
     title: "O Rei Ainda Vive",
+    address: "Avenida Sete de Setembro, 455 - Residencial Baldassari",
+    age_rating: "Livre",
   });
 });
 

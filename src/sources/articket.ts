@@ -87,6 +87,7 @@ export async function syncArticket(today: string): Promise<number> {
           price: priceStr,
           description,
           link: ev.url || `https://articket.com.br/e/${ev.id}`,
+          end_time: ev.end_date ? saoPauloIso(ev.end_date).slice(11, 16) : null,
           image: ev.image ?? null,
         });
         stored++;

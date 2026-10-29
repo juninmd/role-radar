@@ -24,6 +24,7 @@ import { syncBilheteriaDigital } from "./sources/bilheteriadigital.ts";
 import { syncBilheteriaExpress } from "./sources/bilheteriaexpress.ts";
 import { syncBlueticket } from "./sources/blueticket.ts";
 import { nowPlaying } from "./sources/cinema.ts";
+import { climaDoEvento, previsoes } from "./sources/clima.ts";
 import { syncClubeDoIngresso } from "./sources/clubedoingresso.ts";
 import { syncCorridasBr } from "./sources/corridasbr.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
@@ -58,6 +59,7 @@ import {
 import { safeUrl, spotPlaces } from "./web/catalog.ts";
 import { type Category, categorize, parsePrice } from "./web/classify.ts";
 import { geocodePlaces } from "./web/geocode.ts";
+import { CITY_COORDS, distanceKm, resolveCity } from "./web/places.ts";
 import { saveSnapshot } from "./web/store.ts";
 
 const TZ = "America/Sao_Paulo";
@@ -143,6 +145,7 @@ const EMOJI: Record<Category, string> = {
 
 const STATUS_LINHA: Record<string, string> = {
   esgotado: "🚫 *ESGOTADO*",
+  ultimos: "🔥 *Últimos ingressos*",
   cancelado: "❌ *CANCELADO*",
   adiado: "⏸️ *ADIADO* — confira a nova data",
 };
@@ -184,11 +187,58 @@ export function calendarUrl(ev: Event): string {
     dates: `${ini}/${fim}`,
     ctz: TZ,
   });
-  const local = [ev.venue, ev.city].filter(Boolean).join(", ");
+  const local = [ev.venue, ev.address, ev.city].filter(Boolean).join(", ");
   if (local) q.set("location", local);
   if (ev.link) q.set("details", ev.link);
   return `https://calendar.google.com/calendar/render?${q}`;
 }
+
+// Nome da bilheteria pelo domínio do link: "onde compro" sem abrir o link.
+const VENDAS: [RegExp, string][] = [
+  [/sympla\.com\.br/, "Sympla"],
+  [/q2ingressos|quero2ingressos/, "Q2 Ingressos"],
+  [/eventoon/, "Evento ON"],
+  [/zig\.tickets/, "Zig"],
+  [/duoticket/, "Duoticket"],
+  [/oticket/, "OTicket"],
+  [/guicheweb/, "Guichê Web"],
+  [/articket/, "Articket"],
+  [/megabilheteria/, "Mega Bilheteria"],
+  [/blueticket/, "Blueticket"],
+  [/ingressodigital/, "Ingresso Digital"],
+  [/ingressonacional/, "Ingresso Nacional"],
+  [/minhaentrada/, "Minha Entrada"],
+  [/bilheteriaexpress/, "Bilheteria Express"],
+  [/bilheteriadigital/, "Bilheteria Digital"],
+  [/clubedoingresso/, "Clube do Ingresso"],
+  [/uhuu/, "Uhuu"],
+  [/ingresso\.com/, "Ingresso.com"],
+  [/sescsp/, "Sesc"],
+  [/sesisp/, "SESI-SP"],
+  [/corridasbr/, "CorridasBR (inscrições com a organização)"],
+  [/theatropedro2/, "Theatro Pedro II"],
+];
+
+export function vendaEm(link: string | null): string | null {
+  const host = safeUrl(link) ? new URL(link as string).hostname : null;
+  return host ? (VENDAS.find(([re]) => re.test(host))?.[1] ?? null) : null;
+}
+
+/** "🚗 83 km de Franca" para rolê de outra cidade (linha reta entre os centros). */
+export function distanciaDeFranca(city: string | null): string | null {
+  const cidade = resolveCity(city);
+  if (!cidade || cidade === "Franca" || !CITY_COORDS[cidade]) return null;
+  const km = Math.round(distanceKm(CITY_COORDS.Franca, CITY_COORDS[cidade]));
+  return `🚗 ~${km} km de Franca`;
+}
+
+/** "Livre" vira aviso de família; 18+ ganha o selo que todo mundo reconhece. */
+const linhaIdade = (age: string) =>
+  age === "Livre"
+    ? "👨‍👩‍👧 Livre para todas as idades"
+    : age === "18+"
+      ? "🔞 Proibido para menores de 18"
+      : `🪪 Classificação ${age}`;
 
 export function eventButtons(ev: Event): TelegramButton[][] {
   const row: TelegramButton[] = [];
@@ -196,7 +246,12 @@ export function eventButtons(ev: Event): TelegramButton[][] {
     row.push({ text: "🎟️ Ingressos e Detalhes", url: ev.link });
   }
   if (ev.venue) {
-    const query = encodeURIComponent(`${ev.venue}, ${ev.city ?? "Franca"}, SP`);
+    // Com rua e número o Maps acerta o lugar; só o nome do local às vezes não.
+    const query = encodeURIComponent(
+      [ev.venue, ev.address, ev.city ?? "Franca", "SP"]
+        .filter(Boolean)
+        .join(", "),
+    );
     row.push({
       text: "📍 Como Chegar",
       url: `https://www.google.com/maps/search/?api=1&query=${query}`,
@@ -215,26 +270,51 @@ export function eventButtons(ev: Event): TelegramButton[][] {
   return rows;
 }
 
-export function eventLines(ev: Event, today?: string): string {
+export interface CardExtras {
+  /** Linha de previsão do tempo já formatada ("🌦️ 18–29°C · 60% de chuva"). */
+  clima?: string | null;
+}
+
+export function eventLines(
+  ev: Event,
+  today?: string,
+  extras: CardExtras = {},
+): string {
   const emoji = EMOJI[categorize(ev.title, ev.venue)];
   const lines = [`${emoji} *${mdSafe(ev.title)}*`];
   const status = ev.status ? STATUS_LINHA[ev.status] : null;
   if (status) lines.push(status);
-  const cidade = ev.city ? `, ${mdSafe(ev.city)}` : "";
+  // "Franca, Franca": local que é só o nome da cidade não se repete.
+  const cidade =
+    ev.city && norm(ev.city) !== norm(ev.venue ?? "")
+      ? `, ${mdSafe(ev.city)}`
+      : "";
   const where = ev.venue
     ? `${mdSafe(ev.venue)}${cidade}`
     : ev.city
       ? mdSafe(ev.city)
       : "";
   if (where) lines.push(`📍 ${where}`);
+  if (ev.address) lines.push(`🗺️ ${mdSafe(ev.address)}`);
+  const longe = distanciaDeFranca(ev.city);
+  if (longe) lines.push(longe);
   const dias = ev.end_date
     ? `${humanDay(ev.date)} a ${humanDay(ev.end_date)}`
     : quando(ev.date, today);
-  lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}` : ""}`);
+  // Término só em evento de um dia: em festival, "até 05:00" seria de qual dia?
+  const ate =
+    ev.time && ev.end_time && !ev.end_date && ev.end_time !== "00:00"
+      ? ` até ${ev.end_time}`
+      : "";
+  lines.push(`📆 ${dias}${ev.time ? ` às ${ev.time}${ate}` : ""}`);
   if (ev.price)
     lines.push(
       `${parsePrice(ev.price) === 0 ? "🆓" : "💰"} ${mdSafe(ev.price)}`,
     );
+  if (ev.age_rating) lines.push(linhaIdade(ev.age_rating));
+  if (extras.clima) lines.push(`${extras.clima} (previsão)`);
+  const venda = vendaEm(ev.link);
+  if (venda) lines.push(`🎫 Vendas: ${mdSafe(venda)}`);
 
   if (ev.description) {
     // Corte por ponto de código: slice() partia emoji e deixava surrogate solto.
@@ -339,20 +419,28 @@ export async function digest(): Promise<void> {
     const d = detalhes.get(ev.id);
     if (!d) continue;
     capa.set(ev.id, d.image);
-    if (!d.price && !d.time && !d.description && !d.status) continue;
-    enrichEvent(ev.id, d);
+    const { image: _, ...campos } = d;
+    if (!Object.values(campos).some(Boolean)) continue;
+    enrichEvent(ev.id, campos);
     ev.price ??= d.price;
     ev.time ??= d.time;
     ev.description ??= d.description;
+    ev.end_time ??= d.end_time;
+    ev.age_rating ??= d.age_rating;
+    ev.address ??= d.address;
     ev.status = d.status;
   }
+  // Uma consulta por cidade; previsão que falha só tira a linha do card.
+  const tempo = await previsoes([...todays, ...novos].map((ev) => ev.city));
+  const card = (ev: Event) =>
+    eventLines(ev, today, { clima: climaDoEvento(tempo, ev, today) });
 
   // Só o que o Telegram confirmou vira "postado", e na hora: o resto tenta de
   // novo numa próxima rodada do dia.
   let posted = 0;
   const postaDia = async (lista: Event[], selo: string) => {
     for (const ev of lista) {
-      const body = `${selo}\n\n${eventLines(ev, today)}`;
+      const body = `${selo}\n\n${card(ev)}`;
       const image = capa.get(ev.id);
       const buttons = eventButtons(ev);
       const ok = image
@@ -366,7 +454,7 @@ export async function digest(): Promise<void> {
 
   const postaLancamento = async (lista: Event[], selo: string) => {
     for (const ev of lista) {
-      const body = `${selo}\n\n${eventLines(ev, today)}`;
+      const body = `${selo}\n\n${card(ev)}`;
       const image = capa.get(ev.id);
       const buttons = eventButtons(ev);
       const ok = image

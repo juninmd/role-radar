@@ -1,7 +1,7 @@
 import { inRegion, norm, REGION_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
-import { limpa, parseDataBr } from "./comum.ts";
+import { endereco, faixaEtaria, limpa, parseDataBr } from "./comum.ts";
 import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // Clube do Ingresso: estava como "sem eventos da região" e em 2026-10 passou a
@@ -74,6 +74,15 @@ export function parseClubeDetail(html: string, today: string) {
       html.match(/<img src="(https:[^"]+)"[^>]*class="PageEvent__img"/)?.[1] ??
       null,
     title: limpa(html.match(/data-nome="([^"]+)"/)?.[1] ?? ""),
+    // "Avenida Sete de Setembro, 455 - Residencial Baldassari - Franca, SP"
+    address: local
+      ? endereco(limpa(local[2]).replace(/\s*-\s*[^-]+,\s*[A-Z]{2}\s*$/, ""))
+      : null,
+    age_rating: faixaEtaria(
+      html.match(
+        /PageEvent__class">\s*<div class="PageEvent__subTitle">[^<]*<\/div>\s*<div class="PageEvent__desc">([^<]*)</,
+      )?.[1],
+    ),
   };
 }
 
@@ -113,6 +122,8 @@ export async function syncClubeDoIngresso(today: string): Promise<number> {
         price: d.price,
         link: `${SITE}${card.path}`,
         image: d.image,
+        address: d.address,
+        age_rating: d.age_rating,
       });
       stored++;
     }

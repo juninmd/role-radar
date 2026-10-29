@@ -1,7 +1,7 @@
 import { norm } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
-import { limpa, parseDataBr } from "./comum.ts";
+import { endereco, faixaEtaria, limpa, parseDataBr } from "./comum.ts";
 import { MAX_SOURCE_BODY, readCapped } from "./public-url.ts";
 
 // SESI-SP Cultura: teatro, dança e música nos Teatros do SESI. Não é o site de
@@ -21,12 +21,24 @@ interface Card {
   title: string;
   image: string | null;
   company: string | null;
+  /** Ícone de classificação ao lado do "Saiba mais": alt="Livre", "14 anos". */
+  age: string | null;
+}
+
+export interface Sessao {
+  date: string;
+  time: string | null;
+  end_time: string | null;
+  venue: string | null;
+  address: string | null;
 }
 
 /** Cards da listagem de uma unidade (HTML server-side). */
 export function parseSesiList(html: string): Card[] {
   const out: Card[] = [];
-  for (const m of html.matchAll(/<div class="card h-100[\s\S]*?<\/a>/g)) {
+  for (const m of html.matchAll(
+    /<div class="card h-100[\s\S]*?<\/a>\s*(?:<img[^>]*>)?/g,
+  )) {
     const card = m[0];
     const path = card.match(/href="(\/evento\/[0-9a-f-]{36}\/[^"]+)"/)?.[1];
     const title = limpa(
@@ -40,6 +52,9 @@ export function parseSesiList(html: string): Card[] {
       company:
         limpa(card.match(/class="card-text">([\s\S]*?)<\/p>/)?.[1] ?? "") ||
         null,
+      age: faixaEtaria(
+        card.match(/evento-classificacao[^>]*alt="([^"]*)"/)?.[1],
+      ),
     });
   }
   return out;
@@ -54,7 +69,7 @@ export function parseSesiSessions(
   html: string,
   city: string,
   today: string,
-): { date: string; time: string | null; venue: string | null }[] {
+): Sessao[] {
   const painel = html
     .split('class="panel pb-1"')
     .slice(1)
@@ -65,14 +80,28 @@ export function parseSesiSessions(
   if (!painel) return [];
   const venue =
     limpa(painel.match(/<strong>([\s\S]*?)<\/strong>/)?.[1] ?? "") || null;
-  const out: { date: string; time: string | null; venue: string | null }[] = [];
+  // "<strong>Teatro do SESI Franca</strong><br /> Av. Santa Cruz, 2870 - … - Franca - SP"
+  const address = endereco(
+    painel
+      .match(/<\/strong>\s*<br\s*\/?>([\s\S]*?)<br/)?.[1]
+      ?.replace(/\s*-\s*SP\s*$/i, ""),
+  );
+  const out: Sessao[] = [];
   for (const dia of painel.split('class="accordion-day-item"').slice(1)) {
     const rotulo = dia.match(/<h4 class="mb-0">\s*(\d{1,2})\s+([A-Za-zÇç]+)/);
     if (!rotulo) continue;
     const quando = parseDataBr(`${rotulo[1]} de ${rotulo[2]}`, today);
     if (!quando) continue;
-    const time = dia.match(/fa-clock[^>]*><\/i>\s*(\d{2}:\d{2})/)?.[1] ?? null;
-    out.push({ date: quando.date, time, venue });
+    const horario = dia.match(
+      /fa-clock[^>]*><\/i>\s*(\d{2}:\d{2})(?:\s*<span>\s*às\s*(\d{2}:\d{2}))?/,
+    );
+    out.push({
+      date: quando.date,
+      time: horario?.[1] ?? null,
+      end_time: horario?.[2] ?? null,
+      venue,
+      address,
+    });
   }
   return out;
 }
@@ -121,6 +150,9 @@ export async function syncSesiSp(today: string): Promise<number> {
             link: `${SITE}${card.path}`,
             image: card.image,
             description: card.company ? `Com ${card.company}` : null,
+            end_time: s.end_time,
+            age_rating: card.age,
+            address: s.address,
           });
           stored++;
         }

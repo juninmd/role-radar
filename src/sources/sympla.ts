@@ -1,7 +1,7 @@
 import { citySlug, inRegion, SEARCH_CITIES } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
 import { pool } from "../pool.ts";
-import { diaFinal } from "./comum.ts";
+import { diaFinal, endereco } from "./comum.ts";
 import { readCapped } from "./public-url.ts";
 
 // Derivado de SEARCH_CITIES: a lista de cidades vive num lugar só, então
@@ -32,6 +32,7 @@ interface SymplaEvent {
     city?: string;
     neighborhood?: string;
     address?: string;
+    address_num?: string;
   };
   organizer?: { name?: string };
 }
@@ -87,12 +88,11 @@ export async function syncSympla(today: string): Promise<number> {
         if ((endDate ?? date) < today) continue;
         const descParts = [
           ev.organizer?.name ? `Produção: ${ev.organizer.name}` : null,
-          ev.location?.address
-            ? [ev.location.address, ev.location.neighborhood]
-                .filter(Boolean)
-                .join(", ")
-            : null,
         ].filter(Boolean);
+        const rua = [ev.location?.address, ev.location?.address_num]
+          .filter(Boolean)
+          .join(", ");
+        const fim = ev.end_date ? localIso(ev.end_date) : null;
         const description =
           descParts.length > 0 ? descParts.join(" · ").slice(0, 300) : null;
 
@@ -107,6 +107,10 @@ export async function syncSympla(today: string): Promise<number> {
           link: ev.url,
           image: ev.images?.lg ?? ev.images?.original ?? null,
           end_date: endDate,
+          end_time: fim?.slice(11, 16) ?? null,
+          address: endereco(
+            [rua, ev.location?.neighborhood].filter(Boolean).join(" - "),
+          ),
         });
         n++;
       }

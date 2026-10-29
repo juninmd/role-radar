@@ -69,6 +69,9 @@ runMigrations([
   "ALTER TABLE events ADD COLUMN description TEXT",
   "ALTER TABLE items ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE events ADD COLUMN status TEXT",
+  "ALTER TABLE events ADD COLUMN end_time TEXT",
+  "ALTER TABLE events ADD COLUMN age_rating TEXT",
+  "ALTER TABLE events ADD COLUMN address TEXT",
 ]);
 
 // Item cuja resposta da IA não parseia de novo e de novo sai da fila; uma
@@ -146,14 +149,20 @@ export interface Event {
   end_date: string | null;
   /** "esgotado", "cancelado", "adiado" — lido da página do evento; null = normal. */
   status?: string | null;
+  /** Hora de término ("05:00"), quando a fonte informa. */
+  end_time?: string | null;
+  /** Classificação indicativa: "Livre", "14", "18+". */
+  age_rating?: string | null;
+  /** Endereço com rua e número — o "Como chegar" acerta o lugar, não só a cidade. */
+  address?: string | null;
   posted_today: number;
   posted_launch: number;
   created_at: string;
 }
 
 const upsertEventStmt = db.prepare(`
-  INSERT INTO events (id, title, date, time, venue, city, price, link, image, description, trailer, end_date, posted_today, posted_launch, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+  INSERT INTO events (id, title, date, time, venue, city, price, link, image, description, trailer, end_date, end_time, age_rating, address, posted_today, posted_launch, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
   ON CONFLICT(id) DO UPDATE SET
     time = COALESCE(excluded.time, time),
     venue = COALESCE(excluded.venue, venue),
@@ -161,8 +170,15 @@ const upsertEventStmt = db.prepare(`
     image = COALESCE(excluded.image, image),
     description = COALESCE(excluded.description, description),
     trailer = COALESCE(excluded.trailer, trailer),
-    end_date = COALESCE(excluded.end_date, end_date)
+    end_date = COALESCE(excluded.end_date, end_date),
+    end_time = COALESCE(excluded.end_time, end_time),
+    age_rating = COALESCE(excluded.age_rating, age_rating),
+    address = COALESCE(excluded.address, address)
 `);
+
+// Hora fora de 00:00–23:59 é lixo da fonte ("25h", "19:99"): sem horário.
+const horaValida = (h?: string | null) =>
+  h && /^([01]\d|2[0-3]):[0-5]\d$/.test(h) ? h : null;
 
 /**
  * Grava/atualiza um evento. O id é derivado aqui de propósito: quando a fonte
@@ -206,6 +222,9 @@ export function upsertEvent(
     trailer?: string | null;
     end_date?: string | null;
     description?: string | null;
+    end_time?: string | null;
+    age_rating?: string | null;
+    address?: string | null;
   },
 ): void {
   if (!dataValida(ev.date)) {
@@ -218,8 +237,7 @@ export function upsertEvent(
     eventId(ev.title, ev.date),
     ev.title,
     ev.date,
-    // Hora fora de 00:00–23:59 é lixo da fonte ("25h", "19:99"): sem horário.
-    ev.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(ev.time) ? ev.time : null,
+    horaValida(ev.time),
     semVazio(ev.venue),
     cidadeCanonica(ev.city),
     semVazio(ev.price),
@@ -231,6 +249,9 @@ export function upsertEvent(
     ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
       ? ev.end_date
       : null,
+    horaValida(ev.end_time),
+    semVazio(ev.age_rating),
+    semVazio(ev.address),
     new Date().toISOString(),
   );
 }
@@ -303,6 +324,9 @@ export function enrichEvent(
     time?: string | null;
     description?: string | null;
     status?: string | null;
+    end_time?: string | null;
+    age_rating?: string | null;
+    address?: string | null;
   },
 ): void {
   db.prepare(
@@ -310,16 +334,20 @@ export function enrichEvent(
        price = COALESCE(price, ?2),
        time = COALESCE(time, ?3),
        description = COALESCE(description, ?4),
-       status = ?5
+       status = ?5,
+       end_time = COALESCE(end_time, ?6),
+       age_rating = COALESCE(age_rating, ?7),
+       address = COALESCE(address, ?8)
      WHERE id = ?1`,
   ).run(
     id,
     semVazio(extra.price),
-    extra.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(extra.time)
-      ? extra.time
-      : null,
+    horaValida(extra.time),
     semVazio(extra.description),
     semVazio(extra.status),
+    horaValida(extra.end_time),
+    semVazio(extra.age_rating),
+    semVazio(extra.address),
   );
 }
 
@@ -416,10 +444,11 @@ export function pruneOnlineEvents(): void {
 
 // Agenda acadêmica/profissional que as bilheterias (sobretudo o Sympla)
 // misturam com show: medido em 2026-10-29, 17 de 281 eventos (PAMV, "Visita
-// Técnica", "Semana Jurídica", "Escola Bíblica"). Palestra e oficina ficam —
+// Técnica", "Semana Jurídica", "Escola Bíblica") — e evento de teste do
+// operador da bilheteria ("Teste stress 30/10" na Q2). Palestra e oficina ficam —
 // são programação cultural de Sesc e afins.
 const NAO_E_ROLE =
-  /\b(visita tecnica|escola biblica|semana (juridica|academica)|jornada de [a-z]+ia\b|pamv|congresso|simposio|capacitacao|pos.?graduacao|curso de|mentoria|webinar)\b/;
+  /\b(visita tecnica|escola biblica|semana (juridica|academica)|jornada de [a-z]+ia\b|pamv|congresso|simposio|capacitacao|pos.?graduacao|curso de|mentoria|webinar|evento (de )?teste)\b|^teste\b/;
 
 /** Remove o que é curso, congresso ou evento acadêmico, não rolê. */
 export function pruneNonLeisure(): void {

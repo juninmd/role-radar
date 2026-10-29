@@ -1,4 +1,5 @@
 import { pool } from "../pool.ts";
+import { endereco, faixaEtaria } from "./comum.ts";
 import { fetchPublic, readCapped } from "./public-url.ts";
 
 const MAX_HTML = 200_000;
@@ -15,8 +16,11 @@ export interface PageMeta {
   price: string | null;
   time: string | null;
   description: string | null;
-  /** "esgotado", "cancelado", "adiado"; null = à venda ou sem informação. */
+  /** "esgotado", "ultimos", "cancelado", "adiado"; null = à venda ou sem informação. */
   status: string | null;
+  end_time: string | null;
+  age_rating: string | null;
+  address: string | null;
 }
 
 const VAZIO: PageMeta = {
@@ -25,6 +29,9 @@ const VAZIO: PageMeta = {
   time: null,
   description: null,
   status: null,
+  end_time: null,
+  age_rating: null,
+  address: null,
 };
 
 type Ld = Record<string, unknown>;
@@ -91,10 +98,20 @@ const STATUS: [RegExp, string][] = [
 /** Preço, horário e status do primeiro schema.org/Event da página. */
 export function parseEventLd(html: string): Omit<PageMeta, "image"> {
   const ev = ldNodes(html).find((n) => /Event$/.test(String(n["@type"] ?? "")));
-  if (!ev) return { price: null, time: null, description: null, status: null };
+  if (!ev) {
+    const { image: _, ...vazio } = VAZIO;
+    return vazio;
+  }
   const inicio = String(ev.startDate ?? "");
   // Só data ("2026-11-14") ou meia-noite é "sem horário", não 00:00.
   const hora = inicio.match(/T(\d{2}:\d{2})/)?.[1] ?? null;
+  const fim = String(ev.endDate ?? "").match(/T(\d{2}:\d{2})/)?.[1] ?? null;
+  const lugar = (ev.location ?? {}) as Ld;
+  const end = (lugar.address ?? {}) as Ld;
+  const rua =
+    typeof lugar.address === "string"
+      ? lugar.address
+      : String(end.streetAddress ?? "");
   const offers = ev.offers;
   const disponivel = JSON.stringify(offers ?? "");
   const status =
@@ -103,7 +120,10 @@ export function parseEventLd(html: string): Omit<PageMeta, "image"> {
     (/SoldOut/i.test(disponivel) &&
     !/InStock|LimitedAvailability/i.test(disponivel)
       ? "esgotado"
-      : null);
+      : // Sobrou lote só com estoque limitado: avisar antes de esgotar.
+        /LimitedAvailability/i.test(disponivel) && !/InStock/i.test(disponivel)
+        ? "ultimos"
+        : null);
   const desc = typeof ev.description === "string" ? ev.description.trim() : "";
   return {
     price: precoDasOfertas(offers),
@@ -111,6 +131,9 @@ export function parseEventLd(html: string): Omit<PageMeta, "image"> {
     // Descrição curta demais é slogan da bilheteria, não do evento.
     description: desc.length >= 40 ? desc : null,
     status,
+    end_time: fim && fim !== hora ? fim : null,
+    age_rating: faixaEtaria(String(ev.typicalAgeRange ?? "")),
+    address: endereco(rua),
   };
 }
 
@@ -153,6 +176,7 @@ interface Alvo {
   link: string | null;
   price?: string | null;
   time?: string | null;
+  address?: string | null;
 }
 
 /**
@@ -164,7 +188,7 @@ export async function fetchDetails(
   limit = BATCH_CONCURRENCY,
 ): Promise<Map<string, PageMeta>> {
   const pairs = await pool(events, limit, async (ev) => {
-    const falta = !ev.image || !ev.price || !ev.time;
+    const falta = !ev.image || !ev.price || !ev.time || !ev.address;
     const meta = falta && ev.link ? await fetchPageMeta(ev.link) : { ...VAZIO };
     return [ev.id, { ...meta, image: ev.image ?? meta.image }] as const;
   });

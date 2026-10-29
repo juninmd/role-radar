@@ -1,6 +1,6 @@
-import { inRegion } from "../config/region.ts";
+import { inRegion, norm } from "../config/region.ts";
 import { upsertEvent } from "../db.ts";
-import { diaFinal } from "./comum.ts";
+import { diaFinal, endereco } from "./comum.ts";
 import { readCapped } from "./public-url.ts";
 
 // Zig.tickets (antiga Superticket): forte presença em pubs, baladas e shows (Old Barn, Art House, etc.).
@@ -16,6 +16,28 @@ interface ZigLocation {
   city?: string;
   formatted_address?: string;
 }
+
+/**
+ * "R. Eliseu Guilherme, 354 - Jardim Sumare, Ribeirão Preto, SP - Art House":
+ * cidade, UF e o que vem depois já estão no card — fica a rua e o bairro.
+ */
+export function semCidade(
+  endereco_: string | null | undefined,
+  city: string | null | undefined,
+): string | null {
+  if (!endereco_) return null;
+  const partes = endereco_.split(",");
+  const corte = partes.findIndex(
+    (p, i) => i > 0 && city && norm(p).trim() === norm(city),
+  );
+  return endereco((corte > 0 ? partes.slice(0, corte) : partes).join(","));
+}
+
+// Hora local de um ISO com fuso ("2026-10-31T05:00:00.000-03:00" → "05:00").
+const horaLocal = (iso?: string | null) => {
+  const h = iso?.slice(11, 16) ?? null;
+  return h && h !== "00:00" ? h : null;
+};
 
 interface ZigEvent {
   id?: number;
@@ -80,6 +102,8 @@ export async function syncZigTickets(today: string): Promise<number> {
         price: null,
         link,
         image: ev.banner ?? ev.vertical_banner ?? null,
+        end_time: horaLocal(ev.end_date),
+        address: semCidade(ev.event_location?.formatted_address, city),
       });
       stored++;
     }

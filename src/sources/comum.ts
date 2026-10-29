@@ -171,3 +171,25 @@ export function diaFinal(
     ? null
     : ultimo;
 }
+
+/**
+ * Classificação indicativa como cada fonte escreve ("Livre", "L", "18 anos",
+ * "18+", "Classificação 16 anos") → "Livre" ou "16+". Fora de 10–18 é lixo.
+ */
+export function faixaEtaria(raw?: string | null): string | null {
+  const t = (raw ?? "").trim();
+  if (/^(livre|l)$/i.test(t) || /\blivre\b/i.test(t)) return "Livre";
+  const n = Number(t.match(/\b(1[0-8])\s*(\+|anos)?/)?.[1]);
+  return n >= 10 && n <= 18 ? `${n}+` : null;
+}
+
+// Rua de verdade, não nome de espaço ("CHF ESPAÇO CULTURAL"): tem número ou
+// começa como logradouro.
+const LOGRADOURO =
+  /\d|^(r\.|rua|av\.?|avenida|al\.|alameda|rod\.?|rodovia|estrada|pra[çc]a|travessa|largo)\b/i;
+
+/** Endereço publicável, ou null. */
+export const endereco = (raw?: string | null): string | null => {
+  const t = limpa(raw ?? "");
+  return t.length >= 6 && LOGRADOURO.test(t) ? t : null;
+};
