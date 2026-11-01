@@ -49,6 +49,8 @@ export const env = {
   geocodeMax: num(process.env.GEOCODE_MAX, 25),
   // Matérias abertas por rodada para ler o corpo (o RSS só traz a manchete).
   articleMax: num(process.env.ARTICLE_MAX, 40),
+  // Perfis de redes sociais públicas (bsky:/yt:/tg:/URL) — ver sources/social.ts.
+  extraFeeds: process.env.EXTRA_FEEDS ?? "",
   // Google News por IPv6 (o IPv4 do cluster leva 429) — exige hostNetwork.
   googleIpv6: process.env.GOOGLE_IPV6 === "1",
 };
