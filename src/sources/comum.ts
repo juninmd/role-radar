@@ -85,6 +85,11 @@ function horaDeInicio(texto: string): string | null {
     if (DURACAO.test(texto.slice(0, m.index))) continue;
     return `${m[1].padStart(2, "0")}:${m[2] ?? "00"}`;
   }
+  // "21h" sem minutos; "18 anos" não casa porque exige o h colado.
+  for (const m of texto.matchAll(/(?<!\d)(\d{1,2})\s?h(?![a-zà-ú\d])/gi)) {
+    if (DURACAO.test(texto.slice(0, m.index)) || Number(m[1]) > 23) continue;
+    return `${m[1].padStart(2, "0")}:00`;
+  }
   return null;
 }
 
@@ -100,13 +105,17 @@ export function parseDataBr(
   const texto = raw.trim();
   const hora = horaDeInicio(texto);
 
-  // dd/mm/aaaa (ou dd.mm.aaaa / dd-mm-aaaa)
-  const completa = texto.match(/(\d{1,2})([/.-])(\d{1,2})\2(\d{4})/);
-  if (completa) {
-    const [dia, mes, ano] = [completa[1], completa[3], completa[4]].map(Number);
+  // dd/mm/aaaa, dd.mm.aaaa, dd-mm-aaaa e dd/mm/aa
+  // Ano de dois dígitos só com barra: "10-12-14" não é uma data.
+  const completa = texto.match(
+    /(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?!\d)/,
+  );
+  if (completa && (completa[4].length === 4 || completa[2] === "/")) {
+    const ano4 = completa[4].length === 2 ? `20${completa[4]}` : completa[4];
+    const [dia, mes, ano] = [completa[1], completa[3], ano4].map(Number);
     if (!valido(ano, mes, dia)) return null;
     return {
-      date: `${completa[4]}-${completa[3].padStart(2, "0")}-${completa[1].padStart(2, "0")}`,
+      date: `${ano4}-${completa[3].padStart(2, "0")}-${completa[1].padStart(2, "0")}`,
       time: hora,
     };
   }
@@ -114,7 +123,7 @@ export function parseDataBr(
   // "14 de Ago", "21 de agosto" e também "01 AGO" (cards sem a preposição).
   // Mês inteiro e sem letra colada: "10 Maria" e "2 dezenas" não são datas.
   const porExtenso = texto.match(
-    /(?<!\d)(\d{1,2})\s*(?:de\s*)?(jan(?:eiro)?|fev(?:ereiro)?|mar(?:ço|co)?|abr(?:il)?|mai(?:o)?|jun(?:ho)?|jul(?:ho)?|ago(?:sto)?|set(?:embro)?|out(?:ubro)?|nov(?:embro)?|dez(?:embro)?)(?![a-zà-ú])(?:\.?\s*(?:de\s*)?(\d{4})(?!\d))?/i,
+    /(?<!\d)(\d{1,2})º?\s*(?:de\s*)?(jan(?:eiro)?|fev(?:ereiro)?|mar(?:ço|co)?|abr(?:il)?|mai(?:o)?|jun(?:ho)?|jul(?:ho)?|ago(?:sto)?|set(?:embro)?|out(?:ubro)?|nov(?:embro)?|dez(?:embro)?)(?![a-zà-ú])\.?(?:\s*(?:de\s*)?(20\d{2})(?!\d))?/i,
   );
   // dd/mm sem ano — pega o ÚLTIMO (em "04 até 30/07" o que vale é o fim)
   const curtas = [...texto.matchAll(/(\d{1,2})\/(\d{1,2})(?!\/|\d)/g)];

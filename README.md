@@ -12,6 +12,10 @@ Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos sho
 
 Bilheterias e agendas estruturadas (ver `docs/bilheterias.md`: Sympla, Q2, SESI-SP Cultura, Clube do Ingresso, CorridasBR e outras) + Google News RSS por query (shows/eventos Franca, Ribeirão Preto, agenda cultural, teatro/stand-up, ingressos/Sympla, estreias de cinema e séries) + Papelpop. Edite em `src/config/topic.ts`.
 
+Além dos feeds, `src/sources/` raspa ~30 bilheterias e agendas (Sympla, OTicket, Q2, Fever, Sesc…) direto para eventos estruturados, e o BolaShow (guia de shows no Bluesky) é a única rede social com feed público sem login — Instagram, Facebook e X exigem sessão. A região vai até ~100 km de Franca (`src/config/region.ts`, incl. Uberaba-MG). Mapa do que foi testado e descartado: `docs/pesquisa-fontes-eventos.md`.
+
+**Redes sociais:** `EXTRA_FEEDS` (ver `.env.example`) aceita perfis públicos de Bluesky (`bsky:handle`), YouTube (`yt:UC…`), canais do Telegram (`tg:canal`, lidos de `t.me/s`) e qualquer URL de RSS — inclusive um RSS-Bridge próprio para Instagram/Facebook/X. O texto dos posts passa pela mesma extração por IA dos feeds.
+
 Notícia com cara de rolê (ou com data) tem a matéria original lida antes da extração: o link do Google News é decodificado para a URL real e o corpo (JSON-LD `articleBody` ou parágrafos de `<article>`) vai pro prompt — é onde ficam data, local e gratuidade. Até `ARTICLE_MAX` matérias por rodada. Se o Google responder 429, a rodada para de consultá-lo e esses itens ficam na fila por até 48h. Com `GOOGLE_IPV6=1` (CronJob com `hostNetwork`) o Google é consultado direto pelo IPv6 do host, que não leva o 429 do IPv4 do cluster; todo link externo só é buscado se o host for público (também em cada redirect).
 
 ## Uso

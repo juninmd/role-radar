@@ -23,12 +23,14 @@ import { syncBasquete } from "./sources/basquete.ts";
 import { syncBilheteriaDigital } from "./sources/bilheteriadigital.ts";
 import { syncBilheteriaExpress } from "./sources/bilheteriaexpress.ts";
 import { syncBlueticket } from "./sources/blueticket.ts";
+import { syncBolaShow } from "./sources/bolashow.ts";
 import { nowPlaying } from "./sources/cinema.ts";
 import { climaDoEvento, previsoes } from "./sources/clima.ts";
 import { syncClubeDoIngresso } from "./sources/clubedoingresso.ts";
 import { syncCorridasBr } from "./sources/corridasbr.ts";
 import { syncDuoticket } from "./sources/duoticket.ts";
 import { syncEventoon } from "./sources/eventoon.ts";
+import { syncFever } from "./sources/fever.ts";
 import { syncFrancaShopping } from "./sources/francashopping.ts";
 import { syncGuicheWeb } from "./sources/guicheweb.ts";
 import { syncIngresso } from "./sources/ingresso.ts";
@@ -386,6 +388,8 @@ export async function digest(): Promise<void> {
     syncGuicheWeb(today),
     syncZigTickets(today),
     syncArticket(today),
+    syncBolaShow(today),
+    syncFever(today),
     syncSesiSp(today),
     syncClubeDoIngresso(today),
     syncCorridasBr(today),

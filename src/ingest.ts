@@ -4,6 +4,11 @@ import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
 import { readCapped } from "./sources/public-url.ts";
+import {
+  parseExtraFeeds,
+  parseTelegramChannel,
+  TELEGRAM_PREFIX,
+} from "./sources/social.ts";
 
 // Feeds medidos têm 65–165 KB; o teto só corta resposta fora do normal.
 const MAX_FEED = 5_000_000;
@@ -25,7 +30,11 @@ async function fetchFeed(url: string) {
     signal: AbortSignal.timeout(env.feedTimeoutMs),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parser.parseString(await readCapped(res, MAX_FEED));
+  const body = await readCapped(res, MAX_FEED);
+  // Canal público do Telegram não tem RSS: os posts saem do HTML de t.me/s.
+  if (url.startsWith(TELEGRAM_PREFIX))
+    return { items: parseTelegramChannel(body) };
+  return parser.parseString(body);
 }
 
 const itemImage = (it: Record<string, unknown>): string | null => {
@@ -52,17 +61,21 @@ export async function ingest(): Promise<number> {
   const now = new Date().toISOString();
 
   const results = await Promise.allSettled(
-    topic.feeds.map(async (feed) => {
+    [...topic.feeds, ...parseExtraFeeds(env.extraFeeds)].map(async (feed) => {
       try {
         const parsed = await fetchFeed(feed.url);
         const items = (parsed.items ?? []).slice(0, env.maxItemsPerFeed);
         let feedAdded = 0;
         for (const it of items) {
           const link = it.link ?? "";
-          if (!link || !it.title) continue;
+          // Post de rede social (Bluesky) vem sem <title>: a 1ª linha do texto serve.
+          const title = (
+            it.title ?? it.contentSnippet?.split("\n")[0]?.slice(0, 140)
+          )?.trim();
+          if (!link || !title) continue;
           const isNew = insertItem({
             id: hash(link),
-            title: it.title.trim(),
+            title,
             link,
             source: feed.name,
             summary: clean(it.contentSnippet ?? it.content),

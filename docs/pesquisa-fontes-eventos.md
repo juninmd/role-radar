@@ -26,6 +26,8 @@ Este documento cataloga de forma exaustiva todas as fontes de eventos pesquisada
 | **Franca Shopping** | `https://francashopping.com.br/eventos/` | Franca | Exposições, parques, circo e temporadas longas. |
 | **Sesc SP** | `https://www.sescsp.org.br/wp-json/wp/v1/atividades/filter?local={id}` | Franca (1005) e RP (35) | API oficial do Sesc com gratuidade, datas, locais e ingressos. |
 | **Ingresso.com** | API de catálogo/cinema | Franca (Moviecom Franca Shopping) | Sessões diárias de cinema, trailers, sinopses e pôsteres em alta definição. |
+| **Fever** | `https://feverup.com/en/ribeirao-preto/{candlelight,music-events}` + `/m/{id}/en` | Ribeirão Preto | Lista só dá o link; data, local e menor preço vêm do JSON-LD `Event` de cada página (~1 MB cada, teto de 14). Concertos à luz de vela no Teatro Minaz/USP. Outras cidades da região dão 404. |
+| **BolaShow (Bluesky)** | `https://bsky.app/profile/andrebolashow.bsky.social/rss` | Ribeirão Preto, Franca | Única rede social com feed público sem login. Guia de shows de Campinas/interior; posts `ARTISTA 🗓️ data 📌 Local - Cidade` e resumo diário `• ARTISTA | Cidade`. ~1–2 shows/semana da região; Sesc é descartado (já vem de `sesc.ts`). |
 | **Franca Basquete** | Raspagem do calendário NBB/CBB | Franca (Pedrocão) | Filtra apenas mando de quadra no Ginásio Pedrocão. |
 
 ---
@@ -42,6 +44,9 @@ Este documento cataloga de forma exaustiva todas as fontes de eventos pesquisada
 | **Gazeta de Bebedouro** | `gazetadebebedouro.com.br/feed/` | Bebedouro | Feed WordPress ativo. Traz festas cívicas, celebrações e eventos da cidade. |
 | **A Cidade ON Ribeirão** | `acidadeon.com/ribeiraopreto/lazer-e-cultura/feed/` | Ribeirão Preto / Franca | Categoria exclusiva de cultura e lazer. Altíssimo sinal/ruído. |
 | **Agenda Barretos** | `barretosnews.com.br/category/agenda-cultural/feed/` | Barretos | Cobertura cultural focada em Barretos e região. |
+| **Cultura Tribuna Ribeirão** | `tribunaribeirao.com.br/category/cultura/feed/` | Ribeirão Preto | Teatro e show (Minaz, Pedro II, Multiplan Hall) com a data no texto; passa pela extração por IA. `/category/agenda/feed/` é categoria inexistente (404). |
+| **G1 Triângulo Mineiro** | `g1.globo.com/rss/g1/mg/triangulo-mineiro/` | Uberaba / Uberlândia | Série semanal de destaques do fim de semana; passa pela extração por IA e o filtro `inRegion` descarta Uberlândia. |
+| **Sesc em Minas** | `sescmg.com.br/feed/` | Uberaba | Sonora Brasil e oficinas no Sesc Uberaba (~1 de 10 posts); o resto do feed é de outras cidades. |
 | **Em Foco Sertãozinho** | `emfocosertaozinho.com.br/feed/` | Sertãozinho | Noticiário local que cobre eventos no Teatro Municipal de Sertãozinho. |
 | **Google News RSS (20+ queries)** | `news.google.com/rss/search?q=...` | Franca e cidades vizinhas | Consultas refinadas por casas noturnas, praças, futebol local (Francana) e shows. |
 
@@ -77,7 +82,9 @@ Este documento cataloga de forma exaustiva todas as fontes de eventos pesquisada
 | **Showpass** | `https://showpass.com.br/` | Sem eventos na região | Sem cobertura no interior de SP. |
 | **Disk Ingressos** | `https://diskingressos.com.br/` | 200 (0 eventos na região) | Foco no Paraná/Curitiba. |
 | **Shotgun.live** | `https://shotgun.live/` | 200 (0 eventos na região) | Foco na capital SP e capitais. |
-| **Instagram / Facebook** | Web scraping | Exige autenticação / WAF | Monitorado de forma limpa e resiliente via dorks do Google News (`site:instagram.com Franca evento`). |
+| **Instagram / Facebook / X** | Web scraping | Exige login (reverificado 2026-10-31) | Instagram: `web_profile_info` dá 401 `require_login`, o HTML só traz contagem de seguidores. Facebook: shell de login. X: `syndication` dá 429, Nitter/xcancel 451/offline. Coberto via dorks do Google News (`site:instagram.com Franca evento`). |
+| **Telegram / YouTube / Mastodon** | `t.me/s/<canal>`, `youtube.com/feeds/videos.xml`, `/tags/*.rss` | Funcionam, mas sem conteúdo útil | Nenhum canal ativo da região no Telegram (os 2 que existem pararam em 2020/2022); YouTube do Sesc/Prefeitura/Pedro II sem agenda; `#franca` no Mastodon é a França. |
+| **Shopping Santa Úrsula** | `shoppingsantaursula.com.br/lazer-e-eventos/` | 404 na verificação de 2026-10-31 | Um agente de pesquisa reportou 200 em `/eventos/`, mas não reproduziu; além disso `start_date` é data de publicação, não do evento. Não integrado. |
 
 ---
 

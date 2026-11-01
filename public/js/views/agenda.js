@@ -10,9 +10,26 @@ import {
   weekday,
 } from "../util.js";
 
-const WD = ["D", "S", "T", "Q", "Q", "S", "S"];
+const WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const MES = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
 
-/** Faixa dos próximos 30 dias: intensidade = nº de rolês. Clique fixa o dia. */
+/**
+ * Calendário dos próximos 30 dias alinhado por dia da semana (colunas dom–sáb):
+ * intensidade = nº de rolês. Clique fixa o dia.
+ */
 function heatStrip(items, today) {
   const counts = new Map();
   for (const it of items)
@@ -26,27 +43,40 @@ function heatStrip(items, today) {
       role: "group",
       "aria-label": "Rolês por dia nos próximos 30 dias",
     },
-    days.map((d) => {
-      const n = counts.get(d) ?? 0;
-      const wd = weekday(d);
-      return h(
-        "button",
-        {
-          type: "button",
-          // Id estável: render() devolve o foco por id, e o clique refaz a faixa.
-          id: `dia-${d}`,
-          class: `heat-cell${wd === 0 || wd === 6 || wd === 5 ? " wknd" : ""}`,
-          style: { "--heat": (n / max).toFixed(2) },
-          "aria-pressed": state.filters.day === d ? "true" : "false",
-          "aria-label": `${humanDay(d, today)}: ${n} rolê${n === 1 ? "" : "s"}`,
-          title: `${humanDay(d, today)} · ${n}`,
-          onclick: () => setFilters({ day: state.filters.day === d ? "" : d }),
-        },
-        h("span", { class: "wd", "aria-hidden": "true" }, WD[wd]),
-        h("span", { class: "dn", "aria-hidden": "true" }, d.slice(8)),
-        n ? h("b", { "aria-hidden": "true" }, n) : null,
-      );
-    }),
+    [
+      ...WD.map((w) =>
+        h("span", { class: "heat-head", "aria-hidden": "true" }, w),
+      ),
+      ...days.map((d, i) => {
+        const n = counts.get(d) ?? 0;
+        const wd = weekday(d);
+        // Mês aparece no primeiro dia da janela e a cada dia 1.
+        const mes =
+          i === 0 || d.endsWith("-01") ? MES[Number(d.slice(5, 7)) - 1] : "";
+        return h(
+          "button",
+          {
+            type: "button",
+            // Id estável: render() devolve o foco por id, e o clique refaz a faixa.
+            id: `dia-${d}`,
+            class: `heat-cell${wd === 0 || wd === 6 || wd === 5 ? " wknd" : ""}`,
+            // A primeira linha começa na coluna do dia da semana de hoje.
+            style: {
+              "--heat": (n / max).toFixed(2),
+              ...(i === 0 ? { "grid-column-start": String(wd + 1) } : {}),
+            },
+            "aria-pressed": state.filters.day === d ? "true" : "false",
+            "aria-label": `${humanDay(d, today)}: ${n} rolê${n === 1 ? "" : "s"}`,
+            title: `${humanDay(d, today)} · ${n}`,
+            onclick: () =>
+              setFilters({ day: state.filters.day === d ? "" : d }),
+          },
+          mes ? h("span", { class: "wd", "aria-hidden": "true" }, mes) : null,
+          h("span", { class: "dn", "aria-hidden": "true" }, d.slice(8)),
+          n ? h("b", { "aria-hidden": "true" }, n) : null,
+        );
+      }),
+    ],
   );
 }
 

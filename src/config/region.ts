@@ -35,6 +35,10 @@ export const REGION_CITIES = [
   "Barretos",
   "Sertãozinho",
   "Bebedouro",
+  // Achadas na página regional do Sympla (2026-10-31) — fora da lista antes:
+  // Uberaba/MG (~100km, 16 eventos) e Cajuru (~80km).
+  "Uberaba",
+  "Cajuru",
 ];
 
 /**

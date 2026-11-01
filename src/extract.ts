@@ -21,7 +21,7 @@ Regras:
 - Texto sem nenhuma data do evento (nem relativa) → NÃO inclua.
 - Evento de vários dias (festival, feira, exposição): "date" = primeiro dia, "end_date" = último dia. Um dia só → end_date null.
 - Leia o texto da matéria: o nome do evento, o local, o horário e a gratuidade costumam estar lá, não na manchete.
-- SÓ eventos em Franca-SP (prioridade), nas cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, Batatais, Orlândia, etc.), em Ribeirão Preto ou em Barretos/Sertãozinho/Bebedouro (raio ~100km). Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
+- SÓ eventos em Franca-SP (prioridade), nas cidades vizinhas diretas (Restinga, Itirapuã, Ribeirão Corrente, Claraval, Batatais, Orlândia, etc.), em Ribeirão Preto ou em Barretos/Sertãozinho/Bebedouro/Cajuru/Uberaba-MG (raio ~100km). Estreias de cinema/série nacionais valem (city: "Cinemas" ou "Streaming") se tiverem data.
 - Vale qualquer tipo de rolê com data: shows, teatro, stand-up, festivais, feiras/exposições, jogos de basquete (Sesi Franca) e futebol da região, passeios e eventos gratuitos.
 - Para JOGO, o título é só o confronto: "Francana x Ponte Preta" ou "Sesi Franca x Flamengo" — nunca a manchete ("Molecada em campo: times sub-13...").
 - O título é o NOME do evento, curto, como estaria no cartaz. Se a manchete não permitir extrair um nome de evento curto, NÃO inclua o item.

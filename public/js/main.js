@@ -92,7 +92,7 @@ function renderStats(visible) {
     minute: "2-digit",
     timeZone: "America/Sao_Paulo",
   });
-  $("updated").textContent = `atualizado às ${at} · Franca, região e Ribeirão`;
+  $("updated").textContent = `atualizado às ${at} · Franca, Ribeirão e região (até 100 km)`;
   // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
   $("count").textContent =
     `${visible} ${visible === 1 ? "rolê" : "rolês"} no filtro`;

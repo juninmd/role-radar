@@ -35,6 +35,8 @@ export const CITY_COORDS: Record<string, LatLng> = {
   Barretos: { lat: -20.5572, lng: -48.5678 },
   Sertãozinho: { lat: -21.1378, lng: -47.9903 },
   Bebedouro: { lat: -20.9492, lng: -48.4792 },
+  Uberaba: { lat: -19.7472, lng: -47.9319 },
+  Cajuru: { lat: -21.2756, lng: -47.3028 },
 };
 
 // Mais longo primeiro: "Ribeirão Preto" não pode casar como "Ribeirão Corrente".

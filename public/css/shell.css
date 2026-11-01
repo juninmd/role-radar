@@ -141,10 +141,25 @@
     flex: 1;
     padding: 2px 4px;
   }
+  .top-actions {
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+  }
   .top-actions .btn {
-    padding: 6px 10px;
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 6px 8px;
     min-height: 32px;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .stat span {
+    font-size: 0.62rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .hide-sm {
+    display: none;
   }
   .only-mobile {
     display: inline-flex;
