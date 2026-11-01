@@ -68,10 +68,14 @@ export async function ingest(): Promise<number> {
         let feedAdded = 0;
         for (const it of items) {
           const link = it.link ?? "";
-          if (!link || !it.title) continue;
+          // Post de rede social (Bluesky) vem sem <title>: a 1ª linha do texto serve.
+          const title = (
+            it.title ?? it.contentSnippet?.split("\n")[0]?.slice(0, 140)
+          )?.trim();
+          if (!link || !title) continue;
           const isNew = insertItem({
             id: hash(link),
-            title: it.title.trim(),
+            title,
             link,
             source: feed.name,
             summary: clean(it.contentSnippet ?? it.content),

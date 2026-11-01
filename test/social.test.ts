@@ -92,3 +92,19 @@ test("ingest lê canal do Telegram e RSS do Bluesky vindos de EXTRA_FEEDS", asyn
     { source: "Casa", link: "https://bsky.app/profile/casax/post/1" },
   ]);
 });
+
+test("item de RSS sem <title> (Bluesky) usa a primeira linha do texto como título", async () => {
+  env.extraFeeds = "Casa=bsky:casax.bsky.social";
+  stubFetch(async (url) =>
+    url.includes("bsky.app/profile/casax")
+      ? new Response(
+          `<rss version="2.0"><channel><title>Casa</title><item><link>https://bsky.app/profile/casax/post/7</link><description>Noite do Rock&#xA;&#xA;🗓️ 07/11/2026</description></item></channel></rss>`,
+        )
+      : new Response("", { status: 404 }),
+  );
+  await ingest();
+  const row = db
+    .query("SELECT title FROM items WHERE source = 'Casa'")
+    .get() as { title: string } | null;
+  expect(row?.title).toBe("Noite do Rock");
+});
