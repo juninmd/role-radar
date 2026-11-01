@@ -10,7 +10,7 @@ Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos sho
 
 ## Fontes
 
-Google News RSS por query (shows/eventos Franca, Ribeirão Preto, agenda cultural, teatro/stand-up, ingressos/Sympla, estreias de cinema e séries) + Papelpop. Edite em `src/config/topic.ts`.
+Bilheterias e agendas estruturadas (ver `docs/bilheterias.md`: Sympla, Q2, SESI-SP Cultura, Clube do Ingresso, CorridasBR e outras) + Google News RSS por query (shows/eventos Franca, Ribeirão Preto, agenda cultural, teatro/stand-up, ingressos/Sympla, estreias de cinema e séries) + Papelpop. Edite em `src/config/topic.ts`.
 
 Além dos feeds, `src/sources/` raspa ~30 bilheterias e agendas (Sympla, OTicket, Q2, Fever, Sesc…) direto para eventos estruturados, e o BolaShow (guia de shows no Bluesky) é a única rede social com feed público sem login — Instagram, Facebook e X exigem sessão. A região vai até ~100 km de Franca (`src/config/region.ts`, incl. Uberaba-MG). Mapa do que foi testado e descartado: `docs/pesquisa-fontes-eventos.md`.
 

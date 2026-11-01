@@ -6,10 +6,7 @@ import { json, stubFetch } from "./fetch.ts";
 // cartaz, mesmo com os outros filmes válidos.
 test("cinema: item nulo não tira o cartaz da cidade", async () => {
   stubFetch(async () =>
-    json([
-      null,
-      { title: "Filme Cinema Nulo", isPlaying: true },
-    ]),
+    json([null, { title: "Filme Cinema Nulo", isPlaying: true }]),
   );
   const days = await nowPlaying();
   expect(JSON.stringify(days)).toContain("Filme Cinema Nulo");

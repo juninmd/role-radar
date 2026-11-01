@@ -146,5 +146,7 @@ test("nome do local sai limpo pro geocoder", () => {
   );
   expect(cleanVenue("IMESB (Plateia Livre)", "Bebedouro")).toBe("IMESB");
   // Bilheteria escreve a cidade sem acento e com espaço duplo: o sufixo tem de sair igual.
-  expect(cleanVenue("Bar Dom Pedro - Ribeirao  Preto", "Ribeirão Preto")).toBe("Bar Dom Pedro");
+  expect(cleanVenue("Bar Dom Pedro - Ribeirao  Preto", "Ribeirão Preto")).toBe(
+    "Bar Dom Pedro",
+  );
 });

@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { db, eventsOn } from "../src/db.ts";
-import { syncQ2Ingressos } from "../src/sources/q2ingressos.ts";
+import { parseQ2Detail, syncQ2Ingressos } from "../src/sources/q2ingressos.ts";
 import { json, stubFetch } from "./fetch.ts";
 
 const TODAY = "2026-10-11";
@@ -95,4 +95,38 @@ test("catálogo gigante do Q2 não é lido até o fim", async () => {
   });
   await syncQ2Ingressos(TODAY);
   expect(pulled).toBeLessThan(CHUNKS);
+});
+
+test("detalhe da Q2 traz horário, faixa de preço, esgotado e vídeo", () => {
+  expect(
+    parseQ2Detail({
+      time: "20:00",
+      sections: [
+        {
+          tickets: [
+            { value: 60, available: 0 },
+            { value: 120, available: 0 },
+          ],
+        },
+      ],
+      eventDetailVideos: ["https://www.youtube.com/embed/MTpKC6Jz0Uc"],
+    }),
+  ).toEqual({
+    time: "20:00",
+    price: "R$ 60 a R$ 120",
+    status: "esgotado",
+    trailer: "https://www.youtube.com/watch?v=MTpKC6Jz0Uc",
+  });
+  // Estoque não informado não é "esgotado"; cortesia (0) não é preço.
+  expect(
+    parseQ2Detail({ sections: [{ tickets: [{ value: 0 }] }] }),
+  ).toMatchObject({
+    price: null,
+    status: null,
+  });
+  expect(parseQ2Detail({})).toMatchObject({
+    price: null,
+    status: null,
+    time: null,
+  });
 });

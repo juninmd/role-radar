@@ -74,11 +74,16 @@ export const limpa = (s: string) =>
 // Duração do espetáculo ("Duração 2h30") vem antes do horário e não é início.
 const DURACAO = /dura[çc][ãa]o\D{0,12}$/i;
 
-/** Primeiro "HHhMM" ou "HH:MM" que não seja duração, em HH:MM com zero à esquerda. */
+// "21h00", "21:00", e também a hora cheia que os cartazes usam: "às 20h",
+// "22H", "18 horas", "20hs". Hora fora de 0–23 não é horário.
+const HORA =
+  /(?<![\d/.])([01]?\d|2[0-3])(?:\s*[h:]\s*([0-5]\d)(?!\d)|\s*(?:h|hs|hrs?|horas?)(?![a-zà-ú\d]))/gi;
+
+/** Primeiro horário que não seja duração, em HH:MM com zero à esquerda. */
 function horaDeInicio(texto: string): string | null {
-  for (const m of texto.matchAll(/(\d{1,2})[h:](\d{2})/g)) {
+  for (const m of texto.matchAll(HORA)) {
     if (DURACAO.test(texto.slice(0, m.index))) continue;
-    return `${m[1].padStart(2, "0")}:${m[2]}`;
+    return `${m[1].padStart(2, "0")}:${m[2] ?? "00"}`;
   }
   // "21h" sem minutos; "18 anos" não casa porque exige o h colado.
   for (const m of texto.matchAll(/(?<!\d)(\d{1,2})\s?h(?![a-zà-ú\d])/gi)) {
@@ -100,7 +105,7 @@ export function parseDataBr(
   const texto = raw.trim();
   const hora = horaDeInicio(texto);
 
-  // dd/mm/aaaa
+  // dd/mm/aaaa, dd.mm.aaaa, dd-mm-aaaa e dd/mm/aa
   // Ano de dois dígitos só com barra: "10-12-14" não é uma data.
   const completa = texto.match(
     /(?<!\d)(\d{1,2})([/.-])(\d{1,2})\2(\d{4}|\d{2})(?!\d)/,
@@ -135,26 +140,65 @@ export function parseDataBr(
       : null;
   if (!alvo?.mes) return null;
 
-  // Ano escrito depois do mês ("14 de novembro de 2027") vale como está.
-  const anoExplicito = porExtenso?.[3] ? Number(porExtenso[3]) : null;
-  if (anoExplicito) {
-    const d = Number(alvo.dia);
-    const m = Number(alvo.mes);
-    return valido(anoExplicito, m, d)
-      ? {
-          date: `${anoExplicito}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
-          time: hora,
-        }
-      : null;
-  }
-
   const ano = Number(today.slice(0, 4));
   const dia = Number(alvo.dia);
   const mes = Number(alvo.mes);
   const iso = (y: number) =>
     `${y}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+  // Ano escrito ("15 de novembro de 2027") manda: não se chuta outro.
+  const anoEscrito = porExtenso?.[3] ? Number(porExtenso[3]) : null;
+  if (anoEscrito)
+    return valido(anoEscrito, mes, dia)
+      ? { date: iso(anoEscrito), time: hora }
+      : null;
   if (valido(ano, mes, dia) && iso(ano) >= today)
     return { date: iso(ano), time: hora };
   // Sem ano certo (ex.: 29/02 fora de bissexto), não chuta: só o próximo ano válido.
   return valido(ano + 1, mes, dia) ? { date: iso(ano + 1), time: hora } : null;
 }
+
+/**
+ * Último dia de um evento a partir do início e do fim locais
+ * ("YYYY-MM-DDTHH:MM…"). Festa que vira a madrugada — termina no dia seguinte
+ * até as 8h — é de um dia só: sem isto o card dizia "sex. 30/10 a sáb. 31/10".
+ * Fim "00:00" não conta como madrugada: há fonte que usa meia-noite como "sem hora".
+ */
+export function diaFinal(
+  inicio: string,
+  fim: string | null | undefined,
+): string | null {
+  const dia = inicio.slice(0, 10);
+  const ultimo = fim?.slice(0, 10);
+  if (!ultimo || !/^\d{4}-\d{2}-\d{2}$/.test(ultimo) || ultimo <= dia)
+    return null;
+  const seguinte = new Date(`${dia}T12:00:00Z`);
+  seguinte.setUTCDate(seguinte.getUTCDate() + 1);
+  const hora = fim?.slice(11, 16) ?? "";
+  const madrugada =
+    /^\d{2}:\d{2}$/.test(hora) && hora > "00:00" && hora <= "08:00";
+  return ultimo === seguinte.toISOString().slice(0, 10) && madrugada
+    ? null
+    : ultimo;
+}
+
+/**
+ * Classificação indicativa como cada fonte escreve ("Livre", "L", "18 anos",
+ * "18+", "Classificação 16 anos") → "Livre" ou "16+". Fora de 10–18 é lixo.
+ */
+export function faixaEtaria(raw?: string | null): string | null {
+  const t = (raw ?? "").trim();
+  if (/^(livre|l)$/i.test(t) || /\blivre\b/i.test(t)) return "Livre";
+  const n = Number(t.match(/\b(1[0-8])\s*(\+|anos)?/)?.[1]);
+  return n >= 10 && n <= 18 ? `${n}+` : null;
+}
+
+// Rua de verdade, não nome de espaço ("CHF ESPAÇO CULTURAL"): tem número ou
+// começa como logradouro.
+const LOGRADOURO =
+  /\d|^(r\.|rua|av\.?|avenida|al\.|alameda|rod\.?|rodovia|estrada|pra[çc]a|travessa|largo)\b/i;
+
+/** Endereço publicável, ou null. */
+export const endereco = (raw?: string | null): string | null => {
+  const t = limpa(raw ?? "");
+  return t.length >= 6 && LOGRADOURO.test(t) ? t : null;
+};
