@@ -6,13 +6,20 @@
 }
 .heat {
   display: grid;
-  grid-template-columns: repeat(15, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   margin: 12px 0 8px;
 }
+.heat-head {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .heat-cell {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 2.7;
   border-radius: 10px;
   border: 1px solid var(--line);
   cursor: pointer;

@@ -178,8 +178,8 @@ progress {
   }
 }
 @media (max-width: 640px) {
-  .heat {
-    grid-template-columns: repeat(10, 1fr);
+  .heat-cell {
+    aspect-ratio: 1.3;
   }
   .duel-pair {
     grid-template-columns: 1fr;
