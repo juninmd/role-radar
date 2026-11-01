@@ -14,6 +14,8 @@ test("cidade da região é aceita independente de acento, caixa e espaço nas bo
     "Sao Joaquim da Barra",
     "Patrocínio Paulista",
     "Ribeirão Corrente",
+    "Uberaba",
+    "Cajuru",
   ]) {
     expect(inRegion(c)).toBe(true);
   }

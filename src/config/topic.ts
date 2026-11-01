@@ -199,6 +199,23 @@ Regras do digest:
       url: "https://www.acidadeon.com/ribeiraopreto/lazer-e-cultura/feed/",
     },
     {
+      // Cobre teatro e show de Ribeirão (Minaz, Pedro II, Multiplan Hall) com
+      // a data no texto — passa pelo extractEvents() de IA, como o G1.
+      name: "Cultura Tribuna Ribeirão",
+      url: "https://www.tribunaribeirao.com.br/category/cultura/feed/",
+    },
+    {
+      // Uberaba entrou no raio de ~100km; o G1 do Triângulo traz a série semanal
+      // "destaques do fim de semana em Uberlândia e Uberaba" (CDN força gzip).
+      name: "G1 Triângulo Mineiro (Uberaba)",
+      url: "https://g1.globo.com/rss/g1/mg/triangulo-mineiro/",
+    },
+    {
+      // Sesc Uberaba (Sonora Brasil etc.): poucos posts, mas com data e local.
+      name: "Sesc em Minas (Uberaba)",
+      url: "https://sescmg.com.br/feed/",
+    },
+    {
       // Notícia geral de Sertãozinho, mesmo padrão do Jornal da Franca —
       // maioria é saúde/política, mas capta evento real (teatro municipal
       // etc.) que nenhuma bilheteria pega.
