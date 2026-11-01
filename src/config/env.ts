@@ -51,6 +51,10 @@ export const env = {
   articleMax: num(process.env.ARTICLE_MAX, 40),
   // Perfis de redes sociais públicas (bsky:/yt:/tg:/URL) — ver sources/social.ts.
   extraFeeds: process.env.EXTRA_FEEDS ?? "",
+  // Instagram via Graph API oficial (business_discovery) — ver sources/instagram.ts.
+  igUserId: process.env.IG_USER_ID ?? "",
+  igToken: process.env.IG_ACCESS_TOKEN ?? "",
+  igAccounts: process.env.IG_ACCOUNTS ?? "",
   // Google News por IPv6 (o IPv4 do cluster leva 429) — exige hostNetwork.
   googleIpv6: process.env.GOOGLE_IPV6 === "1",
 };

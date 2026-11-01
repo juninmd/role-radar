@@ -3,6 +3,11 @@ import Parser from "rss-parser";
 import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
+import {
+  fetchInstagram,
+  IG_PREFIX,
+  instagramFeeds,
+} from "./sources/instagram.ts";
 import { readCapped } from "./sources/public-url.ts";
 import {
   parseExtraFeeds,
@@ -25,6 +30,7 @@ const parser = new Parser({
  * e só usamos o rss-parser pra interpretar o XML já decodificado.
  */
 async function fetchFeed(url: string) {
+  if (url.startsWith(IG_PREFIX)) return fetchInstagram(url);
   const res = await fetch(url, {
     headers: { "user-agent": "rss-parser" },
     signal: AbortSignal.timeout(env.feedTimeoutMs),
@@ -61,7 +67,11 @@ export async function ingest(): Promise<number> {
   const now = new Date().toISOString();
 
   const results = await Promise.allSettled(
-    [...topic.feeds, ...parseExtraFeeds(env.extraFeeds)].map(async (feed) => {
+    [
+      ...topic.feeds,
+      ...parseExtraFeeds(env.extraFeeds),
+      ...instagramFeeds(),
+    ].map(async (feed) => {
       try {
         const parsed = await fetchFeed(feed.url);
         const items = (parsed.items ?? []).slice(0, env.maxItemsPerFeed);
