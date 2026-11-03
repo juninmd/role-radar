@@ -432,7 +432,7 @@ export async function digest(): Promise<void> {
     ev.end_time ??= d.end_time;
     ev.age_rating ??= d.age_rating;
     ev.address ??= d.address;
-    ev.status = d.status;
+    if (d.status) ev.status = d.status;
   }
   // Uma consulta por cidade; previsão que falha só tira a linha do card.
   const tempo = await previsoes([...todays, ...novos].map((ev) => ev.city));
@@ -442,32 +442,35 @@ export async function digest(): Promise<void> {
   // Só o que o Telegram confirmou vira "postado", e na hora: o resto tenta de
   // novo numa próxima rodada do dia.
   let posted = 0;
-  const postaDia = async (lista: Event[], selo: string) => {
+  const postaEventos = async (
+    lista: Event[],
+    selo: string,
+    onSuccess: (id: string) => void,
+  ) => {
     for (const ev of lista) {
       const body = `${selo}\n\n${card(ev)}`;
       const image = capa.get(ev.id);
       const buttons = eventButtons(ev);
+      const category = categorize(ev.title, ev.venue);
+      const opts = { city: ev.city, category };
       const ok = image
-        ? await sendTelegramPhoto(body, image, buttons)
-        : await sendTelegram(body, buttons);
+        ? await sendTelegramPhoto(body, image, buttons, opts)
+        : await sendTelegram(body, buttons, opts);
       if (!ok) continue;
-      markEventsPosted([ev.id]);
-      posted++;
+      onSuccess(ev.id);
     }
   };
 
-  const postaLancamento = async (lista: Event[], selo: string) => {
-    for (const ev of lista) {
-      const body = `${selo}\n\n${card(ev)}`;
-      const image = capa.get(ev.id);
-      const buttons = eventButtons(ev);
-      const ok = image
-        ? await sendTelegramPhoto(body, image, buttons)
-        : await sendTelegram(body, buttons);
-      if (!ok) continue;
-      markEventsLaunched([ev.id]);
-    }
-  };
+  const postaDia = (lista: Event[], selo: string) =>
+    postaEventos(lista, selo, (id) => {
+      markEventsPosted([id]);
+      posted++;
+    });
+
+  const postaLancamento = (lista: Event[], selo: string) =>
+    postaEventos(lista, selo, (id) => {
+      markEventsLaunched([id]);
+    });
 
   await postaDia(todaysFranca, "⚡ *É HOJE EM FRANCA!*");
   if (todaysFranca.length)
@@ -563,14 +566,25 @@ export async function digest(): Promise<void> {
       );
     // Evento de fora reenviado sem o cabeçalho pareceria rolê de Franca.
     // Cabeçalho que não saiu deixa os eventos pendentes para a próxima rodada.
+    // Se o cabeçalho já foi entregue hoje (blockSent), não reenvia.
     let cabecalhoOk = true;
     if (todaysFora.length || novosFora.length) {
-      cabecalhoOk = await cabecalho();
-      if (cabecalhoOk) markBlockSent(today, "fora:cabecalho");
-    } else await oncePerDay(today, "fora:cabecalho", cabecalho);
+      if (!blockSent(today, "fora:cabecalho")) {
+        cabecalhoOk = await cabecalho();
+        // Não marca markBlockSent aqui imediatamente se algum evento ainda pode falhar
+      }
+    } else {
+      await oncePerDay(today, "fora:cabecalho", cabecalho);
+    }
     if (cabecalhoOk) {
+      const antesPosted = posted;
       await postaDia(todaysFora, "⚡ *É HOJE (fora de Franca)*");
       await postaLancamento(novosFora, "🚀 *NOVO ROLÊ NA REGIÃO!*");
+      // Se todos os eventos de fora pendentes foram postados com sucesso, marca o bloco como enviado
+      const todosHojeOk = posted - antesPosted === todaysFora.length;
+      if (todosHojeOk) {
+        markBlockSent(today, "fora:cabecalho");
+      }
       if (novosFora.length)
         console.log(
           `[digest] ${novosFora.length} novo(s) evento(s) anunciado(s) na região`,

@@ -110,6 +110,41 @@ test("enrichEvent completa o vazio sem apagar o que a fonte deu", () => {
   });
 });
 
+test("detalhe sem status não apaga status cancelado ou esgotado vindo da fonte", () => {
+  upsertEvent({
+    title: "Show Cancelado da Fonte",
+    date: "2031-05-12",
+    time: "21:00",
+    venue: "Teatro",
+    city: "Franca",
+    price: "R$ 50",
+    link: "https://ev.test/cancelado",
+    image: null,
+  });
+  const [ev] = eventsOn("2031-05-12");
+  // Simula que a fonte já marcou como cancelado
+  enrichEvent(ev.id, { status: "cancelado" });
+  let [cancelado] = eventsOn("2031-05-12");
+  expect(cancelado.status).toBe("cancelado");
+
+  // Enriquecimento sem status (detalhe retornou status nulo)
+  enrichEvent(ev.id, {
+    price: "R$ 60",
+    address: "Rua Nova, 123",
+    status: null,
+  });
+  [cancelado] = eventsOn("2031-05-12");
+  expect(cancelado.status).toBe("cancelado");
+
+  // Garante que o card mantém a linha de cancelado e o botão de agenda não aparece
+  const card = eventLines(cancelado, "2031-05-10");
+  expect(card).toContain("❌ *CANCELADO*");
+  const buttons = eventButtons(cancelado);
+  expect(buttons.flat().map((b) => b.text)).not.toContain(
+    "📅 Salvar na agenda",
+  );
+});
+
 const base = {
   id: "c1",
   title: "Stand-up do Fulano",

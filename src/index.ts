@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import { startBotPolling } from "./bot.ts";
 import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { digest } from "./digest.ts";
@@ -23,6 +24,9 @@ if (args.has("--serve")) {
   console.log(`[${topic.name}] agente ativo`);
   console.log(`  ingestão: ${env.cronIngestion}`);
   console.log(`  digest:   ${env.cronDigest}`);
+  startBotPolling().catch((err) =>
+    console.error("[bot] erro ao iniciar polling:", err),
+  );
   await ingest();
   cron.schedule(
     env.cronIngestion,

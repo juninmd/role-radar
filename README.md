@@ -5,7 +5,7 @@ Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos sho
 ## Stack
 
 - **Bun** (TypeScript nativo, `bun:sqlite`, `.env` autoload)
-- `rss-parser` + `node-cron`
+- `rss-parser` + `node-cron` *(Nota: o `rss-parser` interpreta o XML de feeds após o fetch próprio com descompressão e proteção SSRF via `fetchPublic`; atualização/troca de dependências é avaliada na issue #136)*
 - IA multi-provider via fetch: `litellm` (padrão — proxy do cluster, modelo `cloud/gemma3`) | `ollama` | `openai` | `anthropic` | `google`
 
 ## Fontes
@@ -14,7 +14,47 @@ Bilheterias e agendas estruturadas (ver `docs/bilheterias.md`: Sympla, Q2, SESI-
 
 Além dos feeds, `src/sources/` raspa ~30 bilheterias e agendas (Sympla, OTicket, Q2, Fever, Sesc…) direto para eventos estruturados, e o BolaShow (guia de shows no Bluesky) é a única rede social com feed público sem login — Instagram, Facebook e X exigem sessão. A região vai até ~100 km de Franca (`src/config/region.ts`, incl. Uberaba-MG). Mapa do que foi testado e descartado: `docs/pesquisa-fontes-eventos.md`.
 
-**Redes sociais:** `EXTRA_FEEDS` (ver `.env.example`) aceita perfis públicos de Bluesky (`bsky:handle`), YouTube (`yt:UC…`), canais do Telegram (`tg:canal`, lidos de `t.me/s`) e qualquer URL de RSS — inclusive um RSS-Bridge próprio para Instagram/Facebook/X. O texto dos posts passa pela mesma extração por IA dos feeds.
+**Bilheterias reconhecidas (`VENDAS`):**
+O radar identifica automaticamente o ponto de venda a partir do domínio do link (exibindo selo `🎫 Vendas: <Nome>` no card):
+- Sympla (`sympla.com.br`)
+- Q2 Ingressos (`q2ingressos.com.br` / `quero2ingressos.com.br`)
+- Evento ON (`eventoon.com.br`)
+- Zig (`zig.tickets`)
+- Duoticket (`duoticket.com.br`)
+- OTicket (`oticket.com.br`)
+- Guichê Web (`guicheweb.com.br`)
+- Articket (`articket.com.br`)
+- Mega Bilheteria (`megabilheteria.com`)
+- Blueticket (`blueticket.com.br`)
+- Ingresso Digital (`ingressodigital.com`)
+- Ingresso Nacional (`ingressonacional.com.br`)
+- Minha Entrada (`minhaentrada.com.br`)
+- Bilheteria Express (`bilheteriaexpress.com.br`)
+- Bilheteria Digital (`bilheteriadigital.com`)
+- Clube do Ingresso (`clubedoingresso.com`)
+- Uhuu (`uhuu.com`)
+- Ingresso.com (`ingresso.com`)
+- Sesc (`sescsp.org.br`)
+- SESI-SP (`sesisp.org.br`)
+- CorridasBR (`corridasbr.com.br`)
+- Theatro Pedro II (`theatropedro2.com.br`)
+
+**Redes sociais e Feeds Extras (`EXTRA_FEEDS`):**
+A variável `EXTRA_FEEDS` aceita múltiplos perfis ou feeds no formato `Nome=alvo`, separados por ponto-e-vírgula (`;`):
+- Bluesky: `bsky:handle` (ex.: `BolaShow=bsky:bolashow.bsky.social`)
+- YouTube: `yt:UC...` (ID do canal)
+- Telegram: `tg:canal` (lido do portal público `t.me/s/canal`)
+- RSS direto: URL completa (ex.: `Bridge=https://meu-rss-bridge.local/?action=display...`)
+Todas as requisições passam por validação de host público e proteção anti-SSRF (`fetchPublic`). O texto dos posts passa pela mesma curadoria e extração por IA dos feeds principais.
+
+## Bot Telegram e Comandos
+
+Quando executado no modo `--loop` (`bun start`), o bot realiza long polling via `getUpdates` para chats cadastrados em `TELEGRAM_CHAT_IDS`:
+- `/hoje`: Responde com os eventos do dia filtrados pelas preferências do chat.
+- `/semana`: Agenda agrupada dos próximos 7 dias.
+- `/categoria show|teatro|cinema|...|todas`: Define filtros de categorias desejadas.
+- `/silenciar <cidade>`: Alterna o silenciamento de eventos de uma cidade para o chat.
+- `/ajuda`: Lista os comandos disponíveis e as preferências atualmente salvas no SQLite.
 
 Notícia com cara de rolê (ou com data) tem a matéria original lida antes da extração: o link do Google News é decodificado para a URL real e o corpo (JSON-LD `articleBody` ou parágrafos de `<article>`) vai pro prompt — é onde ficam data, local e gratuidade. Até `ARTICLE_MAX` matérias por rodada. Se o Google responder 429, a rodada para de consultá-lo e esses itens ficam na fila por até 48h. Com `GOOGLE_IPV6=1` (CronJob com `hostNetwork`) o Google é consultado direto pelo IPv6 do host, que não leva o 429 do IPv4 do cluster; todo link externo só é buscado se o host for público (também em cada redirect).
 

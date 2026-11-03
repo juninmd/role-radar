@@ -1,4 +1,6 @@
 import { env } from "./config/env.ts";
+import { norm } from "./config/region.ts";
+import { getChatPreferences } from "./db.ts";
 import { fetchPublic, readBytesCapped } from "./sources/public-url.ts";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -50,6 +52,11 @@ export interface TelegramButton {
   url: string;
 }
 
+export interface SendTelegramOptions {
+  city?: string | null;
+  category?: string | null;
+}
+
 // Corte por ponto de código: slice() na divisa de um emoji deixava surrogate solto.
 const legenda = (texto: string) => Array.from(texto).slice(0, 1000).join("");
 
@@ -60,6 +67,7 @@ const legenda = (texto: string) => Array.from(texto).slice(0, 1000).join("");
 export async function sendTelegram(
   text: string,
   buttons?: TelegramButton[][],
+  opts?: SendTelegramOptions,
 ): Promise<boolean> {
   if (!env.telegramToken || !env.telegramChatIds.length) {
     console.log("[telegram] não configurado — imprimindo no console:\n");
@@ -69,6 +77,24 @@ export async function sendTelegram(
   }
   let delivered = true;
   for (const chatId of env.telegramChatIds) {
+    if (opts) {
+      const prefs = getChatPreferences(chatId);
+      if (
+        opts.city &&
+        prefs.silenced_cities.some(
+          (c) => norm(c) === norm(opts.city as string),
+        )
+      ) {
+        continue;
+      }
+      if (
+        opts.category &&
+        prefs.filter_categories.length &&
+        !prefs.filter_categories.includes(opts.category)
+      ) {
+        continue;
+      }
+    }
     const chunks = split(text, 3800);
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
@@ -124,6 +150,7 @@ export async function sendTelegramPhoto(
   caption: string,
   photo: string,
   buttons?: TelegramButton[][],
+  opts?: SendTelegramOptions,
 ): Promise<boolean> {
   if (!env.telegramToken || !env.telegramChatIds.length) {
     console.log("[telegram] não configurado — imprimindo no console:\n");
@@ -133,6 +160,24 @@ export async function sendTelegramPhoto(
   }
   let delivered = true;
   for (const chatId of env.telegramChatIds) {
+    if (opts) {
+      const prefs = getChatPreferences(chatId);
+      if (
+        opts.city &&
+        prefs.silenced_cities.some(
+          (c) => norm(c) === norm(opts.city as string),
+        )
+      ) {
+        continue;
+      }
+      if (
+        opts.category &&
+        prefs.filter_categories.length &&
+        !prefs.filter_categories.includes(opts.category)
+      ) {
+        continue;
+      }
+    }
     // Degrada um problema por vez, preservando o máximo: Markdown -> texto puro
     // (salva legenda com marcação inválida) -> upload dos bytes (salva host que
     // o Telegram não consegue buscar) -> mensagem sem foto.

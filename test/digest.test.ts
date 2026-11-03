@@ -78,7 +78,7 @@ test("queda de rede no meio não perde o registro do que já saiu", async () => 
   expect(eventsOn(today)[0]?.posted_today).toBe(1);
 });
 
-test("evento de fora reenviado volta com o cabeçalho de fora", async () => {
+test("evento de fora reenviado volta com o cabeçalho de fora se ainda não entregou todos", async () => {
   db.exec("DELETE FROM events;");
   evento("Show Longe", today, "Ribeirão Preto");
   rede((body) => body.includes("Show Longe"));
@@ -89,6 +89,49 @@ test("evento de fora reenviado volta com o cabeçalho de fora", async () => {
   const bodies = telegram(retry);
   expect(bodies).toHaveLength(2);
   expect(eventsOn(today)[0]?.posted_today).toBe(1);
+});
+
+test("cabeçalho de fora não é repetido se já foi enviado com sucesso no dia", async () => {
+  db.exec("DELETE FROM events;");
+  evento("Show 1 Fora", today, "Ribeirão Preto");
+  evento("Show 2 Fora", today, "Ribeirão Preto");
+
+  // Primeira rodada: cabeçalho sai, Show 1 sai, Show 2 falha
+  const sentPrimeira: string[] = [];
+  stubFetch(async (url, init) => {
+    if (!url.startsWith("https://api.telegram.org/"))
+      return new Response("", { status: 404 });
+    const b = String(init?.body);
+    sentPrimeira.push(b);
+    if (b.includes("Show 2 Fora")) return json({ ok: false }, 500);
+    return json({ ok: true });
+  });
+  await digest();
+
+  // Verifica que o cabeçalho saiu na primeira rodada
+  expect(sentPrimeira.some((b) => b.includes("Fora de Franca"))).toBe(true);
+
+  // Segunda rodada: Show 2 é reenviado com sucesso
+  const sentSegunda: string[] = [];
+  stubFetch(async (url, init) => {
+    if (!url.startsWith("https://api.telegram.org/"))
+      return new Response("", { status: 404 });
+    sentSegunda.push(String(init?.body));
+    return json({ ok: true });
+  });
+  await digest();
+
+  // Terceira rodada (já tudo postado): nada deve sair
+  const sentTerceira: string[] = [];
+  stubFetch(async (url, init) => {
+    if (!url.startsWith("https://api.telegram.org/"))
+      return new Response("", { status: 404 });
+    sentTerceira.push(String(init?.body));
+    return json({ ok: true });
+  });
+  await digest();
+
+  expect(sentTerceira).toHaveLength(0);
 });
 
 // Sem o cabeçalho confirmado, o evento de fora ficaria sem contexto de região:
