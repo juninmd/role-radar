@@ -3,7 +3,7 @@ import Parser from "rss-parser";
 import { env } from "./config/env.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
-import { readCapped } from "./sources/public-url.ts";
+import { fetchPublic, readCapped } from "./sources/public-url.ts";
 import {
   parseExtraFeeds,
   parseTelegramChannel,
@@ -25,9 +25,10 @@ const parser = new Parser({
  * e só usamos o rss-parser pra interpretar o XML já decodificado.
  */
 async function fetchFeed(url: string) {
-  const res = await fetch(url, {
+  const res = await fetchPublic(url, {
     headers: { "user-agent": "rss-parser" },
     signal: AbortSignal.timeout(env.feedTimeoutMs),
+    redirect: "follow",
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = await readCapped(res, MAX_FEED);

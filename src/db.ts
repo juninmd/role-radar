@@ -46,6 +46,11 @@ db.exec(`
     block TEXT NOT NULL,
     PRIMARY KEY (date, block)
   );
+  CREATE TABLE IF NOT EXISTS chat_preferences (
+    chat_id            TEXT PRIMARY KEY,
+    silenced_cities    TEXT NOT NULL DEFAULT '',
+    filter_categories  TEXT NOT NULL DEFAULT ''
+  );
 `);
 
 // Migrações: colunas adicionadas depois que bancos já existiam.
@@ -334,7 +339,7 @@ export function enrichEvent(
        price = COALESCE(price, ?2),
        time = COALESCE(time, ?3),
        description = COALESCE(description, ?4),
-       status = ?5,
+       status = COALESCE(?5, status),
        end_time = COALESCE(end_time, ?6),
        age_rating = COALESCE(age_rating, ?7),
        address = COALESCE(address, ?8)
@@ -389,6 +394,50 @@ export function markEventsLaunched(ids: string[]): void {
     for (const id of list) stmt.run(id);
   });
   tx(ids);
+}
+
+export interface ChatPreferences {
+  chat_id: string;
+  silenced_cities: string[];
+  filter_categories: string[];
+}
+
+export function getChatPreferences(chatId: string): ChatPreferences {
+  const row = db
+    .query<
+      { chat_id: string; silenced_cities: string; filter_categories: string },
+      [string]
+    >(
+      "SELECT chat_id, silenced_cities, filter_categories FROM chat_preferences WHERE chat_id = ?",
+    )
+    .get(chatId);
+  return {
+    chat_id: chatId,
+    silenced_cities: row?.silenced_cities
+      ? row.silenced_cities
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+    filter_categories: row?.filter_categories
+      ? row.filter_categories
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+  };
+}
+
+export function setChatPreferences(prefs: ChatPreferences): void {
+  const cities = prefs.silenced_cities.join(",");
+  const cats = prefs.filter_categories.join(",");
+  db.prepare(
+    `INSERT INTO chat_preferences (chat_id, silenced_cities, filter_categories)
+     VALUES (?1, ?2, ?3)
+     ON CONFLICT(chat_id) DO UPDATE SET
+       silenced_cities = excluded.silenced_cities,
+       filter_categories = excluded.filter_categories`,
+  ).run(prefs.chat_id, cities, cats);
 }
 
 export function markEventsPosted(ids: string[]): void {
