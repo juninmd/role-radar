@@ -1,3 +1,4 @@
+import { extractArticleFromHtml } from "@juninmd/digest-kit/core";
 import { env } from "../config/env.ts";
 import { db, type Item } from "../db.ts";
 import { pool } from "../pool.ts";
@@ -161,10 +162,22 @@ export async function articleText(html: string): Promise<string> {
     .text();
 
   const body = ld.map(ldArticleBody).find(Boolean);
+  if (body) {
+    return squash(body).slice(0, MAX_BODY);
+  }
+
+  const extracted = extractArticleFromHtml(html, { fallbackToBody: true });
+  if (extracted?.contentMarkdown) {
+    const text = squash(extracted.contentMarkdown);
+    if (text.length >= MIN_PARAGRAPH) {
+      return text.slice(0, MAX_BODY);
+    }
+  }
+
   const paras = (inArticle.length ? inArticle : anywhere)
     .map(squash)
     .filter((p) => p.length >= MIN_PARAGRAPH);
-  const text = squash(body ?? paras.join(" ")) || squash(og);
+  const text = squash(paras.join(" ")) || squash(og);
   return text.slice(0, MAX_BODY);
 }
 

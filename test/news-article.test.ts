@@ -273,3 +273,19 @@ test("corpo da matéria além de 2 MB não é lido", async () => {
   expect(await extractEvents("2026-09-24")).toBe(0);
   expect(pulled).toBeLessThan(40);
 });
+
+test("extrai corpo de matéria sem JSON-LD via digest-kit", async () => {
+  const htmlNoLd = `<!DOCTYPE html><html><head><title>Festival</title></head><body>
+<header><nav>Irrelevante</nav></header>
+<article>
+  <h1>Festival de Primavera</h1>
+  <p>${BODY}</p>
+</article>
+<footer>Rodapé</footer></body></html>`;
+
+  network(htmlNoLd);
+  expect(await extractEvents("2026-09-24")).toBe(1);
+  const events = eventsBetween("2026-09-25", "2026-09-27");
+  expect(events.length).toBe(1);
+  expect(events[0]?.title).toBe("Festival Mundo Asiático");
+});
