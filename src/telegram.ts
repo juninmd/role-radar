@@ -81,9 +81,7 @@ export async function sendTelegram(
       const prefs = getChatPreferences(chatId);
       if (
         opts.city &&
-        prefs.silenced_cities.some(
-          (c) => norm(c) === norm(opts.city as string),
-        )
+        prefs.silenced_cities.some((c) => norm(c) === norm(opts.city as string))
       ) {
         continue;
       }
@@ -164,9 +162,7 @@ export async function sendTelegramPhoto(
       const prefs = getChatPreferences(chatId);
       if (
         opts.city &&
-        prefs.silenced_cities.some(
-          (c) => norm(c) === norm(opts.city as string),
-        )
+        prefs.silenced_cities.some((c) => norm(c) === norm(opts.city as string))
       ) {
         continue;
       }

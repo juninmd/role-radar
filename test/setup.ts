@@ -8,7 +8,6 @@ import { join } from "node:path";
 process.env.DB_PATH = join(mkdtempSync(join(tmpdir(), "role-radar-")), "t.db");
 process.env.TELEGRAM_BOT_TOKEN = "";
 process.env.TELEGRAM_CHAT_IDS = "";
-process.env.AI_PROVIDER = "litellm";
 process.env.LITELLM_BASE_URL = "http://llm.test/v1";
 process.env.GEOCODE_MAX = "0";
 

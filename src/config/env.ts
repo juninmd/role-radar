@@ -7,25 +7,11 @@ const num = (v: string | undefined, d: number) => {
 };
 
 export const env = {
-  aiProvider: (process.env.AI_PROVIDER || "litellm") as
-    | "litellm"
-    | "ollama"
-    | "openai"
-    | "anthropic"
-    | "google",
   litellmBaseUrl:
     process.env.LITELLM_BASE_URL ??
     "http://litellm.ai.svc.cluster.local:4000/v1",
   litellmKey: process.env.LITELLM_API_KEY ?? "",
   litellmModel: process.env.LITELLM_MODEL ?? "cloud/auto",
-  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1",
-  ollamaModel: process.env.OLLAMA_MODEL ?? "llama3.2",
-  openaiKey: process.env.OPENAI_API_KEY ?? "",
-  openaiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-  anthropicKey: process.env.ANTHROPIC_API_KEY ?? "",
-  anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
-  geminiKey: process.env.GEMINI_API_KEY ?? "",
-  geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
 
   telegramToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramChatIds: (process.env.TELEGRAM_CHAT_IDS ?? "")

@@ -22,7 +22,6 @@ const completion = (content: string) =>
   json({ choices: [{ message: { content } }] });
 
 beforeEach(() => {
-  env.aiProvider = "litellm";
   db.exec("DELETE FROM items; DELETE FROM events;");
 });
 

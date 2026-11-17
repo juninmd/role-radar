@@ -55,7 +55,6 @@ function network(page: BodyInit = html) {
 }
 
 beforeEach(() => {
-  env.aiProvider = "litellm";
   db.exec("DELETE FROM items; DELETE FROM events;");
   insertItem({
     id: "gn1",

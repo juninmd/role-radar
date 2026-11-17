@@ -7,7 +7,6 @@ import { json, stubFetch } from "./fetch.ts";
 const TODAY = "2026-09-26";
 
 beforeEach(() => {
-  env.aiProvider = "litellm";
   db.exec("DELETE FROM items; DELETE FROM events;");
   insertItem({
     id: "i1",

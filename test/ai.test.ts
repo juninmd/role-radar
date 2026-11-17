@@ -15,33 +15,25 @@ const hang = (_url: string, init?: RequestInit) =>
     });
   });
 
-for (const provider of ["litellm", "anthropic", "google"] as const) {
-  test(`${provider} travado vira erro em vez de pendurar o digest`, async () => {
-    env.aiProvider = provider;
-    env.aiTimeoutMs = 50;
-    stubFetch(hang);
-    await expect(chat("s", "u")).rejects.toThrow();
-  });
-}
+test("LiteLLM travado vira erro em vez de pendurar o digest", async () => {
+  env.aiTimeoutMs = 50;
+  stubFetch(hang);
+  await expect(chat("s", "u")).rejects.toThrow();
+});
 
-// A chave na query vai parar em URL de erro/log; no header não.
-test("google manda a chave no header, nunca na URL", async () => {
-  const { aiProvider, geminiKey, aiTimeoutMs } = env;
-  env.aiProvider = "google";
-  env.geminiKey = "chave-de-teste";
+test("chama só o LiteLLM do cluster, com a chave no header", async () => {
+  const { aiTimeoutMs } = env;
   env.aiTimeoutMs = 5000;
   const seen: { url: string; init?: RequestInit }[] = [];
   stubFetch(async (url, init) => {
     seen.push({ url, init });
-    return json({ candidates: [{ content: { parts: [{ text: "ok" }] } }] });
+    return json({ choices: [{ message: { content: "ok" } }] });
   });
   try {
     expect(await chat("s", "u")).toBe("ok");
   } finally {
-    Object.assign(env, { aiProvider, geminiKey, aiTimeoutMs });
+    env.aiTimeoutMs = aiTimeoutMs;
   }
-  expect(seen[0]?.url).not.toContain("key=");
-  expect(new Headers(seen[0]?.init?.headers).get("x-goog-api-key")).toBe(
-    "chave-de-teste",
-  );
+  expect(seen).toHaveLength(1);
+  expect(seen[0]?.url).toBe(`${env.litellmBaseUrl}/chat/completions`);
 });
