@@ -7,7 +7,10 @@ const MAX_REPLY = 5_000_000;
 // Erro do provedor vai para a mensagem e para o log: o início basta.
 const MAX_ERROR = 1_000;
 // Teto de saída por chamada, igual em todos os provedores: a conta sai do output.
-const MAX_OUTPUT_TOKENS = 2048;
+// 2048 não bastava: o pool cloud/auto tem modelos de raciocínio que gastam o
+// orçamento em reasoning_content antes do JSON, que voltava cortado ou vazio
+// (medido no evo-agent: 800 e 1500 viravam só raciocínio).
+const MAX_OUTPUT_TOKENS = env.aiMaxTokens;
 
 export async function chat(system: string, user: string): Promise<string> {
   switch (env.aiProvider) {
@@ -22,6 +25,9 @@ export async function chat(system: string, user: string): Promise<string> {
         env.litellmModel,
         system,
         user,
+        // Extração não precisa de raciocínio longo; o LiteLLM descarta o
+        // parâmetro nos modelos que não o aceitam (drop_params).
+        { reasoning_effort: "low" },
       );
     case "openai":
       return openaiCompatible(
@@ -51,6 +57,7 @@ async function openaiCompatible(
   model: string,
   system: string,
   user: string,
+  extra: Record<string, unknown> = {},
 ): Promise<string> {
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -66,16 +73,22 @@ async function openaiCompatible(
       ],
       temperature: 0.4,
       max_tokens: MAX_OUTPUT_TOKENS,
+      ...extra,
     }),
     signal: AbortSignal.timeout(env.aiTimeoutMs),
   });
   if (!res.ok)
     throw new Error(`AI ${res.status}: ${await readCapped(res, MAX_ERROR)}`);
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
-    choices: { message: { content: string } }[];
+    choices: { message: { content: string }; finish_reason?: string }[];
   };
+  const choice = json.choices?.[0];
+  if (choice?.finish_reason === "length")
+    console.warn(
+      `[ai] resposta cortada no teto de ${MAX_OUTPUT_TOKENS} tokens (AI_MAX_TOKENS)`,
+    );
   // Sem "choices" (bloqueio, erro de cota com 200) vira vazio, não TypeError.
-  return json.choices?.[0]?.message?.content?.trim() ?? "";
+  return choice?.message?.content?.trim() ?? "";
 }
 
 async function anthropic(system: string, user: string): Promise<string> {
@@ -99,9 +112,13 @@ async function anthropic(system: string, user: string): Promise<string> {
       `Anthropic ${res.status}: ${await readCapped(res, MAX_ERROR)}`,
     );
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
-    content: { text: string }[];
+    content: { type?: string; text?: string }[];
   };
-  return json.content?.[0]?.text?.trim() ?? "";
+  // Com raciocínio ligado o primeiro bloco é "thinking", sem texto.
+  return (json.content ?? [])
+    .map((b) => b.text ?? "")
+    .join("")
+    .trim();
 }
 
 async function google(system: string, user: string): Promise<string> {
@@ -124,7 +141,13 @@ async function google(system: string, user: string): Promise<string> {
       `Gemini ${res.status}: ${await readCapped(res, MAX_ERROR)}`,
     );
   const json = JSON.parse(await readCapped(res, MAX_REPLY)) as {
-    candidates: { content: { parts: { text: string }[] } }[];
+    candidates: {
+      content: { parts: { text?: string; thought?: boolean }[] };
+    }[];
   };
-  return json.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  // parts[0] pode ser o raciocínio (thought): junta só o texto da resposta.
+  return (json.candidates?.[0]?.content?.parts ?? [])
+    .map((p) => (p.thought ? "" : (p.text ?? "")))
+    .join("")
+    .trim();
 }

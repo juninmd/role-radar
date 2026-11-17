@@ -26,8 +26,10 @@ const body = async (provider: "litellm" | "google") => {
   }
 };
 
-test("provedor compatível com OpenAI envia max_tokens", async () => {
-  expect((await body("litellm")).max_tokens).toBe(2048);
+test("provedor compatível com OpenAI envia max_tokens e esforço de raciocínio baixo", async () => {
+  const sent = await body("litellm");
+  expect(sent.max_tokens).toBe(4096);
+  expect(sent.reasoning_effort).toBe("low");
 });
 
 test("Gemini envia maxOutputTokens em generationConfig", async () => {
@@ -35,5 +37,26 @@ test("Gemini envia maxOutputTokens em generationConfig", async () => {
   expect(
     (sent.generationConfig as { maxOutputTokens?: number } | undefined)
       ?.maxOutputTokens,
-  ).toBe(2048);
+  ).toBe(4096);
+});
+
+test("Gemini ignora a parte de raciocínio (thought) e junta o texto", async () => {
+  const { aiProvider } = env;
+  env.aiProvider = "google";
+  stubFetch(async () =>
+    json({
+      candidates: [
+        {
+          content: {
+            parts: [{ text: "pensando…", thought: true }, { text: "[]" }],
+          },
+        },
+      ],
+    }),
+  );
+  try {
+    expect(await chat("s", "u")).toBe("[]");
+  } finally {
+    env.aiProvider = aiProvider;
+  }
 });
