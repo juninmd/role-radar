@@ -91,6 +91,6 @@ bun run typecheck
 
 ## Env
 
-Ver `.env.example`. Principais: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `AI_PROVIDER`, `LITELLM_BASE_URL`/`LITELLM_API_KEY`, `CRON_DIGEST`.
+Ver `.env.example`. Principais: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `LITELLM_BASE_URL`/`LITELLM_API_KEY`/`LITELLM_MODEL` (a IA passa só pelo LiteLLM), `CRON_DIGEST`.
 
 Dentro do cluster use `http://litellm.ai.svc.cluster.local:4000/v1`; de fora, o endpoint externo do LiteLLM (cert self-signed → `NODE_TLS_REJECT_UNAUTHORIZED=0` só em dev).
