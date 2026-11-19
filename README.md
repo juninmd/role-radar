@@ -6,7 +6,7 @@ Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos sho
 
 - **Bun** (TypeScript nativo, `bun:sqlite`, `.env` autoload)
 - `rss-parser` + `node-cron` *(Nota: o `rss-parser` interpreta o XML de feeds após o fetch próprio com descompressão e proteção SSRF via `fetchPublic`; atualização/troca de dependências é avaliada na issue #136)*
-- IA multi-provider via fetch: `litellm` (padrão — proxy do cluster, modelo `cloud/gemma3`) | `ollama` | `openai` | `anthropic` | `google`
+- IA via fetch para o proxy **LiteLLM** (API compatível com OpenAI; modelo padrão `cloud/auto`, configurável em `LITELLM_MODEL`)
 
 ## Fontes
 
@@ -70,6 +70,7 @@ bun run digest   # só envia digest
 bun run serve    # dashboard web em http://localhost:3000 (PORT)
 bun test         # testes (rede e Telegram mockados)
 bun run typecheck
+bun run lint     # biome check --write: corrige o que for seguro
 ```
 
 ## Dashboard web
@@ -91,6 +92,25 @@ bun run typecheck
 
 ## Env
 
-Ver `.env.example`. Principais: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `LITELLM_BASE_URL`/`LITELLM_API_KEY`/`LITELLM_MODEL` (a IA passa só pelo LiteLLM), `CRON_DIGEST`.
+Copie `.env.example` para `.env` (o Bun carrega sozinho). Todas as variáveis são opcionais; os padrões vêm de `src/config/env.ts`. Valores numéricos inválidos ou negativos caem no padrão.
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `LITELLM_BASE_URL` | `http://litellm.ai.svc.cluster.local:4000/v1` | endpoint do LiteLLM |
+| `LITELLM_API_KEY` | — | chave do LiteLLM |
+| `LITELLM_MODEL` | `cloud/auto` | modelo usado na curadoria |
+| `TELEGRAM_BOT_TOKEN` | — | sem token, o digest é impresso no console |
+| `TELEGRAM_CHAT_IDS` | — | chat ids separados por vírgula |
+| `CRON_INGESTION` / `CRON_DIGEST` | `*/30 * * * *` / `0 11 * * *` | agendas do `--loop` (UTC; 11h UTC = 8h BRT) |
+| `DB_PATH` | `./data/store.db` | arquivo SQLite |
+| `PORT` | `3000` | porta do `bun run serve` |
+| `MAX_ITEMS_PER_FEED` | `20` | itens lidos por feed |
+| `DIGEST_MAX_ITEMS` | `120` | teto de itens enviados à IA por digest |
+| `FEED_TIMEOUT_MS` / `AI_TIMEOUT_MS` | `12000` / `60000` | timeouts de feed e de IA |
+| `AI_MAX_TOKENS` | `4096` | teto de tokens de saída por chamada |
+| `GEOCODE_MAX` | `25` | locais geocodificados por rodada (`0` desliga) |
+| `ARTICLE_MAX` | `40` | matérias abertas por rodada para ler o corpo |
+| `EXTRA_FEEDS` | — | perfis públicos extras (ver acima) |
+| `GOOGLE_IPV6` | — | `1` consulta o Google News pelo IPv6 do host |
 
 Dentro do cluster use `http://litellm.ai.svc.cluster.local:4000/v1`; de fora, o endpoint externo do LiteLLM (cert self-signed → `NODE_TLS_REJECT_UNAUTHORIZED=0` só em dev).
