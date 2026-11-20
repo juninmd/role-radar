@@ -53,8 +53,9 @@ const RETRY_UNREAD_MS = 48 * 3600_000;
  * Item sem nenhum sinal de data nunca vira evento — então nem vai pra IA.
  * Descarta ~70% da fila de graça — é o que permite varrê-la inteira, não só 40.
  */
+// "amanhã" fica fora do grupo com \b final: \b não reconhece "ã" como letra.
 const DATE_HINT =
-  /\b\d{1,2}\s*[/-]\s*\d{1,2}\b|\b\d{1,2}\s*de\s*(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)|\bdia\s+\d{1,2}\b|\b(segunda|terca|terça|quarta|quinta|sexta|sabado|sábado|domingo)\b|\b(hoje|amanha|amanhã|fim de semana|feriado|neste|nesta|próxim|proxim)\b|\d{4}-\d{2}-\d{2}|\b\d{1,2}\s*h(oras|\d{2})?\b/i;
+  /\b\d{1,2}\s*[/-]\s*\d{1,2}\b|\b\d{1,2}\s*de\s*(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)|\bdia\s+\d{1,2}\b|\b(segunda|terca|terça|quarta|quinta|sexta|sabado|sábado|domingo)\b|\b(hoje|amanha|fim de semana|feriado|neste|nesta|próxim|proxim)\b|\bamanhã|\d{4}-\d{2}-\d{2}|\b\d{1,2}\s*h(oras|\d{2})?\b/i;
 
 const hasDateHint = (it: Item) =>
   DATE_HINT.test(`${it.title} ${it.summary ?? ""} ${it.body ?? ""}`);
