@@ -32,6 +32,24 @@ export function cachedCoord(query: string): LatLng | null | undefined {
     : { lat: row.lat, lng: row.lng };
 }
 
+/**
+ * Geocache inteiro num Map, numa query só. O catálogo resolve um pino por
+ * evento: um SELECT por evento (N+1) era mais da metade do buildCatalog.
+ */
+export function allCoords(): Map<string, LatLng | null> {
+  const rows = db
+    .query<{ query: string; lat: number | null; lng: number | null }, []>(
+      "SELECT query, lat, lng FROM geocache",
+    )
+    .all();
+  return new Map(
+    rows.map((r) => [
+      r.query,
+      r.lat === null || r.lng === null ? null : { lat: r.lat, lng: r.lng },
+    ]),
+  );
+}
+
 export function cacheCoord(query: string, coord: LatLng | null): void {
   db.prepare(
     "INSERT OR REPLACE INTO geocache (query, lat, lng, at) VALUES (?, ?, ?, ?)",

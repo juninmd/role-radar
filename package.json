@@ -12,7 +12,8 @@
     "serve": "bun run src/index.ts --serve",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check --write ."
+    "lint": "biome check --write .",
+    "bench": "DB_PATH=/tmp/role-radar-bench.db bun run bench/catalog.bench.ts"
   },
   "dependencies": {
     "@juninmd/digest-kit": "^0.4.0",
