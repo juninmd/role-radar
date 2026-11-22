@@ -1,4 +1,4 @@
-import { eventsBetween } from "../db.ts";
+import { canonicalTitle, eventsBetween } from "../db.ts";
 import type { CinemaDay } from "../sources/cinema.ts";
 import { FRANCA_SPOTS, getDailySpot } from "../sources/spots.ts";
 import { type Category, categorize, parsePrice } from "./classify.ts";
@@ -82,6 +82,28 @@ const spotId = (name: string) =>
 export const spotPlaces = (): Place[] =>
   FRANCA_SPOTS.map((s) => ({ venue: s.venue, city: "Franca" }));
 
+/**
+ * Um cartão por rolê: evento em andamento vira "hoje", então linhas antigas do
+ * mesmo título e cidade (uma por dia de temporada, ou da fonte e da notícia)
+ * colapsam aqui. Fica a primeira; campos vazios vêm das outras.
+ */
+export function dedupeEvents(events: CatalogEvent[]): CatalogEvent[] {
+  const seen = new Map<string, CatalogEvent>();
+  for (const ev of events) {
+    const k = `${canonicalTitle(ev.title)}|${ev.date}|${ev.city ?? ""}`;
+    const cur = seen.get(k);
+    if (!cur) {
+      seen.set(k, { ...ev });
+      continue;
+    }
+    for (const f of Object.keys(ev) as (keyof CatalogEvent)[])
+      if (cur[f] == null && ev[f] != null) Object.assign(cur, { [f]: ev[f] });
+    if (ev.endDate && (!cur.endDate || ev.endDate > cur.endDate))
+      cur.endDate = ev.endDate;
+  }
+  return [...seen.values()];
+}
+
 export function buildCatalog(today: string): Catalog {
   const events = eventsBetween(today, "9999-12-31").map(
     (ev): CatalogEvent => ({
@@ -124,7 +146,7 @@ export function buildCatalog(today: string): Catalog {
     today,
     dailySpot: spotId(getDailySpot(today).name),
     origin: { name: "Centro de Franca", ...CITY_COORDS.Franca },
-    events,
+    events: dedupeEvents(events),
     spots,
     cinema: (() => {
       const snap = loadSnapshot<CinemaDay[]>("cinema");

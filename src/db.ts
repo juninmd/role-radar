@@ -122,7 +122,7 @@ export function insertItem(row: Omit<Item, "digested" | "body">): boolean {
  * faz o mesmo rolê vindo de Sympla, Duoticket, Evento ON e notícia virar UM
  * evento só, em vez de quatro posts quase idênticos.
  */
-const canonicalTitle = (title: string) =>
+export const canonicalTitle = (title: string) =>
   // norm() tira o acento ANTES do strip geral: sem isso "Família" viraria
   // "fam lia" (o combinante vira espaço) e não casaria com "Familia".
   norm(title)
@@ -212,6 +212,29 @@ const dataValida = (iso: string) => {
   return d.getUTCMonth() === mes - 1 && d.getUTCDate() === dia;
 };
 
+/**
+ * Temporada (exposição, mostra) já gravada que cobre o mesmo período. A fonte
+ * só lista as sessões de hoje em diante, então o "início" anda um dia a cada
+ * rodada: sem isto, cada dia nascia uma linha nova com o mesmo título e fim.
+ */
+function temporadaExistente(
+  title: string,
+  city: string | null,
+  from: string,
+  to: string,
+): string | null {
+  const canon = canonicalTitle(title);
+  const rows = db
+    .query<{ id: string; title: string }, [string, string, string]>(
+      `SELECT id, title FROM events
+       WHERE end_date IS NOT NULL AND COALESCE(city, '') = ?1
+         AND date <= ?3 AND end_date >= ?2
+       ORDER BY date`,
+    )
+    .all(city ?? "", from, to);
+  return rows.find((r) => canonicalTitle(r.title) === canon)?.id ?? null;
+}
+
 export function upsertEvent(
   // trailer é opcional: só a fonte de estreias de cinema tem o que informar.
   ev: Omit<
@@ -238,8 +261,14 @@ export function upsertEvent(
     );
     return;
   }
+  const fim =
+    ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
+      ? ev.end_date
+      : null;
   upsertEventStmt.run(
-    eventId(ev.title, ev.date),
+    (fim &&
+      temporadaExistente(ev.title, cidadeCanonica(ev.city), ev.date, fim)) ||
+      eventId(ev.title, ev.date),
     ev.title,
     ev.date,
     horaValida(ev.time),
@@ -251,9 +280,7 @@ export function upsertEvent(
     semVazio(ev.description),
     semVazio(ev.trailer),
     // Fim antes do início, ou que não é data, é lixo da fonte: evento de um dia.
-    ev.end_date && dataValida(ev.end_date) && ev.end_date > ev.date
-      ? ev.end_date
-      : null,
+    fim,
     horaValida(ev.end_time),
     semVazio(ev.age_rating),
     semVazio(ev.address),
@@ -316,6 +343,56 @@ function rekeyEvents(): void {
 }
 
 rekeyEvents();
+
+/**
+ * Migração idempotente: funde as temporadas que já nasceram repetidas (uma
+ * linha por dia, mesmo título, cidade e fim). Fica a de início mais antigo.
+ */
+export function mergeSeasonDuplicates(): number {
+  const rows = db
+    .query<
+      {
+        id: string;
+        title: string;
+        city: string | null;
+        end_date: string;
+        posted_today: number;
+        posted_launch: number;
+      },
+      []
+    >(
+      `SELECT id, title, city, end_date, posted_today, posted_launch FROM events
+       WHERE end_date IS NOT NULL ORDER BY date, id`,
+    )
+    .all();
+  const keep = new Map<string, (typeof rows)[number]>();
+  const drop: string[] = [];
+  for (const r of rows) {
+    const k = `${canonicalTitle(r.title)}|${r.city ?? ""}|${r.end_date}`;
+    const cur = keep.get(k);
+    if (!cur) {
+      keep.set(k, { ...r });
+      continue;
+    }
+    cur.posted_today = Math.max(cur.posted_today, r.posted_today);
+    cur.posted_launch = Math.max(cur.posted_launch, r.posted_launch);
+    drop.push(r.id);
+  }
+  if (!drop.length) return 0;
+  const del = db.prepare<unknown, [string]>("DELETE FROM events WHERE id = ?");
+  const upd = db.prepare<unknown, [number, number, string]>(
+    "UPDATE events SET posted_today = ?, posted_launch = ? WHERE id = ?",
+  );
+  db.transaction(() => {
+    for (const id of drop) del.run(id);
+    for (const k of keep.values())
+      upd.run(k.posted_today, k.posted_launch, k.id);
+  })();
+  console.log(`[db] ${drop.length} temporada(s) repetida(s) fundida(s)`);
+  return drop.length;
+}
+
+mergeSeasonDuplicates();
 
 /**
  * Completa o evento com o que a página de detalhe trouxe. Preço, horário e
