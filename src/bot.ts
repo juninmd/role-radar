@@ -80,7 +80,7 @@ export function handleCommand(
         "/categoria show|teatro|cinema|comedia|infantil|esporte|festa|gastronomia|cultura|outros|todas — Filtra por categoria",
         "/silenciar <cidade> — Alterna o silenciamento de uma cidade",
         "",
-        `📍 Cidades silenciadas: ${prefs.silenced_cities.length ? prefs.silenced_cities.join(", ") : "nenhuma"}`,
+        `📍 Cidades silenciadas: ${prefs.silenced_cities.length ? prefs.silenced_cities.map(mdSafe).join(", ") : "nenhuma"}`,
         `🎭 Categorias filtradas: ${prefs.filter_categories.length ? prefs.filter_categories.join(", ") : "todas"}`,
       ].join("\n");
       return [{ text: msg }];
