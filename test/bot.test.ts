@@ -91,6 +91,13 @@ test("/silenciar adiciona e remove cidades nas preferências", () => {
   expect(getChatPreferences("100").silenced_cities).toEqual([]);
 });
 
+// Cidade digitada pelo usuário volta no /ajuda: "_" solto faria o Telegram recusar o Markdown.
+test("/ajuda escapa o Markdown das cidades silenciadas", () => {
+  handleCommand({ command: "silenciar", args: ["Santa_Rita"] }, "100");
+  const [ajuda] = handleCommand({ command: "ajuda", args: [] }, "100");
+  expect(ajuda?.text).toContain("Cidades silenciadas: Santa\\_Rita");
+});
+
 test("/categoria atualiza e limpa categorias nas preferências", () => {
   const res1 = handleCommand(
     { command: "categoria", args: ["show", "teatro"] },
