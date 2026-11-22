@@ -16,6 +16,7 @@ import {
   humanDay,
   mdSafe,
 } from "./digest.ts";
+import { sendTelegramTo } from "./telegram.ts";
 import { categorize } from "./web/classify.ts";
 
 const TZ = "America/Sao_Paulo";
@@ -265,23 +266,7 @@ export async function pollTelegramUpdates(offset = 0): Promise<number> {
       if (!cmd) continue;
       const responses = handleCommand(cmd, chatId);
       for (const r of responses) {
-        await fetch(
-          `https://api.telegram.org/bot${env.telegramToken}/sendMessage`,
-          {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              chat_id: chatId,
-              text: r.text,
-              parse_mode: "Markdown",
-              disable_web_page_preview: true,
-              ...(r.buttons?.length
-                ? { reply_markup: { inline_keyboard: r.buttons } }
-                : {}),
-            }),
-            signal: AbortSignal.timeout(10000),
-          },
-        ).catch(() => {});
+        await sendTelegramTo(chatId, r.text, r.buttons);
       }
     }
   } catch (err) {

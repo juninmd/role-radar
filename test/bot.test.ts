@@ -194,3 +194,30 @@ test("pollTelegramUpdates processa mensagens de chats permitidos e ignora chats 
   expect(sentMessages[0].chat_id).toBe("100");
   expect(sentMessages[0].text).toContain("Comandos do Rolê Radar");
 });
+
+// Markdown recusado (400) não pode deixar o usuário sem resposta.
+test("pollTelegramUpdates reenvia a resposta como texto puro quando o Markdown é recusado", async () => {
+  const sent: Array<{ text: string; parse_mode?: string }> = [];
+  stubFetch(async (url, init) => {
+    if (url.includes("getUpdates")) {
+      return json({
+        ok: true,
+        result: [
+          { update_id: 7, message: { chat: { id: 100 }, text: "/ajuda" } },
+        ],
+      });
+    }
+    const body = JSON.parse(String(init?.body));
+    sent.push(body);
+    return body.parse_mode
+      ? json({ ok: false, description: "can't parse entities" }, 400)
+      : json({ ok: true });
+  });
+
+  await pollTelegramUpdates(0);
+
+  expect(sent).toHaveLength(2);
+  expect(sent[0].parse_mode).toBe("Markdown");
+  expect(sent[1].parse_mode).toBeUndefined();
+  expect(sent[1].text).toContain("Comandos do Rolê Radar");
+});
