@@ -4,7 +4,7 @@ import { FRANCA_SPOTS, getDailySpot } from "../sources/spots.ts";
 import { type Category, categorize, parsePrice } from "./classify.ts";
 import { geoKey, type Place } from "./geocode.ts";
 import { CITY_COORDS, jitter, type LatLng, resolveCity } from "./places.ts";
-import { cachedCoord, loadSnapshot } from "./store.ts";
+import { allCoords, loadSnapshot } from "./store.ts";
 
 export interface Pin {
   lat: number;
@@ -61,11 +61,12 @@ export const safeUrl = (u: string | null | undefined): string | null => {
 };
 
 function pinFor(
+  coords: Map<string, LatLng | null>,
   place: Place | null,
   city: string | null,
   seed: string,
 ): Pin | null {
-  const hit = place ? cachedCoord(geoKey(place)) : undefined;
+  const hit = place ? coords.get(geoKey(place)) : undefined;
   if (hit) return { ...hit, approx: false };
   const resolved = resolveCity(city);
   if (!resolved) return null;
@@ -105,6 +106,7 @@ export function dedupeEvents(events: CatalogEvent[]): CatalogEvent[] {
 }
 
 export function buildCatalog(today: string): Catalog {
+  const coords = allCoords();
   const events = eventsBetween(today, "9999-12-31").map(
     (ev): CatalogEvent => ({
       id: ev.id,
@@ -119,6 +121,7 @@ export function buildCatalog(today: string): Catalog {
       description: ev.description ?? null,
       category: categorize(ev.title, ev.venue),
       pin: pinFor(
+        coords,
         ev.venue ? { venue: ev.venue, city: ev.city } : null,
         ev.city,
         ev.id,
@@ -136,7 +139,7 @@ export function buildCatalog(today: string): Catalog {
       description: s.description,
       venue: s.venue,
       category: categorize(s.name, s.venue),
-      pin: pinFor({ venue: s.venue, city: "Franca" }, "Franca", s.name),
+      pin: pinFor(coords, { venue: s.venue, city: "Franca" }, "Franca", s.name),
       image: safeUrl(s.image),
       mapsUrl: safeUrl(s.mapsUrl) ?? "",
     }),
@@ -153,7 +156,12 @@ export function buildCatalog(today: string): Catalog {
       if (!snap) return null;
       const days = snap.value.map((d) => ({
         ...d,
-        pin: pinFor({ venue: d.cinema, city: d.city }, d.city, d.cinema),
+        pin: pinFor(
+          coords,
+          { venue: d.cinema, city: d.city },
+          d.city,
+          d.cinema,
+        ),
         movies: d.movies.map((m) => ({
           ...m,
           link: safeUrl(m.link) ?? "",

@@ -5,7 +5,7 @@ import { buildCatalog, safeUrl } from "../src/web/catalog.ts";
 import { categorize, parsePrice } from "../src/web/classify.ts";
 import { cleanVenue, geocodePlaces, geoKey } from "../src/web/geocode.ts";
 import { CITY_COORDS, resolveCity } from "../src/web/places.ts";
-import { cachedCoord } from "../src/web/store.ts";
+import { allCoords, cachedCoord } from "../src/web/store.ts";
 import { json, stubFetch } from "./fetch.ts";
 
 const today = "2026-09-27";
@@ -78,6 +78,11 @@ test("geocode: erro de rede não vira cache negativo; resposta vazia vira", asyn
   expect(cachedCoord(geoKey(ok))).toEqual({ lat: -20.54, lng: -47.4 });
   expect(cachedCoord(geoKey(vazio))).toBeNull();
   expect(cachedCoord(geoKey(quebrado))).toBeUndefined();
+  // O Map do catálogo tem que concordar com a consulta unitária.
+  const coords = allCoords();
+  expect(coords.get(geoKey(ok))).toEqual({ lat: -20.54, lng: -47.4 });
+  expect(coords.get(geoKey(vazio))).toBeNull();
+  expect(coords.get(geoKey(quebrado))).toBeUndefined();
 });
 
 test("geocode: homônimo longe da cidade é descartado", async () => {

@@ -39,14 +39,18 @@ export const CITY_COORDS: Record<string, LatLng> = {
   Cajuru: { lat: -21.2756, lng: -47.3028 },
 };
 
-// Mais longo primeiro: "Ribeirão Preto" não pode casar como "Ribeirão Corrente".
-const BY_LENGTH = [...REGION_CITIES].sort((a, b) => b.length - a.length);
-
 // Palavra inteira com pontuação como separador: "Franca, SP" casa, "Francavilla" não.
 const comPalavras = (s: string) =>
   ` ${norm(s)
     .replace(/[^a-z0-9]+/g, " ")
     .trim()} `;
+
+// Mais longo primeiro: "Ribeirão Preto" não pode casar como "Ribeirão Corrente".
+// Forma normalizada calculada uma vez: o catálogo chama resolveCity ~2x por
+// evento, e normalizar as 30 cidades a cada chamada dominava o buildCatalog.
+const BY_LENGTH = [...REGION_CITIES]
+  .sort((a, b) => b.length - a.length)
+  .map((city) => ({ city, key: comPalavras(city) }));
 
 /**
  * Rótulo livre da fonte ("Cinemas de Ribeirão Preto", "Ribeirão e Franca")
@@ -55,7 +59,7 @@ const comPalavras = (s: string) =>
 export function resolveCity(label: string | null): string | null {
   if (!label) return null;
   const palavras = comPalavras(label);
-  return BY_LENGTH.find((c) => palavras.includes(comPalavras(c))) ?? null;
+  return BY_LENGTH.find(({ key }) => palavras.includes(key))?.city ?? null;
 }
 
 /** Distância em km entre dois pontos (haversine). */
