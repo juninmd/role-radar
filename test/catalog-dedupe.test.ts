@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
 import { db, mergeSeasonDuplicates, upsertEvent } from "../src/db.ts";
-import { buildCatalog } from "../src/web/catalog.ts";
+import { buildCatalog, dedupeTitle } from "../src/web/catalog.ts";
 
 const base = {
   time: "10:00",
@@ -52,4 +52,22 @@ test("galeria não repete o mesmo evento em andamento", () => {
   const cat = buildCatalog("2026-11-21");
   const titles = cat.events.map((e) => e.title).sort();
   expect(titles).toEqual(["O Veneno do Teatro", "Outro"]);
+});
+
+test("mesmo show com o título invertido em outro site vira um cartão", () => {
+  expect(dedupeTitle("Léo Santana - paGGodin")).toBe(
+    dedupeTitle("Paggodin - Leo Santana"),
+  );
+  // Hífen colado na palavra não separa: "Stand-up" segue uma parte só.
+  expect(dedupeTitle("Stand-up Comedy")).not.toBe(dedupeTitle("Comedy Stand"));
+  upsertEvent({ ...base, title: "Léo Santana - paGGodin", date: "2026-11-21" });
+  upsertEvent({
+    ...base,
+    title: "Paggodin - Leo Santana",
+    date: "2026-11-21",
+    price: "R$ 50",
+  });
+  const evs = buildCatalog("2026-11-21").events;
+  expect(evs).toHaveLength(1);
+  expect(evs[0].price).toBe("R$ 50");
 });

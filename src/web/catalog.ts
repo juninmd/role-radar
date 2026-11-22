@@ -83,6 +83,18 @@ export const spotPlaces = (): Place[] =>
   FRANCA_SPOTS.map((s) => ({ venue: s.venue, city: "Franca" }));
 
 /**
+ * Partes separadas por "-" em ordem alfabética: "Léo Santana - paGGodin" e
+ * "Paggodin - Leo Santana" são o mesmo show anunciado por sites diferentes.
+ */
+export const dedupeTitle = (title: string) =>
+  title
+    .split(/\s+[-–—]\s+|\s*\|\s*/)
+    .map(canonicalTitle)
+    .filter(Boolean)
+    .sort()
+    .join(" ");
+
+/**
  * Um cartão por rolê: evento em andamento vira "hoje", então linhas antigas do
  * mesmo título e cidade (uma por dia de temporada, ou da fonte e da notícia)
  * colapsam aqui. Fica a primeira; campos vazios vêm das outras.
@@ -90,7 +102,7 @@ export const spotPlaces = (): Place[] =>
 export function dedupeEvents(events: CatalogEvent[]): CatalogEvent[] {
   const seen = new Map<string, CatalogEvent>();
   for (const ev of events) {
-    const k = `${canonicalTitle(ev.title)}|${ev.date}|${ev.city ?? ""}`;
+    const k = `${dedupeTitle(ev.title)}|${ev.date}|${ev.city ?? ""}`;
     const cur = seen.get(k);
     if (!cur) {
       seen.set(k, { ...ev });
