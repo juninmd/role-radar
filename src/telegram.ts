@@ -97,15 +97,8 @@ export async function sendTelegram(
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const chunkButtons = i === chunks.length - 1 ? buttons : undefined;
-      let res = await send(chatId, chunk, "Markdown", chunkButtons);
-      if (res.status === 400) {
-        // Markdown malformado vindo da IA — reenvia como texto puro.
-        res = await send(chatId, chunk, undefined, chunkButtons);
-      }
-      if (!res.ok) {
+      if (!(await sendTelegramTo(chatId, chunk, chunkButtons)))
         delivered = false;
-        console.error(`[telegram] ${res.status}: ${await res.text()}`);
-      }
     }
   }
   return delivered;
@@ -137,7 +130,7 @@ export async function sendTelegramAlbum(
     const res = await tgJson("sendMediaGroup", { chat_id: chatId, media });
     if (!res.ok) {
       console.warn(`[telegram] sendMediaGroup ${res.status} — fallback texto`);
-      if (!(await textFallback(chatId, caption))) delivered = false;
+      if (!(await sendTelegramTo(chatId, caption))) delivered = false;
     }
   }
   return delivered;
@@ -184,22 +177,26 @@ export async function sendTelegramPhoto(
       continue;
     if (!res.ok) {
       console.warn(`[telegram] sendPhoto ${res.status} — fallback p/ texto`);
-      if (!(await textFallback(chatId, caption, buttons))) delivered = false;
+      if (!(await sendTelegramTo(chatId, caption, buttons))) delivered = false;
     }
   }
   return delivered;
 }
 
-/** Última degradação de foto/álbum: a legenda como mensagem de texto. */
-async function textFallback(
+/**
+ * Envia texto a um chat em Markdown; se o Telegram recusa (400, Markdown
+ * malformado), reenvia como texto puro. Falha final vai para o log. Também é
+ * a última degradação de foto/álbum: a legenda como mensagem de texto.
+ */
+export async function sendTelegramTo(
   chatId: string,
-  caption: string,
+  text: string,
   buttons?: TelegramButton[][],
 ): Promise<boolean> {
-  let alt = await send(chatId, caption, "Markdown", buttons);
-  if (alt.status === 400) alt = await send(chatId, caption, undefined, buttons);
-  if (!alt.ok) console.error(`[telegram] ${alt.status}: ${await alt.text()}`);
-  return alt.ok;
+  let res = await send(chatId, text, "Markdown", buttons);
+  if (res.status === 400) res = await send(chatId, text, undefined, buttons);
+  if (!res.ok) console.error(`[telegram] ${res.status}: ${await res.text()}`);
+  return res.ok;
 }
 
 function photoPorUrl(
