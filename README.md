@@ -1,116 +1,137 @@
-# 🎟️ Rolê Radar — Franca & Ribeirão Preto
+<p align="center">
+  <img src="docs/screenshots/hero.webp" alt="Rolê Radar: dashboard com a aba Explorar no desktop e no celular" width="100%">
+</p>
 
-Radar de entretenimento em **Franca-SP** e **Ribeirão Preto-SP**: próximos shows, festivais, cinema, séries, teatro, stand-up e atrações — com preço de ingresso quando disponível. RSS → SQLite (dedupe) → curadoria com IA (pt-BR) → digest diário no Telegram.
+<h1 align="center">📡 Rolê Radar</h1>
 
-## Stack
+<p align="center">
+  Shows, festivais, teatro, stand-up, cinema e atrações de <b>Franca-SP</b>, <b>Ribeirão Preto-SP</b> e região (até ~100 km),<br>
+  com preço quando disponível. Dashboard web + digest diário no Telegram, tudo em pt-BR.
+</p>
 
-- **Bun** (TypeScript nativo, `bun:sqlite`, `.env` autoload)
-- `rss-parser` + `node-cron` *(Nota: o `rss-parser` interpreta o XML de feeds após o fetch próprio com descompressão e proteção SSRF via `fetchPublic`; atualização/troca de dependências é avaliada na issue #136)*
-- IA via fetch para o proxy **LiteLLM** (API compatível com OpenAI; modelo padrão `cloud/auto`, configurável em `LITELLM_MODEL`)
+<p align="center">
+  <img alt="Bun" src="https://img.shields.io/badge/runtime-Bun-black?logo=bun">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white">
+  <img alt="SQLite" src="https://img.shields.io/badge/db-SQLite-003b57?logo=sqlite">
+</p>
+
+---
+
+## Como funciona
+
+```
+bilheterias + agendas + RSS ──► SQLite (dedupe) ──► curadoria com IA ──► Telegram
+                                     │
+                                     └──► dashboard web (Explorar · Mapa · Me decide)
+```
+
+1. **Coleta:** ~30 raspadores de bilheterias e agendas (`src/sources/`) e feeds RSS (Google News por query, Papelpop, perfis públicos).
+2. **Dedupe:** tudo vai para o SQLite; título canônico + data identifica o evento, e temporadas/festivais viram um só.
+3. **Curadoria:** um modelo compatível com a API da OpenAI filtra o que é rolê de verdade e extrai data, local e preço.
+4. **Entrega:** digest diário no Telegram e dashboard web lendo o mesmo banco.
+
+## Dashboard
+
+`bun run serve` sobe um `Bun.serve` que lê o mesmo SQLite do job de coleta: o que o digest grava aparece no dash sem deploy novo.
+
+### 🔎 Explorar
+
+Faixa de 14 dias com "calor" por dia e lista agrupada por data, em cards com foto ou em linhas compactas.
+
+![Aba Explorar](docs/screenshots/explorar.webp)
+
+### 🗺️ Mapa
+
+Leaflet com tiles do OpenStreetMap em tema escuro, anéis de 10, 50 e 100 km e legenda por categoria. Local sem endereço geocodificado aparece no centro da cidade, com contorno tracejado.
+
+![Aba Mapa](docs/screenshots/mapa.webp)
+
+> Neste print os tiles do mapa foram trocados por um fundo neutro, porque ele foi gerado offline.
+
+### 🎲 Me decide
+
+Dois modos: **Sorteio** (quiz de com quem, vibe, quando, orçamento e distância, que vira um ranking com % de match e uma roleta ponderada) e **Duelo** ("esse ou esse?" até sobrar um).
+
+![Aba Me decide](docs/screenshots/decide.webp)
+
+### 📱 No celular
+
+<p align="center"><img src="docs/screenshots/mobile.webp" alt="Dashboard no celular" width="320"></p>
+
+**Também tem:** busca e filtros (tipo, quando, período, vibe, cidade, preço, distância, favoritos), tudo no hash da URL para compartilhar o link já filtrado; favoritos no `localStorage`; "Perto de mim"; e exportação da agenda em `.ics`.
+
+**Rotas:** `/` (app), `/api/catalog` (JSON), `/agenda.ics` (Google, Apple ou Outlook), `/health`.
+
+> Os prints usam dados de exemplo gerados localmente.
+
+## Bot do Telegram
+
+No modo `--loop` (`bun start`), o bot faz long polling para os chats de `TELEGRAM_CHAT_IDS`:
+
+| Comando | O que faz |
+|---|---|
+| `/hoje` | eventos do dia, com os filtros do chat |
+| `/semana` | agenda dos próximos 7 dias |
+| `/categoria show\|teatro\|cinema\|…\|todas` | escolhe as categorias |
+| `/silenciar <cidade>` | liga/desliga uma cidade |
+| `/ajuda` | comandos e preferências salvas |
 
 ## Fontes
 
-Bilheterias e agendas estruturadas (ver `docs/bilheterias.md`: Sympla, Q2, SESI-SP Cultura, Clube do Ingresso, CorridasBR e outras) + Google News RSS por query (shows/eventos Franca, Ribeirão Preto, agenda cultural, teatro/stand-up, ingressos/Sympla, estreias de cinema e séries) + Papelpop. Edite em `src/config/topic.ts`.
+- **Bilheterias e agendas estruturadas:** Sympla, Q2, OTicket, Fever, Sesc, SESI-SP Cultura, Clube do Ingresso, CorridasBR e outras (detalhes em [`docs/bilheterias.md`](docs/bilheterias.md)).
+- **RSS:** Google News por query (shows, teatro, stand-up, ingressos, estreias) e Papelpop. Edite em `src/config/topic.ts`.
+- **Perfis públicos (`EXTRA_FEEDS`):** formato `Nome=alvo` separado por `;`, com `bsky:handle`, `yt:UC…` (canal do YouTube), `tg:canal` (portal público `t.me/s/`) ou URL de RSS. Instagram, Facebook e X exigem login e ficam de fora.
+- **Região:** cidades e raio em `src/config/region.ts`. O que foi testado e descartado está em [`docs/pesquisa-fontes-eventos.md`](docs/pesquisa-fontes-eventos.md).
 
-Além dos feeds, `src/sources/` raspa ~30 bilheterias e agendas (Sympla, OTicket, Q2, Fever, Sesc…) direto para eventos estruturados, e o BolaShow (guia de shows no Bluesky) é a única rede social com feed público sem login — Instagram, Facebook e X exigem sessão. A região vai até ~100 km de Franca (`src/config/region.ts`, incl. Uberaba-MG). Mapa do que foi testado e descartado: `docs/pesquisa-fontes-eventos.md`.
-
-**Bilheterias reconhecidas (`VENDAS`):**
-O radar identifica automaticamente o ponto de venda a partir do domínio do link (exibindo selo `🎫 Vendas: <Nome>` no card):
-- Sympla (`sympla.com.br`)
-- Q2 Ingressos (`q2ingressos.com.br` / `quero2ingressos.com.br`)
-- Evento ON (`eventoon.com.br`)
-- Zig (`zig.tickets`)
-- Duoticket (`duoticket.com.br`)
-- OTicket (`oticket.com.br`)
-- Guichê Web (`guicheweb.com.br`)
-- Articket (`articket.com.br`)
-- Mega Bilheteria (`megabilheteria.com`)
-- Blueticket (`blueticket.com.br`)
-- Ingresso Digital (`ingressodigital.com`)
-- Ingresso Nacional (`ingressonacional.com.br`)
-- Minha Entrada (`minhaentrada.com.br`)
-- Bilheteria Express (`bilheteriaexpress.com.br`)
-- Bilheteria Digital (`bilheteriadigital.com`)
-- Clube do Ingresso (`clubedoingresso.com`)
-- Uhuu (`uhuu.com`)
-- Ingresso.com (`ingresso.com`)
-- Sesc (`sescsp.org.br`)
-- SESI-SP (`sesisp.org.br`)
-- CorridasBR (`corridasbr.com.br`)
-- Theatro Pedro II (`theatropedro2.com.br`)
-
-**Redes sociais e Feeds Extras (`EXTRA_FEEDS`):**
-A variável `EXTRA_FEEDS` aceita múltiplos perfis ou feeds no formato `Nome=alvo`, separados por ponto-e-vírgula (`;`):
-- Bluesky: `bsky:handle` (ex.: `BolaShow=bsky:bolashow.bsky.social`)
-- YouTube: `yt:UC...` (ID do canal)
-- Telegram: `tg:canal` (lido do portal público `t.me/s/canal`)
-- RSS direto: URL completa (ex.: `Bridge=https://meu-rss-bridge.local/?action=display...`)
-Todas as requisições passam por validação de host público e proteção anti-SSRF (`fetchPublic`). O texto dos posts passa pela mesma curadoria e extração por IA dos feeds principais.
-
-## Bot Telegram e Comandos
-
-Quando executado no modo `--loop` (`bun start`), o bot realiza long polling via `getUpdates` para chats cadastrados em `TELEGRAM_CHAT_IDS`:
-- `/hoje`: Responde com os eventos do dia filtrados pelas preferências do chat.
-- `/semana`: Agenda agrupada dos próximos 7 dias.
-- `/categoria show|teatro|cinema|...|todas`: Define filtros de categorias desejadas.
-- `/silenciar <cidade>`: Alterna o silenciamento de eventos de uma cidade para o chat.
-- `/ajuda`: Lista os comandos disponíveis e as preferências atualmente salvas no SQLite.
-
-Notícia com cara de rolê (ou com data) tem a matéria original lida antes da extração: o link do Google News é decodificado para a URL real e o corpo (JSON-LD `articleBody` ou parágrafos de `<article>`) vai pro prompt — é onde ficam data, local e gratuidade. Até `ARTICLE_MAX` matérias por rodada. Se o Google responder 429, a rodada para de consultá-lo e esses itens ficam na fila por até 48h. Com `GOOGLE_IPV6=1` (CronJob com `hostNetwork`) o Google é consultado direto pelo IPv6 do host, que não leva o 429 do IPv4 do cluster; todo link externo só é buscado se o host for público (também em cada redirect).
+O ponto de venda é reconhecido pelo domínio do link e aparece no card como `🎫 Vendas: <Nome>`. Notícia com cara de rolê tem a matéria original lida antes da extração, porque é lá que ficam data, local e gratuidade. Todo link externo passa por validação de host público (anti-SSRF), inclusive em cada redirect.
 
 ## Uso
 
 ```sh
 bun install
-cp .env.example .env   # configure tokens
-bun run dev      # 1 ciclo: ingest + digest
-bun start        # loop com cron (ingest a cada 30min, digest 11h)
-bun run ingest   # só coleta
-bun run digest   # só envia digest
-bun run serve    # dashboard web em http://localhost:3000 (PORT)
-bun test         # testes (rede e Telegram mockados)
+cp .env.example .env   # preencha o que for usar
+bun run dev            # 1 ciclo: coleta + digest
+bun start              # loop com cron (coleta a cada 30 min, digest diário)
+bun run ingest         # só coleta
+bun run digest         # só envia o digest
+bun run serve          # dashboard em http://localhost:3000
+bun test               # testes (rede e Telegram mockados)
 bun run typecheck
-bun run lint     # biome check --write: corrige o que for seguro
+bun run lint           # biome check --write
 ```
 
-## Dashboard web
-
-`bun run serve` sobe um `Bun.serve` que lê o mesmo SQLite do CronJob — o que o digest diário grava aparece no dash sem deploy novo (a aba aberta recarrega a cada 30 min).
-
-- **Visões:** 🔎 Explorar (faixa de 14 dias com calor + lista agrupada por dia, em cards com foto ou linhas com miniatura), 🗺️ Mapa (Leaflet + tiles OSM escurecidos, anéis de 10/50/100 km e carrossel de cards) e 🎲 Me decide (sorteio: quiz com quem/vibe/quando/orçamento/distância → ranking com % de match e roleta ponderada; duelo: "esse ou esse?" até sobrar um). Links antigos `#v=radar`, `#v=agenda`, `#v=galeria` e `#v=duelo` abrem na tela equivalente.
-- **Filtros:** busca, tipo (eventos, filmes em cartaz, lugares fixos), quando, período, vibe, cidade, preço, distância, ordenação e favoritos. Tudo vai no hash da URL — o link compartilhado abre igual. Favoritos ficam no `localStorage`.
-- **Rotas:** `/` (app), `/api/catalog` (JSON), `/agenda.ics` (agenda futura para importar em Google, Apple ou Outlook), `/health`.
-- **Localização:** cidade tem centro fixo (`src/web/places.ts`); o digest geocodifica até `GEOCODE_MAX` locais por rodada no Nominatim (1 req/s, cache em `geocache`). Local não encontrado fica no centro da cidade, marcado como aproximado.
-- **Categoria/preço:** palavra-chave e regex em `src/web/classify.ts` (determinístico, sem IA).
+Também há um `Dockerfile` para rodar em container.
 
 ## Fallbacks
 
-- IA fora do ar ou travada (`AI_TIMEOUT_MS`) → o lote fica na fila e é reprocessado no próximo digest.
-- Telegram falhou (429 é reenviado respeitando `retry_after`) → evento não é marcado como postado; outra rodada no mesmo dia reenvia só o que faltou (blocos já entregues ficam em `digest_runs`).
-- Sem `TELEGRAM_BOT_TOKEN` → imprime o digest no console.
-- Feed que falha não derruba os demais (`Promise.allSettled`).
+- IA fora do ar ou lenta (`AI_TIMEOUT_MS`): o lote fica na fila para o próximo digest.
+- Telegram falhou (429 respeita `retry_after`): o evento não é marcado como enviado, e outra rodada no mesmo dia manda só o que faltou.
+- Sem `TELEGRAM_BOT_TOKEN`: o digest é impresso no console.
+- Um feed com erro não derruba os outros (`Promise.allSettled`).
 
-## Env
+## Configuração
 
-Copie `.env.example` para `.env` (o Bun carrega sozinho). Todas as variáveis são opcionais; os padrões vêm de `src/config/env.ts`. Valores numéricos inválidos ou negativos caem no padrão.
+Copie `.env.example` para `.env` (o Bun carrega sozinho). Todas as variáveis são opcionais; os padrões ficam em `src/config/env.ts`, e valor numérico inválido cai no padrão.
 
 | Variável | Padrão | Descrição |
 |---|---|---|
-| `LITELLM_BASE_URL` | `http://litellm.ai.svc.cluster.local:4000/v1` | endpoint do LiteLLM |
-| `LITELLM_API_KEY` | — | chave do LiteLLM |
-| `LITELLM_MODEL` | `cloud/auto` | modelo usado na curadoria |
-| `TELEGRAM_BOT_TOKEN` | — | sem token, o digest é impresso no console |
+| `LITELLM_BASE_URL` | — | endpoint compatível com a API da OpenAI (ex.: um proxy LiteLLM) |
+| `LITELLM_API_KEY` | — | chave do endpoint |
+| `LITELLM_MODEL` | `cloud/auto` | modelo da curadoria |
+| `TELEGRAM_BOT_TOKEN` | — | sem token, o digest vai para o console |
 | `TELEGRAM_CHAT_IDS` | — | chat ids separados por vírgula |
 | `CRON_INGESTION` / `CRON_DIGEST` | `*/30 * * * *` / `0 11 * * *` | agendas do `--loop` (UTC; 11h UTC = 8h BRT) |
 | `DB_PATH` | `./data/store.db` | arquivo SQLite |
-| `PORT` | `3000` | porta do `bun run serve` |
+| `PORT` | `3000` | porta do dashboard |
 | `MAX_ITEMS_PER_FEED` | `20` | itens lidos por feed |
 | `DIGEST_MAX_ITEMS` | `120` | teto de itens enviados à IA por digest |
 | `FEED_TIMEOUT_MS` / `AI_TIMEOUT_MS` | `12000` / `60000` | timeouts de feed e de IA |
 | `AI_MAX_TOKENS` | `4096` | teto de tokens de saída por chamada |
-| `GEOCODE_MAX` | `25` | locais geocodificados por rodada (`0` desliga) |
-| `ARTICLE_MAX` | `40` | matérias abertas por rodada para ler o corpo |
-| `EXTRA_FEEDS` | — | perfis públicos extras (ver acima) |
-| `GOOGLE_IPV6` | — | `1` consulta o Google News pelo IPv6 do host |
+| `GEOCODE_MAX` | `25` | locais geocodificados por rodada no Nominatim (`0` desliga) |
+| `ARTICLE_MAX` | `40` | matérias abertas por rodada |
+| `EXTRA_FEEDS` | — | perfis públicos extras (ver Fontes) |
+| `GOOGLE_IPV6` | — | `1` consulta o Google News por IPv6 |
 
-Dentro do cluster use `http://litellm.ai.svc.cluster.local:4000/v1`; de fora, o endpoint externo do LiteLLM (cert self-signed → `NODE_TLS_REJECT_UNAUTHORIZED=0` só em dev).
+## Stack
+
+[Bun](https://bun.sh) (TypeScript nativo, `bun:sqlite`), `rss-parser`, `node-cron`, Leaflet + OpenStreetMap no front, e IA via `fetch` para qualquer endpoint compatível com a API da OpenAI.
