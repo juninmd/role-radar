@@ -9,8 +9,8 @@ import {
   reducedMotion,
   store,
 } from "../util.js";
+import { card } from "./card.js";
 import { pickWeighted, Q, score, spotsPool } from "./decide-score.js";
-import { card } from "./gallery.js";
 
 const DECIDE_DEFAULTS = {
   company: "amigos",

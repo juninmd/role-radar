@@ -1,7 +1,12 @@
 import { openDetail } from "../detail.js";
 import { ensureLeaflet } from "../leaflet-loader.js";
-import { emit, state } from "../state.js";
+import { emit, setRings, state } from "../state.js";
 import { CATS, fmtKm, h, humanDay } from "../util.js";
+import { card } from "./card.js";
+
+// Anéis que antes eram o "radar de distância": agora são camada do mapa real.
+const RINGS_KM = [10, 50, 100];
+const CAROUSEL_MAX = 40;
 
 // Tooltip/popup recebem nó DOM, nunca string: string vira innerHTML no Leaflet.
 // Um mapa só, reaproveitado entre renders: recriar o Leaflet a cada filtro
@@ -55,6 +60,18 @@ function popup(it) {
   );
 }
 
+/** Toque no pino traz o card dele para o meio do carrossel e o destaca. */
+function focusCard(it) {
+  const el = document.querySelector(
+    `.map-carousel .card-hit[data-id="${CSS.escape(it.id)}"]`,
+  );
+  if (!el) return;
+  for (const c of document.querySelectorAll(".map-carousel .card.sel"))
+    c.classList.remove("sel");
+  el.closest(".card")?.classList.add("sel");
+  el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+}
+
 export function renderMap(root, items) {
   const pts = items.filter((it) => it.pin);
   root.replaceChildren(
@@ -68,6 +85,17 @@ export function renderMap(root, items) {
           "p",
           { class: "muted small" },
           `${pts.length} ${pts.length === 1 ? "rolê" : "rolês"} no mapa · contorno tracejado = local aproximado`,
+        ),
+        h(
+          "button",
+          {
+            type: "button",
+            class: "chip",
+            id: "map-rings",
+            "aria-pressed": state.rings ? "true" : "false",
+            onclick: () => setRings(!state.rings),
+          },
+          "◎ Anéis de distância",
         ),
         h(
           "div",
@@ -95,23 +123,21 @@ export function renderMap(root, items) {
             "Nenhum rolê com localização nesses filtros. Os sem local ficam só nas listas.",
           ),
       box,
-      h(
-        "ul",
-        { class: "sr-only", "aria-label": "Rolês no mapa (lista acessível)" },
-        pts
-          .slice(0, 60)
-          .map((it) =>
-            h(
-              "li",
-              {},
-              h(
-                "button",
-                { type: "button", onclick: () => openDetail(it) },
-                `${it.title}, ${fmtKm(it.km) ?? ""}`,
+      pts.length
+        ? h(
+            "div",
+            {
+              class: "map-carousel",
+              role: "list",
+              "aria-label": "Rolês no mapa",
+            },
+            pts
+              .slice(0, CAROUSEL_MAX)
+              .map((it) =>
+                h("div", { role: "listitem" }, card(it, { compact: true })),
               ),
-            ),
-          ),
-      ),
+          )
+        : null,
     ),
   );
 
@@ -165,6 +191,29 @@ export function renderMap(root, items) {
   })
     .bindTooltip(h("span", {}, state.origin.name))
     .addTo(originLayer);
+  if (state.rings)
+    for (const km of RINGS_KM) {
+      L.circle([state.origin.lat, state.origin.lng], {
+        radius: km * 1000,
+        color: "#4fc3ff",
+        weight: 1,
+        opacity: 0.6,
+        fill: false,
+        dashArray: "2 8",
+        interactive: false,
+      }).addTo(originLayer);
+      // Rótulo na borda norte do anel (1° de latitude ≈ 111 km).
+      L.marker([state.origin.lat + km / 111, state.origin.lng], {
+        interactive: false,
+        keyboard: false,
+        icon: L.divIcon({
+          className: "ring-label",
+          html: `${km} km`,
+          iconSize: [48, 16],
+          iconAnchor: [24, 8],
+        }),
+      }).addTo(originLayer);
+    }
   if (state.filters.maxKm)
     L.circle([state.origin.lat, state.origin.lng], {
       radius: state.filters.maxKm * 1000,
@@ -185,6 +234,7 @@ export function renderMap(root, items) {
       fillOpacity: it.pin.approx ? 0.35 : 0.85,
     })
       .bindPopup(() => popup(it))
+      .on("click", () => focusCard(it))
       .bindTooltip(h("span", {}, it.title))
       .addTo(layer);
   }

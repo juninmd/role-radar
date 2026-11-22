@@ -1,14 +1,6 @@
 import { DEFAULT_FILTERS, KM_STEPS, setFilters, state } from "./state.js";
 import { CATS, h, KINDS } from "./util.js";
 
-const WHEN = [
-  ["hoje", "Hoje"],
-  ["amanha", "Amanhã"],
-  ["fds", "Fim de semana"],
-  ["7d", "7 dias"],
-  ["30d", "30 dias"],
-  ["tudo", "Tudo"],
-];
 const PERIODS = [
   ["manha", "☀️ Manhã"],
   ["tarde", "🌇 Tarde"],
@@ -130,26 +122,6 @@ export function renderFilters(root, visibleCount) {
           setFilters({ kinds: toggleIn(f.kinds, k) }),
         ),
       ),
-    ),
-    group(
-      "Quando",
-      WHEN.map(([v, l]) =>
-        chip(`w-${v}`, l, !f.day && f.when === v, () =>
-          setFilters({ when: v, day: "" }),
-        ),
-      ),
-      f.day
-        ? chip(
-            "day",
-            `📌 ${f.day.split("-").reverse().slice(0, 2).join("/")} ✕`,
-            true,
-            () => {
-              setFilters({ day: "" });
-              // O chip some ao remover o dia: o foco vai ao chip de período ativo.
-              document.getElementById(`chip-w-${f.when}`)?.focus();
-            },
-          )
-        : null,
     ),
     group(
       "Período",

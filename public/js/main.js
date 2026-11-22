@@ -7,22 +7,25 @@ import {
 } from "./data.js";
 import { initDetail, openDetail } from "./detail.js";
 import { renderFilters } from "./filters.js";
-import { emit, readHash, setView, state, subscribe, VIEWS } from "./state.js";
+import {
+  emit,
+  readHash,
+  setPlay,
+  setView,
+  state,
+  subscribe,
+  VIEWS,
+} from "./state.js";
 import { h, toast } from "./util.js";
-import { renderAgenda } from "./views/agenda.js";
-import { renderDecide } from "./views/decide.js";
-import { renderDuel, resetDuel } from "./views/duel.js";
-import { renderGallery } from "./views/gallery.js";
+import { resetDuel } from "./views/duel.js";
+import { dayStrip, renderExplore } from "./views/explore.js";
 import { renderMap } from "./views/map.js";
-import { renderRadar } from "./views/radar.js";
+import { renderPlay } from "./views/play.js";
 
 const RENDER = {
-  radar: renderRadar,
+  explorar: renderExplore,
   mapa: renderMap,
-  agenda: renderAgenda,
-  galeria: renderGallery,
-  decide: renderDecide,
-  duelo: renderDuel,
+  decide: renderPlay,
 };
 const REFRESH_MS = 30 * 60 * 1000;
 const $ = (id) => document.getElementById(id);
@@ -92,7 +95,8 @@ function renderStats(visible) {
     minute: "2-digit",
     timeZone: "America/Sao_Paulo",
   });
-  $("updated").textContent = `atualizado às ${at} · Franca, Ribeirão e região (até 100 km)`;
+  $("updated").textContent =
+    `atualizado às ${at} · Franca, Ribeirão e região (até 100 km)`;
   // Região viva só com a contagem: anunciar a página inteira a cada render era ruído.
   $("count").textContent =
     `${visible} ${visible === 1 ? "rolê" : "rolês"} no filtro`;
@@ -128,7 +132,8 @@ function renderDock() {
               class: "btn primary small",
               onclick: () => {
                 resetDuel();
-                setView("duelo");
+                state.view = "decide";
+                setPlay("duelo");
               },
             },
             "⚔️ Duelar favoritos",
@@ -156,6 +161,18 @@ function render() {
   renderTabs();
   renderStats(visible.length);
   renderFilters($("filters"), visible.length);
+  // A faixa conta com todos os filtros menos a data: mostra o que cada dia tem.
+  $("days").replaceChildren(
+    dayStrip(
+      applyFilters(
+        state.items,
+        { ...state.filters, day: "", when: "tudo" },
+        state.catalog.today,
+        state.favs,
+      ),
+      state.catalog.today,
+    ),
+  );
   RENDER[state.view]($("view"), visible);
   renderDock();
   // Painéis são redesenhados inteiros: devolve o foco (e o cursor da busca).

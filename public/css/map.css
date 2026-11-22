@@ -1,0 +1,134 @@
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.legend-item[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: rgb(79 255 224 / 0.12);
+}
+.legend-item.static {
+  cursor: default;
+}
+.mini-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mini {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: rgb(255 255 255 / 0.03);
+  cursor: pointer;
+}
+.mini:hover {
+  border-color: var(--line-strong);
+}
+.mini small {
+  grid-column: 2;
+}
+.mini-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Mapa ── */
+.map-view {
+  padding: 12px;
+}
+.map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.map-head p {
+  margin: 0;
+}
+.map {
+  height: min(70vh, 680px);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.map-tiles {
+  filter: invert(1) hue-rotate(200deg) brightness(0.8) contrast(0.9)
+    saturate(0.6);
+}
+.leaflet-container {
+  font: inherit;
+  background: var(--bg-2);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip,
+.leaflet-tooltip {
+  background: rgb(13 17 48 / 0.92);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  backdrop-filter: blur(10px);
+}
+.leaflet-bar a {
+  background: var(--bg-2);
+  color: var(--text);
+  border-color: var(--line);
+}
+.leaflet-container .leaflet-control-attribution {
+  background: rgb(7 9 20 / 0.7);
+  color: var(--muted);
+}
+.pop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 190px;
+}
+
+/* Carrossel de cards embaixo do mapa: mesmo card do Explorar. */
+.map-carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 12px 2px 4px;
+  scroll-snap-type: x proximity;
+}
+.map-carousel > div {
+  flex: 0 0 220px;
+  scroll-snap-align: start;
+}
+.map-carousel .card.sel {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.ring-label {
+  color: #9fdcff;
+  font: 600 11px var(--font);
+  text-align: center;
+  text-shadow: 0 1px 3px #000;
+  white-space: nowrap;
+}

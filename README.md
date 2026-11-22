@@ -77,7 +77,7 @@ bun run lint     # biome check --write: corrige o que for seguro
 
 `bun run serve` sobe um `Bun.serve` que lê o mesmo SQLite do CronJob — o que o digest diário grava aparece no dash sem deploy novo (a aba aberta recarrega a cada 30 min).
 
-- **Visões:** 📡 Radar (distância real a partir de você, ou "tempo × vibe": fatias por categoria, raio = dias até o rolê), 🗺️ Mapa (Leaflet + tiles OSM escurecidos), 📆 Agenda (heatmap de 30 dias + lista por dia), 🖼️ Galeria, 🎲 Me decide (quiz com quem/vibe/quando/orçamento/distância → ranking com % de match e roleta ponderada) e ⚔️ Duelo ("esse ou esse?" até sobrar um).
+- **Visões:** 🔎 Explorar (faixa de 14 dias com calor + lista agrupada por dia, em cards com foto ou linhas com miniatura), 🗺️ Mapa (Leaflet + tiles OSM escurecidos, anéis de 10/50/100 km e carrossel de cards) e 🎲 Me decide (sorteio: quiz com quem/vibe/quando/orçamento/distância → ranking com % de match e roleta ponderada; duelo: "esse ou esse?" até sobrar um). Links antigos `#v=radar`, `#v=agenda`, `#v=galeria` e `#v=duelo` abrem na tela equivalente.
 - **Filtros:** busca, tipo (eventos, filmes em cartaz, lugares fixos), quando, período, vibe, cidade, preço, distância, ordenação e favoritos. Tudo vai no hash da URL — o link compartilhado abre igual. Favoritos ficam no `localStorage`.
 - **Rotas:** `/` (app), `/api/catalog` (JSON), `/agenda.ics` (agenda futura para importar em Google, Apple ou Outlook), `/health`.
 - **Localização:** cidade tem centro fixo (`src/web/places.ts`); o digest geocodifica até `GEOCODE_MAX` locais por rodada no Nominatim (1 req/s, cache em `geocache`). Local não encontrado fica no centro da cidade, marcado como aproximado.
