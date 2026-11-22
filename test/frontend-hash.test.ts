@@ -38,3 +38,30 @@ test("preço do link dentro das opções é mantido", () => {
   readHash();
   expect(state.filters.price).toBe("50");
 });
+
+// Radar, Agenda, Galeria e Duelo viraram modos de Explorar, Mapa e Me decide:
+// link antigo salvo ou compartilhado continua abrindo no lugar equivalente.
+test("links das telas antigas abrem na tela nova equivalente", () => {
+  const casos = [
+    ["#v=radar", "mapa", null, null],
+    ["#v=agenda", "explorar", "lista", null],
+    ["#v=galeria", "explorar", "cards", null],
+    ["#v=duelo", "decide", null, "duelo"],
+  ];
+  for (const [hash, view, layout, play] of casos) {
+    state.view = "explorar";
+    state.play = "sorteio";
+    globalThis.location = { hash };
+    readHash();
+    expect(state.view).toBe(view);
+    if (layout) expect(state.layout).toBe(layout);
+    if (play) expect(state.play).toBe(play);
+  }
+});
+
+test("tela desconhecida no link mantém o Explorar", () => {
+  state.view = "explorar";
+  globalThis.location = { hash: "#v=nada" };
+  readHash();
+  expect(state.view).toBe("explorar");
+});

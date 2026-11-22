@@ -1,13 +1,19 @@
 import { store } from "./util.js";
 
 export const VIEWS = [
-  { id: "radar", label: "Radar", emoji: "📡" },
+  { id: "explorar", label: "Explorar", emoji: "🔎" },
   { id: "mapa", label: "Mapa", emoji: "🗺️" },
-  { id: "agenda", label: "Agenda", emoji: "📆" },
-  { id: "galeria", label: "Galeria", emoji: "🖼️" },
   { id: "decide", label: "Me decide", emoji: "🎲" },
-  { id: "duelo", label: "Duelo", emoji: "⚔️" },
 ];
+
+// Telas antigas viraram modos das novas: link salvo continua abrindo no lugar certo.
+const LEGACY = {
+  radar: { view: "mapa" },
+  agenda: { view: "explorar", layout: "lista" },
+  galeria: { view: "explorar", layout: "cards" },
+  duelo: { view: "decide", play: "duelo" },
+};
+const LAYOUTS = ["cards", "lista"];
 
 export const DEFAULT_FILTERS = {
   q: "",
@@ -42,7 +48,13 @@ const listaSalva = (key) => {
 };
 
 export const state = {
-  view: "radar",
+  view: "explorar",
+  // Formato da lista no Explorar (cards = antiga galeria, lista = antiga agenda).
+  layout: LAYOUTS.includes(store.get("rr:layout", ""))
+    ? store.get("rr:layout", "")
+    : "cards",
+  play: "sorteio", // modo do Me decide: sorteio | duelo
+  rings: store.get("rr:rings", true) !== false, // anéis de distância no mapa
   filters: structuredClone(DEFAULT_FILTERS),
   origin: null, // { name, lat, lng }
   catalog: null,
@@ -71,6 +83,24 @@ export function setView(view) {
   emit();
 }
 
+export function setLayout(layout) {
+  if (!LAYOUTS.includes(layout)) return;
+  state.layout = layout;
+  store.set("rr:layout", layout);
+  emit();
+}
+
+export function setPlay(play) {
+  state.play = play === "duelo" ? "duelo" : "sorteio";
+  emit();
+}
+
+export function setRings(on) {
+  state.rings = Boolean(on);
+  store.set("rr:rings", state.rings);
+  emit();
+}
+
 export function toggleFav(id) {
   if (state.favs.has(id)) state.favs.delete(id);
   else state.favs.add(id);
@@ -81,7 +111,8 @@ export function toggleFav(id) {
 /** Filtros e visão vivem no hash: o link compartilhado abre igual. */
 function writeHash() {
   const p = new URLSearchParams();
-  if (state.view !== "radar") p.set("v", state.view);
+  if (state.view !== "explorar") p.set("v", state.view);
+  if (state.view === "decide" && state.play === "duelo") p.set("m", "duelo");
   for (const [k, v] of Object.entries(state.filters)) {
     const def = DEFAULT_FILTERS[k];
     if (JSON.stringify(v) === JSON.stringify(def)) continue;
@@ -96,6 +127,13 @@ export function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   const v = p.get("v");
   if (v && VIEWS.some((x) => x.id === v)) state.view = v;
+  else if (v && LEGACY[v]) {
+    const old = LEGACY[v];
+    state.view = old.view;
+    if (old.layout) state.layout = old.layout;
+    if (old.play) state.play = old.play;
+  }
+  if (p.get("m") === "duelo") state.play = "duelo";
   for (const k of Object.keys(DEFAULT_FILTERS)) {
     if (!p.has(k)) continue;
     const raw = p.get(k) ?? "";

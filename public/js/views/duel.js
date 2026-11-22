@@ -1,7 +1,7 @@
 import { openDetail } from "../detail.js";
 import { state } from "../state.js";
 import { h, reducedMotion } from "../util.js";
-import { card } from "./gallery.js";
+import { card } from "./card.js";
 
 const MAX = 8;
 let duel = null; // { queue, champ, rounds, total }
