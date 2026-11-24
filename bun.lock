@@ -5,7 +5,7 @@
     "": {
       "name": "role-radar",
       "dependencies": {
-        "@juninmd/digest-kit": "^0.4.0",
+        "@juninmd/digest-kit": "^0.6.0",
         "node-cron": "^3.0.3",
         "rss-parser": "^3.13.0",
       },
@@ -36,7 +36,7 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.2", "", { "os": "win32", "cpu": "x64" }, "sha512-4InchVpdVmdkkkgjQqKpgvyu+VPnoF/7RPSw5YATgEVpt2j72wcCAeV5TwaE9ZGJUZWZn7v2CwSAj6CrMJEx8A=="],
 
-    "@juninmd/digest-kit": ["@juninmd/digest-kit@0.4.0", "", { "dependencies": { "@mozilla/readability": "^0.6.0", "linkedom": "^0.18.15", "node-cron": "^4.6.0", "rss-parser": "^3.13.0", "sqlite-vec": "^0.1.9", "turndown": "^7.2.4" } }, "sha512-zSkh0bvrOjVGd9FDhZDbtuz5VmenO4KfqqDl1WJh4X71m0BTM4LX4pfI4dswXWctoXwXPybn+KqOF7YVa2c9Pg=="],
+    "@juninmd/digest-kit": ["@juninmd/digest-kit@0.6.0", "", { "dependencies": { "@mozilla/readability": "^0.6.0", "linkedom": "^0.18.15", "node-cron": "^4.6.0", "rss-parser": "^3.13.0", "sqlite-vec": "^0.1.9", "turndown": "^7.2.4" } }, "sha512-7Kdb8vNIngqw5s7ukdVWuBagSJmZOUsIWKxD3HUdg/Rrqk5Ua9P7uFBn1BiNMafU1t84qxF80psBelcG7UiVQA=="],
 
     "@mixmark-io/domino": ["@mixmark-io/domino@2.2.0", "", {}, "sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw=="],
 
