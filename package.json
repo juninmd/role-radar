@@ -16,7 +16,7 @@
     "bench": "DB_PATH=/tmp/role-radar-bench.db bun run bench/catalog.bench.ts"
   },
   "dependencies": {
-    "@juninmd/digest-kit": "^0.4.0",
+    "@juninmd/digest-kit": "^0.6.0",
     "node-cron": "^3.0.3",
     "rss-parser": "^3.13.0"
   },
